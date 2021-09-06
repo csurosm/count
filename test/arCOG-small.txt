@@ -1,0 +1,12 @@
+family	Aerpe	Arcfu	Calma	Censy	Halma	Halsp	Halwa	Hypbu	Metac	Metba	Metbu	Metcu	Methu	Metja	Metka	Metla	MetmC	Metma	Metmp	Metsa	Metst	Metth	Naneq	Natph	Picto	Pyrab	Pyrae	Pyrca	Pyrfu	Pyrho	Pyris	Stama	Sulac	Sulso	Sulto	Theac	Theko	Thepe	Thete	Thevo	Uncme
+arCOG00001	1	2	1	0	0	0	0	0	0	3	0	0	1	0	0	0	0	0	0	1	1	2	0	0	1	2	1	1	1	1	1	2	0	1	1	1	3	2	1	1	4
+arCOG00002	1	0	1	1	1	1	0	1	1	1	0	0	2	0	0	1	2	0	2	0	0	0	0	0	2	1	2	1	1	1	2	1	2	3	3	2	3	2	2	2	3
+arCOG00004	0	0	0	0	1	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+arCOG00005	0	0	0	0	11	6	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+arCOG00006	0	0	0	0	1	1	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+arCOG00007	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0
+arCOG00008	0	0	0	0	1	3	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+arCOG00009	1	2	2	0	4	4	5	0	7	5	4	1	3	2	1	1	1	6	1	0	0	1	0	7	4	0	1	1	0	0	1	0	0	1	1	0	1	4	1	0	0
+arCOG00011	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	1	0	0	1	1	0
+arCOG00012	0	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	3	3	1	5	0	0	1	6	0
+arCOG00013	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0

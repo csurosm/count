@@ -1,0 +1,8 @@
+>seq1 /length=2
+ab
+>seq2 /length=4
+aaba
+>seq3 /length=1
+a
+>seq4 /length=3
+abb
