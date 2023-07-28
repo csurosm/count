@@ -1,6 +1,7 @@
 /arcog/
 /cog/
 /lib/
+/javafx-sdk-11.0.2/
 /GCF_000025665.1_ASM2566v1_genomic.fna
 /GCF_000025665.1_ASM2566v1_protein.faa
 /NOG2157-ml2-names.tre
@@ -37,7 +38,11 @@
 /maki8.log
 /maki9.log
 /makig.log
-/manifest.mf
 /texput.log
 /test/
+/tmp/
+/log/
 /nbproject/
+/userguide/
+/src/ca/
+/src/bad/
