@@ -30,7 +30,7 @@ public interface DiscreteDistribution
      * @return array of <var>n</var>+1 elements: [<var>p</var><sub>0</sub> <var>p</var><sub>1</sub> ... <var>p</var><sub>n</sub>]
      */
     
-    public double[] getDistribution(int n);
+    public double[] getPointMassFunction(int n);
     
     
     /**
@@ -53,5 +53,4 @@ public interface DiscreteDistribution
      */
     public abstract int getNumParameters();
     
-
 }

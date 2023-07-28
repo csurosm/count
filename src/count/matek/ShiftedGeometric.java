@@ -54,7 +54,7 @@ public class ShiftedGeometric implements DiscreteDistribution
      * @return [<var>p</var><sub>0</sub> <var>p</var><sub>1</sub> ... <var>p</var><sub>n</sub>]
      */
     @Override
-    public double[] getDistribution(int n)
+    public double[] getPointMassFunction(int n)
     {
         double[] d = new double[n+1];
         d[0] = p;

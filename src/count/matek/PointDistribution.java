@@ -45,7 +45,7 @@ public class PointDistribution implements DiscreteDistribution
      * @return array of probabilities
      */
     @Override
-    public double[] getDistribution(int n)
+    public double[] getPointMassFunction(int n)
     {
         double[] d= new double[n+1];
         d[0] = p;

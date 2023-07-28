@@ -15,7 +15,6 @@
  */
 package count.model;
 
-import count.ds.IndexedTree;
 
 /**
  * Rate variation
@@ -42,9 +41,21 @@ public interface MixedRateModel
 	 * @param class_idx  0..{@link #getNumClasses()}-1
 	 * @return
 	 */
-	public abstract RateModel.GLD getClassModel(int class_idx);
+	public abstract TreeWithRates getClassModel(int class_idx);
 	
 	
-	
+	public static interface RateMultipliers extends MixedRateModel
+	{
+	    public abstract double getGainRateMultiplier(int class_idx);
+	    
+	    public abstract double getLossRateMultiplier(int class_idx);
+	    
+	    public abstract double getDuplicationRateMultiplier(int class_idx);
+	    
+	    public abstract double getEdgeLengthMultiplier(int class_idx);
+	    
+	    public abstract TreeWithRates getBaseModel();
+	    	    
+	}
 
 }

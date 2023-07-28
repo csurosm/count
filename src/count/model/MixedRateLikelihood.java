@@ -7,6 +7,12 @@ import count.io.RateVariationParser;
 import count.io.TableParser;
 import count.matek.Logarithms;
 
+/**
+ * Test class for calculating the likelihood 
+ * in a mixed model. The GUI uses instead 
+ * {@link MixedRatePosteriors},
+ * which offers more functionality.
+ */
 public class MixedRateLikelihood
 {
 	public MixedRateLikelihood(MixedRateModel mixed_model, ProfileTable table)
@@ -22,9 +28,20 @@ public class MixedRateLikelihood
 	private final MixedRateModel mixed_model;
 	private final ProfileTable table;
 	
+	/**
+	 * First cells for classes with non-0 class probability; empty cells up to @link #mixed_model} class count 
+	 */
 	private final Likelihood[] class_factories;
+	/**
+	 * Mapping from our class indices to {@link #mixed_model} class indices.
+	 * 
+	 *
+	 */
 	private final int[] class_index;
 	private final double[] log_class_prob;
+	/**
+	 * Non-0 classes. 
+	 */
 	private int num_classes;
 	
 	private void computeParameters()
@@ -35,7 +52,7 @@ public class MixedRateLikelihood
 			double pc = mixed_model.getClassProbability(c);
 			if (pc != 0.0)
 			{
-				RateModel.GLD rates =mixed_model.getClassModel(c);
+				TreeWithRates rates =mixed_model.getClassModel(c);
 				Likelihood factory = new Likelihood(rates, table);
 				class_factories[num_classes] = factory;
 				class_index[num_classes] = c;
@@ -56,7 +73,7 @@ public class MixedRateLikelihood
 			Likelihood.Profile P = factory.getProfileLikelihood(family_idx);
 			double pLL = P.getLogLikelihood();
 			terms[i] = pLL+ log_class_prob[i]; 
-			System.out.println("#*MRL.gPLL "+family_idx+"\ti "+i+"\tLL "+pLL+"\t"+Math.exp(pLL));
+//			System.out.println("#*MRL.gPLL "+family_idx+"\ti "+i+"\tLL "+pLL+"\t"+Math.exp(pLL));
 		}
 		double LL = Logarithms.sum(terms, num_classes);
 		return LL;
@@ -71,6 +88,20 @@ public class MixedRateLikelihood
 		{
 			Likelihood factory = class_factories[i];
 			terms[i] = factory.getEmptyLL() + log_class_prob[i];
+		}
+		double LL = Logarithms.sum(terms, num_classes);
+		return LL;
+	}
+	
+	public double getSingletonLL()
+	{
+		if (num_classes==0) computeParameters();
+		
+		double[] terms = new double[num_classes];
+		for (int i=0; i<num_classes; i++)
+		{
+			Likelihood factory = class_factories[i];
+			terms[i] = factory.getSingletonLL() + log_class_prob[i];
 		}
 		double LL = Logarithms.sum(terms, num_classes);
 		return LL;
@@ -112,8 +143,8 @@ public class MixedRateLikelihood
         		GeneralizedFileReader.guessReaderForInput(tree_file));
         count.ds.AnnotatedTable table = TableParser.readTable(tree.getLeafNames(),
         		GeneralizedFileReader.guessReaderForInput(table_file),true);
-        RateVariation input_model = RateVariationParser.readRates(
-        		GeneralizedFileReader.guessReaderForInput(rates_file)
+        GammaInvariant input_model = RateVariationParser.readRates(
+        		GeneralizedFileReader.guessBufferedReaderForInput(rates_file)
         		, tree);
         
 //        System.out.println(RateVariationParser.printRates(input_model));

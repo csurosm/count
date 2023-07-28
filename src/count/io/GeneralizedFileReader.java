@@ -15,7 +15,9 @@
  */
 package count.io;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
 import java.util.zip.GZIPInputStream;
@@ -36,7 +38,7 @@ public class GeneralizedFileReader extends java.io.BufferedReader
     }
     /**
      * Sets an input reader by parsing the file path: if it looks like an URL,
-     * a URL connection is initiated; if it ends with <tt>gz</tt>, then
+     * a URL connection is initiated; if it ends with <code>gz</code>, then
      * it is uncompressed on the fly.
      *
      * @param file_name URL or file path name
@@ -45,7 +47,38 @@ public class GeneralizedFileReader extends java.io.BufferedReader
      */
     public static Reader guessReaderForInput(String file_name) throws IOException
     {
-        java.io.InputStream base ;
+//        java.io.InputStream base ;
+//        if (file_name.startsWith("ftp:") || file_name.startsWith("http:"))
+//        {
+//            URL url = new URL(file_name);
+//
+//            base = url.openStream();
+//        } else
+//        {
+//        	if (file_name == "-") // stdin
+//        		base = System.in;
+//        	else
+//        		base=new java.io.FileInputStream(file_name);
+//        }
+//
+//        if (file_name.endsWith(".gz"))
+//            base = new GZIPInputStream(base);
+//        else if (file_name.endsWith(".zip"))
+//            base = new ZipInputStream(base);
+    	if (file_name==null || "".equals(file_name)) return null;
+        return new java.io.InputStreamReader(guessInputStreamForInput(file_name));
+    }
+    
+    public static BufferedReader guessBufferedReaderForInput(String file_name) throws IOException
+    {    
+    	if (file_name==null || "".equals(file_name)) return null;
+    	return new BufferedReader(guessReaderForInput(file_name));
+    }
+    
+    public static InputStream guessInputStreamForInput(String file_name) throws IOException
+    {
+    	if (file_name==null || "".equals(file_name)) return null;
+        InputStream base ;
         if (file_name.startsWith("ftp:") || file_name.startsWith("http:"))
         {
             URL url = new URL(file_name);
@@ -53,13 +86,16 @@ public class GeneralizedFileReader extends java.io.BufferedReader
             base = url.openStream();
         } else
         {
-            base=new java.io.FileInputStream(file_name);
+        	if (file_name == "-") // stdin
+        		base = System.in;
+        	else
+        		base=new java.io.FileInputStream(file_name);
         }
 
         if (file_name.endsWith(".gz"))
             base = new GZIPInputStream(base);
-        else if (file_name.endsWith("zip"))
+        else if (file_name.endsWith(".zip"))
             base = new ZipInputStream(base);
-        return new java.io.InputStreamReader(base);
+        return base;
     }
 }

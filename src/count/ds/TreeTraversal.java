@@ -1,6 +1,9 @@
 package count.ds;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.function.IntConsumer;
 
 /**
 *
@@ -62,6 +65,50 @@ public class TreeTraversal
 		return preOrder;
 	}
 	
+	/**
+	 * Reverses the order in the input array.
+	 * @param order
+	 * @return same array, bit elements are now in reverse order
+	 */
+	public static int[] reverse(int[] order)
+	{
+		int i=0;
+		int j=order.length-1;
+		while (i<j)
+		{
+			int oj = order[j];
+			order[j]=order[i];
+			order[i]=oj;
+			++i;
+			--j;
+		}
+		return order;
+	}
+	
+	public static int[] levelOrder(IndexedTree tree)
+	{
+		return (new TreeTraversal(tree)).levelOrder();
+	}
+	
+	public  int[] levelOrder()
+	{
+		int[] visited_nodes = new int[tree.getNumNodes()]; // used as a FIFO queue for level-order visit
+		if (visited_nodes.length==0) return visited_nodes; // empty tree? 
+		int next_put=0;
+		int next_get=0;
+		visited_nodes[next_put++] = tree.getRoot();
+		while (next_get<next_put && next_put<visited_nodes.length) // stop when all leaves are enqueued
+		{
+			int node = visited_nodes[next_get++]; // dequeue
+			if (!tree.isLeaf(node))
+			{
+				for (int ci=0; ci<tree.getNumChildren(node); ci++)
+					visited_nodes[next_put++] = tree.getChild(node, ci); // enqueue
+			}
+		}
+		return visited_nodes;
+	}
+	
 	
 	public static int[] indexOrder(IndexedTree tree)
 	{
@@ -69,7 +116,7 @@ public class TreeTraversal
 	}
 	
 	/**
-	 * Increasing sequence of naturals 0,1,...,</var>n</var>-1. 
+	 * Increasing sequence of naturals 0,1,...,<var>n</var>-1. 
 	 * 
 	 * @param n number of elements 
 	 * @return
@@ -96,6 +143,41 @@ public class TreeTraversal
 //			A[j] = a;
 //		}
 //	}
+	
+	public static int[] getSubtreeNodes(IndexedTree tree, int subtree_root)
+	{
+		List<Integer> subtree_nodes = new ArrayList<>();
+		TreeTraversal T = new TreeTraversal(tree);
+		T.traverse(subtree_root, node->subtree_nodes.add(node), null);
+		int[] get = new int[subtree_nodes.size()];
+		for (int j=0; j<get.length; j++)
+			get[j] = subtree_nodes.get(j);
+		return get;
+	}
+	
+	
+	/**
+	 * Tree traversal by recursion 
+	 * 
+	 * @param node
+	 * @param preVisit called in prefix order, with node index 
+	 * @param postVisit called in postfix order, with node index 
+	 */
+	public void traverse(int node, IntConsumer preVisit, IntConsumer postVisit)
+	{
+		if (preVisit != null)
+			preVisit.accept(node);
+		
+		int num_children = tree.getNumChildren(node); 
+		for (int ci=0; ci<num_children; ci++)
+		{
+			int child = tree.getChild(node, ci);
+			traverse(child, preVisit, postVisit);
+		}
+		
+		if (postVisit!=null)
+			postVisit.accept(node);
+	}
 	
 	
 	private int visit(int node, int visit_pos, int[] preOrder, int[] postOrder)
@@ -208,6 +290,13 @@ public class TreeTraversal
 		}
 		
 		@Override
+		public String getName(int node)
+		{
+			int i = original_index[node];
+			return traversal.tree.getName(i);
+		}
+		
+		@Override
 		public int getChild(int node, int cidx)
 		{
 			int i = original_index[node];
@@ -215,4 +304,96 @@ public class TreeTraversal
 			return our_index[c];
 		}
 	}
+	
+	/**
+	 * Array of subtree sizes --- number of nodes within the subtree --- 
+	 * rooted at each node.
+	 * 
+	 * @param tree
+	 * @return
+	 */
+    public static int[] getSubtreeSizes(IndexedTree tree)
+    {
+        final int num_nodes = tree.getNumNodes();
+        final int[] size = new int[num_nodes];
+        for (int node=0; node<num_nodes; node++)
+        {
+            if (tree.isLeaf(node))
+                size[node]=1;
+            else
+            {
+                int s = 0;
+                final int nc = tree.getNumChildren(node);
+                for (int ci=0; ci<nc; ci++)
+                {
+                    int child = tree.getChild(node, ci);
+                    s += size[child];
+                }
+                size[node]=s+1;
+            }
+        }
+        return size;
+    }
+    
+    public static int depth(IndexedTree tree, int node)
+    {
+    	int d = 0;
+    	while (!tree.isRoot(node))
+    	{
+    		node = tree.getParent(node);
+    		d++;
+    	}
+    	return d;
+    }
+    
+    public static int[] getPathToRoot(IndexedTree tree, int node)
+    {
+    	int[] path = new int[depth(tree, node)+1];
+    	int i=0;
+    	do
+    	{
+    		path[i] = node;
+    		node = tree.getParent(node);
+    		i++;
+    	} while (i<path.length);
+    	return path;
+    }
+    
+    public static int[] getHeights(IndexedTree tree)
+    {
+    	final int num_nodes = tree.getNumNodes();
+    	final int[] height = new int[num_nodes];
+    
+    	// stays 0 for leaves
+    	for (int node = tree.getNumLeaves(); node<num_nodes; node++)
+    	{
+			int h = 0;
+			for (int ci=0; ci<tree.getNumChildren(node); ci++)
+			{
+				int child = tree.getChild(node, ci);
+				h = Integer.max(h, height[child]);
+			}
+			height[node] = 1+h;
+    	}
+    	return height;
+    }
+    
+    public static int[] getDepths(IndexedTree tree)
+    {
+    	final int num_nodes = tree.getNumNodes();
+    	final int[] depth = new int[num_nodes];
+    
+    	int node = num_nodes-1;
+    	assert (tree.isRoot(node)); 
+    	// depth[node]=0;
+    	while (node>0)
+    	{
+    		--node;
+    		depth[node] = 1+depth[tree.getParent(node)];
+    	}
+    	return depth;
+    	
+    }
+    
+	
 }

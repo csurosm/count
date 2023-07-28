@@ -45,7 +45,7 @@ public class Poisson implements DiscreteDistribution
      * Reminder: <var>p</var><sub>k</sub>=e<sup>-<var>r</var></sup> <var>r</var><sup><var>k</var></sup>/<var>k</var>!.
      */
     @Override
-    public double[] getDistribution(int n)
+    public double[] getPointMassFunction(int n)
     {
         //System.out.println("#**Poisson  r="+r);
         double[] d = new double[n+1];
@@ -91,4 +91,11 @@ public class Poisson implements DiscreteDistribution
     
     @Override
     public final int getNumParameters(){return 1;}
+    
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName()+"[r "+r+"]";
+    }
+    
 }

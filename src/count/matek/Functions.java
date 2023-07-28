@@ -16,7 +16,7 @@
 package count.matek;
 
 /**
- * Some functions adapted from Numerical Recipes.
+ * Some functions adapted from Numerical Recipes, and other useful calculations.
  *
  * @author Mikl&oacute;s Cs&#369;r&ouml;s 
  * @since November 7, 2003, 2:58 PM
@@ -146,10 +146,12 @@ public class Functions
 		private final double gammln_offset;
 		
 		/**
-		 * Logarithm of the rising factorial log (k(k+1)...(k+n-1))
+		 * Logarithm of the rising factorial log (k(k+1)...(k+n-1)). 
+		 * If the parameter is small enough. the precomputed 
+		 * values are used; otherwise calls {@link Functions#gammln(double)}. 
 		 * 
-		 * @param n
-		 * @return
+		 * @param n nonnegative argument
+		 * @return log (o(o+1)(o+2)...(o+n-1))
 		 */
 		public double factln(int n)
 		{
@@ -271,7 +273,7 @@ public class Functions
     /**
     * Complementary error function erfc(x).
     *
-    * \frac{2}{\sqrt{\pi}} \int_{x}&{\infty} e^(-t^2) dt
+    * <pre>\frac{2}{\sqrt{\pi}} \int_{x}&amp;{\infty} e^(-t^2) dt</pre>
     *
     * (NR ch. 6.2)
     */
@@ -432,14 +434,14 @@ public class Functions
     }
     
     /**
-     * Computes the chi-squared test statistic.
+     * Computes the chi-squared test statistic.  
      * Based on Numerical Recipes 14.3
      *
      * @param data binned data
      * @param expected expected values in the bins by the model
      * @param num_constraints number of constraints that determine the degrees of freedom: 
      *     if expected is computed from data, then +1, plus number of parameters fitted
-     * @return nothing; sets the test_statistic --- chi-squure statistic and P-value (entries 0 and 1)
+     * param test_statistic  in lieu of return value, we set this array --- chi-square statistic and P-value (entries 0 and 1)
      */ 
     public static final void Chi_square_test(double[] data, double[] expected, int num_constraints, double[] test_statistic)
     {
@@ -455,4 +457,62 @@ public class Functions
         test_statistic[0] = chisq;
         test_statistic[1] = p;
     }
+
+    /**
+     * Rounds to the closest unit at the given precision.
+     * 
+     * @param x the value to be rounded
+     * @param exact_values if not null, then (msd, exponent) pair is put there (must be of length &ge;2)
+     * @return 
+     */    
+    public static double roundToMostSignificantDigit(double x, int[] exact_values)
+    {
+        return roundToMostSignificantDigit(x, exact_values, false);
+    }
+    /**
+     * Rounds a double to one significant digit (called msd). 
+     * 
+     * @param x the value to be rounded
+     * @param exact_values if not null, then (msd, exponent) pair is put there (must be of length &ge;2)
+     * @param round_to_zero whether we round towards 0 (conversion to int), or to the closest unit
+     * @return the rounded value
+     */
+    public static double roundToMostSignificantDigit(double x, int[] exact_values, boolean round_to_zero)
+    {
+        
+        if (x==0.0)
+        {
+            if (exact_values!=null)
+            {
+                exact_values[0]=0;
+                exact_values[1]=0;
+            }
+            return x;
+        } 
+        int sign = 1;
+        if (x<0.0)
+        {
+            sign = -1;
+            x=-x;
+        }
+        
+        double z = Math.log10(x/(round_to_zero?1.0:0.95));
+        int exponent = (int)z;
+        if (z<0.) exponent--;
+        
+        
+        double pow10 = Math.pow(10.0, exponent);
+        int msd = (int)(x/pow10+(round_to_zero?0.0:0.5));
+        msd = sign * msd;
+        if (exact_values != null)
+        {
+            exact_values[0] = msd;
+            exact_values[1] = exponent;
+        }
+        double v = pow10 * msd;
+        //System.out.println("#*RMD.rTMSD x "+x+"\t v"+v+"\t"+msd+"E"+exponent);
+        
+        return v;
+    }
+
 }

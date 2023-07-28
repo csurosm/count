@@ -57,7 +57,7 @@ public class NegativeBinomial implements DiscreteDistribution
      *
      */
     @Override
-    public double[] getDistribution(int n)
+    public double[] getPointMassFunction(int n)
     {
         double[] d = new double[n+1];
         if (t>2e9) // largest integer is about 2.147e9
@@ -134,4 +134,5 @@ public class NegativeBinomial implements DiscreteDistribution
     {
         return getClass().getSimpleName()+"[t "+t+"; q "+q+"]";
     }
+    
 }

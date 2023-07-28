@@ -16,7 +16,8 @@
 package count.io;
 
 import java.io.Reader;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.io.BufferedReader;
 import java.io.IOException;
 
@@ -27,8 +28,8 @@ import count.matek.NegativeBinomial;
 import count.matek.PointDistribution;
 import count.matek.Poisson;
 import count.matek.ShiftedGeometric;
-import count.model.RateModel;
-import count.model.RateVariation;
+import count.model.FreeMixedModel;
+import count.model.GammaInvariant;
 import count.model.TreeWithRates;
 
 /**
@@ -43,60 +44,60 @@ public class RateVariationParser
      */
     static String RATE_VARIATION_PREFIX = "|variation";
     static String ROOT_PRIOR_PREFIX = "|root";
-    static String MODEL_END = "|End";
+    static String MODEL_END = "|endrates"; // for free mixed model
     
 	private RateVariationParser() {}
 	
-	public static void initFromFile(TreeWithRates rates, BufferedReader input) throws IOException
-	{
-		initFromFile(rates, input, false);
-	}
-	private static void initFromFile(TreeWithRates rates, BufferedReader input, boolean compatibility) throws IOException
-	{
-		IndexedTree tree = rates.getTree();
-		int num_nodes = tree.getNumNodes();
-		final int[] postorder = TreeTraversal.postOrder(tree); // legacy logic: input file lists the rates in postorder
-		
-		int stop_offset = compatibility?1:0; // not for root in legacy format
-		
-		for (int i=0; i<num_nodes-stop_offset; i++) 
-		{
-			String line = null;
-	        do
-	        {
-	            line = input.readLine();
-	        } while (line != null && line.startsWith("#")); // skip comments
+//	public static void initFromFile(TreeWithRates rates, BufferedReader input) throws IOException
+//	{
+//		initFromFile(rates, input, true);
+//	}
+//	private static void initFromFile(TreeWithRates rates, BufferedReader input, boolean compatibility) throws IOException
+//	{
+//		IndexedTree tree = rates.getTree();
+//		int num_nodes = tree.getNumNodes();
+//		final int[] postorder = TreeTraversal.postOrder(tree); // legacy logic: input file lists the rates in postorder
+//		
+//		int stop_offset = compatibility?1:0; // not for root in legacy format
+//		
+//		for (int i=0; i<num_nodes-stop_offset; i++) 
+//		{
+//			String line = null;
+//	        do
+//	        {
+//	            line = input.readLine();
+//	        } while (line != null && line.startsWith("#")); // skip comments
+//	
+//	        int node_idx = postorder[i];
+//	        String[] fields=line.split("\\s+");
+//	        double len = Double.parseDouble(fields[0]);
+//	        double drate =  Double.parseDouble(fields[1]);
+//	        double lrate = Double.parseDouble(fields[2]);
+//	        double grate = Double.parseDouble(fields[3]);
+//	        
+//	        rates.setEdgeLength(node_idx, len);
+//	        rates.setDuplicationRate(node_idx, drate);
+//	        rates.setLossRate(node_idx, lrate);
+//	        if (drate==0.0)
+//	        {
+//	        	if (lrate==0.0)
+//	    	        rates.setGainRate(node_idx, grate);
+//	        	else
+//	        		rates.setGainRate(node_idx, grate/lrate); // legacy logic: store κ*μ
+//	        } else
+//	        {
+//	        	rates.setGainRate(node_idx, grate/drate); // legacy logic: store κ*λ
+//	        }
+//		}
+//	}
 	
-	        int node_idx = postorder[i];
-	        String[] fields=line.split("\\s+");
-	        double len = Double.parseDouble(fields[0]);
-	        double drate =  Double.parseDouble(fields[1]);
-	        double lrate = Double.parseDouble(fields[2]);
-	        double grate = Double.parseDouble(fields[3]);
-	        
-	        rates.setEdgeLength(node_idx, len);
-	        rates.setDuplicationRate(node_idx, drate);
-	        rates.setLossRate(node_idx, lrate);
-	        if (drate==0.0)
-	        {
-	        	if (lrate==0.0)
-	    	        rates.setGainRate(node_idx, grate);
-	        	else
-	        		rates.setGainRate(node_idx, grate/lrate); // legacy logic: store κ*μ
-	        } else
-	        {
-	        	rates.setGainRate(node_idx, grate/drate); // legacy logic: store κ*λ
-	        }
-		}
-	}
+	private static String last_rate_line= null; 
 	
-	public static RateVariation readRates(Reader reader, IndexedTree tree) throws FileFormatException, IOException	
+	public static GammaInvariant readRates(BufferedReader input, IndexedTree tree) throws FileFormatException, IOException	
 	{
 		final TreeWithRates base_rates = new TreeWithRates(tree);
-		final RateVariation readRates = new RateVariation(base_rates);
-		final BufferedReader input = new BufferedReader(reader);
+		final GammaInvariant readRates = new GammaInvariant(base_rates);
 		
-		initFromFile(base_rates, input, true);
 		
 		// parse the root prior and the gamma/forbidden rate categories
 		int gain_categories = 1;
@@ -113,8 +114,13 @@ public class RateVariationParser
 		double loss_forbidden = 0.0;
 		double duplication_forbidden = 0.0;
 		
+		
+		int root = tree.getRoot();
 		DiscreteDistribution root_prior=null;
 		
+		final int[] postorder = TreeTraversal.postOrder(tree); // legacy logic: input file lists the rates in postorder
+		int node_idx = 0;
+
 		String line = null;
         do
         {
@@ -126,6 +132,7 @@ public class RateVariationParser
                 line = line.trim();
                 if (line.length()==0 || line.startsWith("#"))
                     continue;
+                
                 if (line.startsWith(RATE_VARIATION_PREFIX))
                 {
                     String variation_data = line.substring(RATE_VARIATION_PREFIX.length()+1);
@@ -180,42 +187,142 @@ public class RateVariationParser
                         root_prior = new ShiftedGeometric(params[0], params[1]);
                     else
                         throw new FileFormatException("Root prior distribution '"+fields[0]+"' is unknown in line '"+line+"'");
+                } else
+                {
+                	// regular node with edge length and rates
+                	int node = postorder[node_idx];
+                	
+        	        String[] fields=line.split("\\s+");
+        	        // legacy order: length, dup, loss, gain
+        	        double len = Double.parseDouble(fields[0]);
+        	        double drate =  Double.parseDouble(fields[1]);
+        	        double lrate = Double.parseDouble(fields[2]);
+        	        double grate = Double.parseDouble(fields[3]);
+        	        
+        	        base_rates.setEdgeLength(node, len);
+        	        base_rates.setDuplicationRate(node, drate);
+        	        base_rates.setLossRate(node, lrate);
+        	        if (drate==0.0)
+        	        {
+        	        	if (lrate==0.0)
+        	    	        base_rates.setGainRate(node, grate);
+        	        	else
+        	        		base_rates.setGainRate(node, grate/lrate); // legacy logic: store κ*μ
+        	        } else
+        	        {
+        	        	base_rates.setGainRate(node, grate/drate); // legacy logic: store κ*λ
+        	        }
+        	        
+        	        node_idx++;
                 }
             }
         } while (line != null);
-        // set the root prior
-        int root_idx = tree.getRoot();
-        if (root_prior == null)
-        	throw new FileFormatException("Root prior distribution is missing.");
         
-        double[] params = root_prior.getParameters();
-        if (root_prior instanceof Poisson)
-        {
-        	base_rates.setParameters(root_idx, params[0], 0.0, 0.0);
-        } else if (root_prior instanceof NegativeBinomial)
-        {
-        	base_rates.setParameters(root_idx, params[NegativeBinomial.GAIN_IDX], 0.0, params[NegativeBinomial.DUPLICATION_IDX]);
-        } else if (root_prior instanceof ShiftedGeometric)
-        {
-        	base_rates.setParameters(root_idx, 0.0, params[ShiftedGeometric.LOSS_IDX], params[ShiftedGeometric.DUPLICATION_IDX]);
+        last_rate_line = line;
+        
+        if (node_idx<=tree.getNumNodes()-1 && root_prior==null)
+        	return null;
+        
+        // set the root prior
+        if (root_prior == null)
+        { // root rates were listed in postorder 
+			root_prior = base_rates.getLossParameter(root)==1.0
+				?base_rates.getGainDistribution(root)
+				:base_rates.getDuplicationDistribution(root);
         } else
         {
-        	assert (root_prior instanceof PointDistribution);
-        	base_rates.setParameters(root_idx, 0.0, params[0], 0.0);
+	        int root_idx = tree.getRoot();
+	        double[] params = root_prior.getParameters();
+	        if (root_prior instanceof Poisson)
+	        {
+	        	base_rates.setParameters(root_idx, params[0], 1.0, 0.0); // loss prob=1 at root...
+	        } else if (root_prior instanceof NegativeBinomial)
+	        {
+	        	base_rates.setParameters(root_idx, params[NegativeBinomial.GAIN_IDX], 1.0, params[NegativeBinomial.DUPLICATION_IDX]);
+	        } else if (root_prior instanceof ShiftedGeometric)
+	        {
+	        	base_rates.setParameters(root_idx, 0.0, params[ShiftedGeometric.LOSS_IDX], params[ShiftedGeometric.DUPLICATION_IDX]);
+	        } else
+	        {
+	        	assert (root_prior instanceof PointDistribution);
+	        	base_rates.setParameters(root_idx, 0.0, params[0], 0.0);
+	        }
         }
         
         // set the rate categories 
         readRates.setClasses(gain_categories, loss_categories, duplication_categories, length_categories);
-		readRates.setForbiddenFractions(gain_forbidden, loss_forbidden, duplication_forbidden);
-		readRates.setAlpha(gain_alpha, loss_alpha, duplication_alpha, length_alpha);
+        readRates.setGainForbidden(gain_forbidden);
+        readRates.setLossForbidden(loss_forbidden);
+        readRates.setDuplicationForbidden(duplication_forbidden);
+        readRates.setGainAlpha(gain_alpha);
+        readRates.setLossAlpha(loss_alpha);
+        readRates.setDuplicationAlpha(duplication_alpha);
+        readRates.setLengthAlpha(length_alpha);
 		
 		return readRates;
 	}
 	
-	
-	public static String printRates(RateVariation rates)
+	public static FreeMixedModel readFreeRates(BufferedReader input, IndexedTree tree, GammaInvariant class_model) throws FileFormatException, IOException	
 	{
-		RateModel.GLD base_model = rates.getBaseModel();
+		List<TreeWithRates> class_rates_list = new ArrayList<>();
+		List<Double> class_probs_list = new ArrayList<>();
+		String line = null;
+		if (class_model == null)
+			class_model = readRates(input, tree);		
+		
+		while(class_model != null)
+		{
+			line = last_rate_line;
+			
+//			System.out.println("#**RVP.rFR line "+line+"\t// "+class_rates_list.size());
+			
+			if (line != null && line.startsWith(MODEL_END))
+			{
+				String class_data = line.substring(MODEL_END.length()+1);
+                String[] fields = class_data.split("\\s+");			
+                int class_idx = Integer.parseInt(fields[0]);
+                double pc = Double.parseDouble(fields[1]);
+                while (class_idx>=class_rates_list.size())
+                {
+                	class_rates_list.add(null);
+                	class_probs_list.add(null);
+                }
+                class_rates_list.set(class_idx, class_model.getBaseModel());
+                class_probs_list.set(class_idx, pc);
+                
+                class_model = readRates(input, tree);
+			} else if (line == null)
+			{
+				for (int c=0; c<class_model.getNumClasses(); c++)
+				{
+					double pc = class_model.getClassProbability(c);
+					if (pc != 0.0)
+					{
+						class_rates_list.add(class_model.getClassModel(c));
+						class_probs_list.add(pc);
+					}
+				}
+				class_model = null; // no more 
+			} else
+			{
+				 throw new FileFormatException("Unrecognized variation line: "+line);				
+			}
+		} 
+		
+		TreeWithRates[] class_rates = class_rates_list.toArray(new TreeWithRates[0]);
+		double[] class_weights = new double[class_rates.length];
+		for (int c=0; c<class_weights.length; c++)
+		{
+			class_weights[c] = class_probs_list.get(c);
+		}
+		FreeMixedModel free_model = new FreeMixedModel(class_rates, class_weights);
+		return free_model;
+	}
+	
+	
+	
+	public static String printRates(TreeWithRates base_model)
+	{
 		IndexedTree tree = base_model.getTree();
 		int[] all_nodes = TreeTraversal.postOrder(tree); // must be listed in this order bc that's how it is expected on input
 		
@@ -223,7 +330,9 @@ public class RateVariationParser
 		
 		for (int node:all_nodes)
 		{
-			if (!tree.isRoot(node)) // root is last entry
+			if (tree.isRoot(node))
+				sb.append("#ROOTRATES ");
+			if (!tree.isRoot(node) || true) // root is last entry, but commented out
 			{
 				double len = base_model.getEdgeLength(node);
 				double grate = base_model.getGainRate(node);
@@ -238,9 +347,80 @@ public class RateVariationParser
 				{
 					grate *= drate;
 				}
-				sb.append(len+"\t"+drate+"\t"+lrate+"\t"+grate+"// "+tree.toString(node)+"\n");
+				double p = base_model.getLossParameter(node);
+				double q = base_model.getDuplicationParameter(node);
+				double r = base_model.getGainParameter(node);
+				sb.append(len)
+				.append("\t").append(drate)
+				.append("\t").append(lrate)
+				.append("\t").append(grate);
+				sb.append("\t// params")
+				.append("\t").append(p)
+				.append("\t").append(q)
+				.append("\t").append(r)
+				.append("\t// ").append(tree.toString(node));
+				sb.append("\n");
 			}
 		}
+		return sb.toString();
+	}
+	
+	public static String printRootPrior(TreeWithRates base_model)
+	{
+		IndexedTree tree = base_model.getTree();
+		StringBuilder sb = new StringBuilder();
+        sb.append(ROOT_PRIOR_PREFIX);
+        sb.append('\t');
+        
+        int root = tree.getRoot();
+        DiscreteDistribution root_prior;
+        if (base_model.getGainRate(root)==0.0)
+        	root_prior = base_model.getDuplicationDistribution(root);
+        else 
+        	root_prior = base_model.getGainDistribution(root);
+        sb.append(root_prior.getClass().getSimpleName());
+        double[] params = root_prior.getParameters();
+        for (int i=0; i<params.length; i++)
+        {
+            sb.append('\t');
+            sb.append(params[i]);
+        }
+        sb.append("\n");
+//      sb.append(MODEL_END);
+//      sb.append("\n");
+        return sb.toString();		
+	}
+	
+	public static String printRates(GammaInvariant rates)
+	{
+		TreeWithRates base_model = rates.getBaseModel();
+		IndexedTree tree = base_model.getTree();
+//		int[] all_nodes = TreeTraversal.postOrder(tree); // must be listed in this order bc that's how it is expected on input
+		
+		StringBuilder sb = new StringBuilder(printRates(base_model));
+		
+//		for (int node:all_nodes)
+//		{
+//			if (tree.isRoot(node))
+//				sb.append("#ROOTRATES ");
+//			if (!tree.isRoot(node) || true) // root is last entry
+//			{
+//				double len = base_model.getEdgeLength(node);
+//				double grate = base_model.getGainRate(node);
+//				double lrate = base_model.getLossRate(node);
+//				double drate = base_model.getDuplicationRate(node);
+//				
+//				// keeping legacy scaling
+//				if (drate==0.0)
+//				{
+//					if (lrate!=0.0) grate *= lrate;  
+//				} else 
+//				{
+//					grate *= drate;
+//				}
+//				sb.append(len+"\t"+drate+"\t"+lrate+"\t"+grate+"\t// "+tree.toString(node)+"\n");
+//			}
+//		}
         sb.append(RATE_VARIATION_PREFIX);
         sb.append("\tduplication\t");
         sb.append(rates.getNumDuplicationGammaCategories());
@@ -293,6 +473,24 @@ public class RateVariationParser
         return sb.toString();
 	}
 
+	public static String printRates(FreeMixedModel model)
+	{
+		StringBuilder sb = new StringBuilder();
+		for (int c=0; c<model.getNumClasses(); c++)
+		{
+			TreeWithRates class_rates = model.getClassModel(c);
+			sb.append(printRates(class_rates));
+			sb.append(printRootPrior(class_rates));
+
+			double pc = model.getClassProbability(c);
+			sb.append(MODEL_END);
+			sb.append("\t").append(c);
+			sb.append("\t").append(pc);
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
     /**
      * Our own exception type.
      */
@@ -312,7 +510,7 @@ public class RateVariationParser
         String rate_file = args[arg_idx++];
         
         IndexedTree tree = NewickParser.readTree(new count.io.GeneralizedFileReader(tree_file));
-        RateVariation zeb = readRates(new count.io.GeneralizedFileReader(rate_file), tree);
+        GammaInvariant zeb = readRates(new count.io.GeneralizedFileReader(rate_file), tree);
         
         System.out.println("Read model:");
         System.out.println(printRates(zeb));

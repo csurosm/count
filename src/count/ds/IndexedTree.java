@@ -15,6 +15,12 @@
  */
 package count.ds;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import count.ds.Phylogeny.Node;
+
 /**
  * Public interface used by the algorithms:  
  * a rooted ordered tree in which every node is assigned a unique index defined by a 
@@ -27,7 +33,6 @@ package count.ds;
  * Parent's index is always larger than the child's index; the root has index <var>n</var>-1.  
  * Children are ordered by the node's indexing {@link Node#getChild(int) }.
  * 
- * @param <U> node types in this tree
  * 
  * @author Mikl&oacute;s Cs&#369;r&ouml;s
  */
@@ -72,12 +77,55 @@ public interface IndexedTree
      * Description for node. 
      * 
      * @param node_idx node index
-     * @
      * 
      */
     public default String toString(int node_idx)
     {
     	return Integer.toString(node_idx);
+    }
+    
+    /**
+     * Node name 
+     * 
+     * @param node
+     * @return
+     */
+    public String getName(int node);
+    
+    public static String LEAF_IDENT_PREFIX = "T";
+    public static String NODE_IDENT_PREFIX = "U";
+
+    public default String getIdent(int node)
+    {
+    	String ident 
+    	= (isLeaf(node)?LEAF_IDENT_PREFIX:NODE_IDENT_PREFIX)+Integer.toString(node);
+    	String name = getName(node);
+    	if (name != null)
+    		ident = ident + "[" + name +"]";
+    	return ident;
+    }
+    
+    /**
+     * Whether edge lengths are set. 
+     * 
+     * @return false by default
+     */
+    public default boolean hasLength()
+    {
+    	return false;
+    }
+    
+    /**
+     * Length of edge leading to node.
+     * @param node
+     * @return
+     */
+    public default double getLength(int node)
+    {
+    	if (isRoot(node))
+    		return Double.POSITIVE_INFINITY;
+    	else
+    		return 1.0;
     }
 
     /**
@@ -119,63 +167,86 @@ public interface IndexedTree
         return getParent(node_idx)<0;
     }
     
+    /**
+     * Array of leaf names (to be used for ordering the columns of the input table)
+     * 
+     * @return a non-null array of leaf names 
+     */
+    public default String[] getLeafNames()    
+    {
+    	int num_leaves = getNumLeaves();
+        String[] leaf_names = new String[num_leaves];
+        for (int leaf=0;leaf<num_leaves; leaf++)
+        {
+            leaf_names[leaf] = getName(leaf);
+        }
+        return leaf_names;
+    }
     
-//    /**
-//     * Node selection by index.
-//     * 
-//     * @param node_idx index of node in standard traversal {@link #getNodes}; assumed to be valid 
-//     * 
-//     * @return tree node with the given index 
-//     */
-//    public abstract U getNode(int node_idx);
-
+    /**
+     * Shortest positive-length edge in 
+     * the phylogeny (not considering root's "length").  
+     * 
+     * @return {@link Double#POSITIVE_INFINITY} if all edges are 0, or a finite positive number
+     */
+    public default double shortestEdgeLength()
+    {
+    	double shortest = Double.POSITIVE_INFINITY;
+    	for (int node=0; node<getNumNodes(); node++)
+    	{
+    		if (!isRoot(node))
+    		{
+    			double len = getLength(node);
+    			if (len>0)
+    				shortest = Double.min(shortest, len);
+    		}
+    	}
+    	return shortest;
+    }
     
-//    /**
-//     * Array of nodes in the index order. 
-//     * 
-//     * Node with index <var>i</var> occupies cell <var>i</var> in the returned array.
-//     * The indexes correspond to a depth-first traversal (parents 
-//     * after children) visiting leaves first. Leaves occupy lower indices, 
-//     * and the root in the array's last cell. 
-//     * 
-//     * @return an array of nodes (not null, but length-0 array for empty tree).
-//     */
-//    public abstract U[] getNodes();
+    /**
+     * Longest finite-length edge in 
+     * the phylogeny (not considering root's "length").  
+     * 
+     * @return 0.0 if all edges are infinite or 0.0, or else a finite positive number
+     */
+    public default double longestEdgeLength()
+    {
+    	double longest = 0.0;
+    	for (int node=0; node<getNumNodes(); node++)
+    	{
+    		if (!isRoot(node))
+    		{
+    			double len = getLength(node);
+    			if (len != Double.POSITIVE_INFINITY)
+    				longest = Double.max(longest, len);
+    		}
+    	}
+    	return longest;
+    }
     
-    
-//    /**
-//     * Array of leaves in the index order. 
-//     * 
-//     * @return an array of leaf nodes
-//     */
-//    public default U[] getLeaves()
-//    {
-//        U[] leaves = Arrays.copyOf(getNodes(), getNumLeaves());
-//        return leaves;
-//    }
-    
-//    /**
-//     * Number of edges in the tree. 
-//     * 
-//     * @return Number of nodes {@#getNumNodes()} minus 1. 
-//     */
-//    public default int getNumEdges()
-//    {
-//        return getNumNodes()-1;
-//    }
-    
-
-    
-//    /**
-//     * Tree root.
-//     * 
-//     * @return null if empty tree; otherwise a node without parent
-//     */
-//    public default U getRoot()
-//    {
-//        int n = getNumNodes();
-//        return n==0?null:getNode(n-1);
-//    }
-    
+    public default double[] edgeLengthQuantiles()
+    {
+    	double[] edges = new double[getNumNodes()];
+    	int num_edges = 0;
+    	for (int node=0; node<edges.length; node++)
+    	{
+    		if (!isRoot(node))
+    		{
+    			double len = getLength(node);
+    			if (len != 0.0 && len != Double.POSITIVE_INFINITY)
+    				edges[num_edges++] = len;
+    		}
+    	}
+    	double[] quantiles = new double[3];
+    	if (num_edges > 0)
+    	{
+	    	Arrays.sort(edges,0,num_edges);
+	    	quantiles[1] = edges[edges.length/2];
+	    	quantiles[0] = edges[edges.length/4];
+	    	quantiles[2] = edges[3*edges.length/4];
+    	}
+    	return quantiles;
+    }
     
 }

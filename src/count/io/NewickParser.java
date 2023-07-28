@@ -16,20 +16,28 @@
 package count.io;
 
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import count.ds.IndexedTree;
 import count.ds.Phylogeny;
-import count.util.Executable;
 import java.io.PrintStream;
 
 
 /**
  * Newick-format phylogeny parsing.
  * 
- * Implementing classes fill exploit the hooks {@link #startChildren()}, {@link #nextChild() }, {@link #endChildren() } and {@link #endTree() },
- * {@link #setLength(double) } and {@link #setName(java.lang.String) }, which are called by {@link #parse() }.
+ * Implementing classes fill exploit the hooks {@link #startChildren()}, 
+ * {@link #nextChild() }, {@link #endChildren() } and {@link #endTree() },
+ * {@link #setLength(double) } and {@link #setName(java.lang.String) }, 
+ * which are called by {@link #readTree() }.
  *  The grammar used here is the following.
  * [Corresponds to the Newick format used by Phylip, DRAWTREE etc., with the addition of the '#' style comments,
  * see Joe Felsenstein;s <a href="http://evolution.genetics.washington.edu/phylip/newick_doc.html">specification</a>].
@@ -106,7 +114,9 @@ public class NewickParser
         this.hashmark_comments_allowed = hashmark_comments_allowed;
         this.relaxed_name_parsing = relaxed_name_parsing;
     }
-
+    
+    private NewickParser(){this(null,false,true,true);}
+    
     private final boolean nested_comments_allowed;
     private final boolean hashmark_comments_allowed;
     /**
@@ -162,6 +172,44 @@ public class NewickParser
      */
     private static final String NEED_QUOTE_FOR= ""+QUOTE+LPAREN+RPAREN+COMMA+SEMICOLON+COLON+LBRACKET+RBRACKET;
     
+    public static String printTree(Phylogeny tree)
+    {
+    	return printTree(tree
+    			, false // quotes only if necessary
+    			, true // show edge lengths
+    			, false // no line breaks
+    			, false // do not show identifiers
+    			);
+    }
+    
+    public static String printTree(IndexedTree tree)
+    {
+    	if (tree instanceof Phylogeny) return printTree((Phylogeny)tree);
+    	else return printTree(new Phylogeny(tree));
+    }
+    
+    /**
+     * One-line tree description in Newick format with comments at some nodes.   
+     * 
+     * @param tree
+     * @param node_comments
+     * @return
+     */
+    public static String printTree(IndexedTree tree, String[] node_comments)
+    {
+    	Phylogeny phylo = 
+    			tree instanceof Phylogeny
+    			?(Phylogeny)tree
+    			:new Phylogeny(tree);
+    	boolean quote_name = false;
+    	boolean show_length = true;
+    	boolean line_breaks = false;
+    	 String print_tree 
+         = printTree(null, phylo.getRootNode(), quote_name, show_length, line_breaks, node_comments)
+         	.append(';').toString();
+    	 return print_tree;
+    }
+    
     /**
      * Newick-formatted String for a phylogeny.
      * 
@@ -180,33 +228,48 @@ public class NewickParser
             boolean show_node_identifiers)
     {
         Phylogeny.Node root = tree.getRootNode();
+        String[] node_comments = null;
+        if (show_node_identifiers)
+        {
+        	node_comments = new String[tree.getNumNodes()];
+        	for (int node=0; node<node_comments.length; node++)
+        	{
+        		node_comments[node] = tree.getNode(node).getNodeIdentifier();
+        	}
+        }
         String print_tree 
-                = printTree(null, root, always_quote_name, show_edge_lengths, line_breaks_after_each_node, show_node_identifiers)
+                = printTree(null, root, always_quote_name, show_edge_lengths, line_breaks_after_each_node, node_comments)
                 .append(";").toString();
         return print_tree;
     }
 
-    private static StringBuffer printTree(
-            StringBuffer sb,
+    /** 
+     * The recursive printing procedure for printing the subtree (without closing semicolon).
+     * 
+     * @param sb may be null
+     * @param node root of subtree
+     * @param always_quote_name
+     * @param show_edge_lengths
+     * @param line_breaks_after_each_node
+     * @param node_comments
+     * @return sb appended with printing of this subtree
+     */
+    private static StringBuilder printTree(
+            StringBuilder sb,
             Phylogeny.Node node,
             boolean always_quote_name,
             boolean show_edge_lengths,
             boolean line_breaks_after_each_node,
-            boolean show_node_identifiers)
+            String[] node_comments)
     {
-        final String preNode = "< ";
-        final String inNode = "= ";
-        final String postNode = " > ";
+//        final String preNode = "< ";
+//        final String inNode = "= ";
+//        final String postNode = " > ";
         final String sepNode = line_breaks_after_each_node?"\n":" ";
-        if (sb==null) sb = new StringBuffer();
+        if (sb==null) sb = new StringBuilder();
         
         if (node == null) return sb;
         // previsit node info if requested
-        if (show_node_identifiers)
-            sb.append(LBRACKET)
-            .append(preNode)
-            .append(node.getNodeIdentifier())
-            .append(RBRACKET);
         int num_children = node.getNumChildren();
         // parenthesized list of children
         if (num_children>0)
@@ -219,17 +282,30 @@ public class NewickParser
                     sb.append(COMMA)
                     .append(sepNode);
                 }
-                if (show_node_identifiers)
-                {
-                    sb.append(LBRACKET)
-                    .append(inNode)
-                    .append(node.getNodeIdentifier())
-                    .append(RBRACKET);
-                }
-                sb = printTree(sb, node.getChild(ci), always_quote_name,show_edge_lengths,line_breaks_after_each_node,show_node_identifiers);
+//                // infix order visit 
+//                if (show_node_identifiers)
+//                {
+//                    sb.append(LBRACKET)
+//                    .append(inNode)
+//                    .append(node.getNodeIdentifier())
+//                    .append(RBRACKET);
+//                }
+                sb = printTree(sb, node.getChild(ci), always_quote_name,show_edge_lengths,line_breaks_after_each_node,node_comments);
             }        
             sb.append(RPAREN);
         }
+        // postfix visit, before name and edge length
+        if (node_comments != null)
+        {
+        	String com = node_comments[node.getIndex()];
+        	if (com != null)
+        	{
+	            sb.append(LBRACKET)
+	            .append(com)
+	            .append(RBRACKET);
+        	}
+        }
+        
         if (node.isLeaf() || node.getName() != null)
         {
             if (!node.isLeaf()) sb.append(' ');
@@ -241,14 +317,15 @@ public class NewickParser
             sb.append(COLON)
             .append(toIEEEFormat(node.getLength()));
         }
-        
-        if (show_node_identifiers)
-        {
-            sb.append(LBRACKET)
-            .append(postNode)
-            .append(node.getNodeIdentifier())
-            .append(RBRACKET);
-        }
+
+        // postvisit
+//        if (show_node_identifiers)
+//        {
+//            sb.append(LBRACKET)
+//            .append(postNode)
+//            .append(node.getNodeIdentifier())
+//            .append(RBRACKET);
+//        }
 
         return sb;
     }
@@ -418,9 +495,26 @@ public class NewickParser
     public static Phylogeny readTree(Reader R) throws ParseException, IOException
     {
         NewickParser parser = new NewickParser(R);
-        return parser.readTree();
+        Phylogeny readTree = parser.readTree();
+//        System.out.println("#**NP.rT leaves "+Arrays.toString(readTree.getLeafNames()));
+        return readTree;
     }
     
+    public static Phylogeny[] readAllTrees(Reader R) throws ParseException, IOException
+    {
+        NewickParser parser = new NewickParser(R);
+    	
+    	List<Phylogeny> input_trees = new ArrayList<>();
+    	int c;
+    	while ((c=parser.skipBlanksAndComments())!=-1)
+    	{
+    		parser.input.unread(c);
+    		Phylogeny P = parser.readTree();
+    		input_trees.add(P);
+    	}
+    	return input_trees.toArray(new Phylogeny[0]);
+    	
+    }
     /**
      * Lexical parsing for Newick format. 
      * 
@@ -528,11 +622,15 @@ public class NewickParser
                 } else
                     throw new ParseException(10, "Cannot have node name here."); 
             }
+            
         } while (c != -1 && parsing_state != ParsingState.PARSE_END);        
         
         
         if (parsing_state != ParsingState.PARSE_END)
             throw new ParseException(11, "Missing semicolon at the end");
+        
+
+        assert (c==SEMICOLON);
         
         return current_tree;
     }
@@ -540,7 +638,7 @@ public class NewickParser
     
     
     /**
-     * Called by {@link #parse() }  when starting to visit the current node's children (opening parenthesis).
+     * Called by {@link #readTree() }  when starting to visit the current node's children (opening parenthesis).
      */
     protected void startChildren() 
     {
@@ -570,12 +668,14 @@ public class NewickParser
             current_node.setName(s);
         } else if (relaxed_name_parsing)
         {
-            current_node.setName(current_node.getName().concat(" && "+s));
+            current_node.setName(current_node.getName().concat(""+s));
         } else // 
         {
             assert (!relaxed_name_parsing && current_node.getName()!=null);
             throw new NewickParser.ParseException(9, "Cannot name a node twice.");
         } 
+        
+//        System.out.println("#**NP.setName "+s+"\t"+current_node);
     }
 
     protected void endTree()
@@ -585,10 +685,17 @@ public class NewickParser
         Phylogeny.Node root = current_node;
         if (root.isLeaf() && root.getName()==null)
         {
-            current_tree = new Phylogeny(null);
+            current_tree = new Phylogeny();
             current_node = null;
         }
     }
+    
+    
+    /**
+     * Set by {@link #skipBlanksAndComments()}
+     */
+    private StringBuilder bracketed_comment = null;
+    
     /**
      * Skips white space and comments in the input. 
      * Reading position advances to the next informative character.
@@ -600,23 +707,31 @@ public class NewickParser
     {
         int c;
 
-        boolean parsed_a_comment=false;
+        bracketed_comment = new StringBuilder();
+        
+        boolean parsed_a_comment;
         do
         {
+        	parsed_a_comment=false; // reset at each iteration, so that more than 1 consecutive comments are skipped here 
             do{c=input.read();} while(c!=-1 && Character.isWhitespace((char)c)); // skip leading blanks
+            
             if (c==LBRACKET)
             {
-                parsed_a_comment=true;
+                parsed_a_comment=true; 
                 int nesting_level=1;
                 do
                 {
                     c=input.read();
-                    if (c==RBRACKET) nesting_level--;
-                    if (nested_comments_allowed && c==LBRACKET)
+                    if (c==(int)RBRACKET) nesting_level--;
+                    else if (nested_comments_allowed && c==(int)LBRACKET)
                         nesting_level++;
+                    else if (c!=-1)// including, normally, left bracket that stays in the comment
+                    {
+                    	bracketed_comment.append((char)c);
+                    }
                 } while (nesting_level != 0 && c != -1);
             } else if (hashmark_comments_allowed && c==HASHMARK)
-            do {c=input.read();} while (c!=-1 && c!='\n' && c!='\r');
+            	do {c=input.read();} while (c!=-1 && c!='\n' && c!='\r');
         } while(parsed_a_comment && c!=-1);
         return c;
     }    
@@ -658,7 +773,7 @@ public class NewickParser
     
     /**
      * Parses edge length. 
-     * In addition to usual numerical values, accept <code>NaN</code>, <code>+Inf</code>, <code>-Inf</code> and <code>Inf</code.  
+     * In addition to usual numerical values, accept <code>NaN</code>, <code>+Inf</code>, <code>-Inf</code> and <code>Inf</code>.  
      * 
      * @return edge length; maybe NaN, positive or negative infinity
      * @throws IOException
@@ -791,21 +906,89 @@ public class NewickParser
         }
     }
     
-    private void mainmain(String tree_file) throws Exception
+    private void mainmain(String[] args) throws Exception
     {
-        Phylogeny tree = readTree();
+    	
+    	CommandLine cli = new CommandLine(args, getClass(), 0);
+        Phylogeny tree = cli.getTree();
         PrintStream out = System.out;
         
-        out.println(Executable.getStandardHeader(this.getClass()));
-        out.println(Executable.getStandardRuntimeInfo());
-        out.println(Executable.getStandardHeader("Tree file: "+tree_file));
+        out.println(CommandLine.getStandardHeader(this.getClass()));
+        out.println(CommandLine.getStandardRuntimeInfo(this.getClass(), args));
         
-        System.out.println(printTree(tree, false, true, true, false));
-        for (Phylogeny.Node node: tree.getNodes())
+        boolean line_breaks = false;
+        
+		String filter_file = cli.getOptionValue(CommandLine.OPT_FILTER);
+		if (filter_file != null)
+    	{
+    		List<String> leaves_kept = new ArrayList<>();
+    		BufferedReader R = new BufferedReader(GeneralizedFileReader.guessReaderForInput(filter_file));
+    		String line;
+    		do
+    		{
+    			line = R.readLine();
+    			if (line != null)
+    			{
+        			if (line.length()==0 || line.startsWith("#"))
+        				continue;
+        			String[] fields = line.split("\\t");
+        			String name  = fields[0];
+        			leaves_kept.add(name);
+    			}
+    		} while (line != null);
+    		R.close();
+    		tree.filterLeaves(leaves_kept.toArray(new String[0])); 
+    	}
+    	String relabel_file = cli.getOptionValue(CommandLine.OPT_RELABEL);
+    	if (relabel_file != null)
+    	{
+    		Map<String,String> subst = new HashMap<>();
+    		
+    		BufferedReader R = new BufferedReader(GeneralizedFileReader.guessReaderForInput(relabel_file));
+    		String line;
+    		do
+    		{
+    			line = R.readLine();
+    			if (line != null)
+    			{
+        			if (line.length()==0 || line.startsWith("#"))
+        				continue;
+        			String[] fields = line.split("\\t");
+        			String old_name  = fields[0];
+        			String new_name = fields[1];
+        			subst.put(old_name, new_name);
+    			}
+    		} while (line != null);
+    		R.close();
+
+    		for (Phylogeny.Node L: tree.getLeaves())
+        	{
+        		String name = L.getName();
+        		if (subst.containsKey(name))
+        		{
+        			L.setName(subst.get(name));
+        			subst.remove(name);
+        		} else
+        		{
+        			out.println("# no relabeling for "+L.getName());
+        		}
+        	}
+//    		for (String name: subst.keySet())
+//    		{
+//    			out.println("# not in tree "+name);
+//    		}
+    	} // relabel
+    	
+    	if (filter_file==null && relabel_file==null)
         {
-            System.out.println("#** node "+node);
+            for (Phylogeny.Node node: tree.getNodes())
+            {
+                out.println("#** node "+node);
+            }
+        	line_breaks = true;
         }
-        
+        out.println(printTree(tree, false, true, line_breaks, false));
+    	
     }
     
     /**
@@ -816,14 +999,16 @@ public class NewickParser
      */
     public static void main(String[] args) throws Exception
     {
-        if (args.length <1 || args.length> 2)
-        {
-            System.err.println("Call as $0 file [list]\n\twhere list is a comma-separated list of terminal taxa\n\t;Output is the tree spanned by those taxa.");
-            System.exit(0);
-        }
-        String tree_file = args[0];
-        NewickParser P = new NewickParser(new java.io.FileReader(tree_file));
-        P.mainmain(tree_file);
+    	NewickParser P = new NewickParser();
+    	
+//        if (args.length <1 || args.length> 2)
+//        {
+//            System.err.println("Call as $0 file [list]\n\twhere list is a comma-separated list of terminal taxa\n\t;Output is the tree spanned by those taxa.");
+//            System.exit(0);
+//        }
+//        String tree_file = cli.getTree()
+//        NewickParser P = new NewickParser(new java.io.FileReader(tree_file));
+        P.mainmain(args);
     }
 
 }

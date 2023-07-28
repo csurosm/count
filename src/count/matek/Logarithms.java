@@ -15,11 +15,11 @@
  */
 package count.matek;
 
+import java.util.Arrays;
+
 /**
  * Arithmetics on log-scale. 
  * 
- * @author csuros
- *
  */
 public class Logarithms 
 {
@@ -46,7 +46,7 @@ public class Logarithms
         }		
 	}
 	
-//	private static int cnt_op_add = 0;
+//	private static int cnt_op_add = 0; // no op counting bc multithreading
 
 	/**
 	 * Sums multiple log-scale values. 
@@ -59,16 +59,28 @@ public class Logarithms
 	{
 		if (n==0) return Double.NEGATIVE_INFINITY;
 		
-		double sum = x[0];
-		for (int i=1; i<n; i++)
-			sum = add(sum, x[i]);
+		double sum;
+		if (n<=FAST_CUTOFF)
+		{
+			sum = x[0];
+			for (int i=1; i<n; i++)
+				sum = add(sum, x[i]);
+		} else
+		{
+			sum = fastSum(x.clone(), n);
+//			System.out.println("#**L.sum  n "+n+"\tsum "+sum+"\tfsum "+fsum);
+		}
 		return sum;
 	}
 	
-	private static final double LOG_EPS = Math.log(Functions.EPS);
+	private static final int FAST_CUTOFF = 6; // 6 gives 33%, 14 gives 16% speedup on 59-leaf tree //Integer.MAX_VALUE; // 
+	
+	private static final double LOG_EPS = 53.0*Math.log(0.5); //  machine epsilon half
 
 	/**
-	 * Sums multiple log-scale values 
+	 * Sums multiple log-scale values, from largest to smallest; terminating when remaining small elements will 
+	 * make no contribution at double precision. 
+	 * 
 	 * @param x input array; values will be rearranged 
 	 * @param n
 	 * @return ln(exp(<var>x</var>[0]+...+<var>x</var>[n-1]) (negative infinity if n=0)
@@ -82,31 +94,77 @@ public class Logarithms
             sink(x, x[i], i, n);
         }
         double sum=Double.NEGATIVE_INFINITY;
-        int m=n;
+        int m=n; // number of summing terms on a max-heap
         while (m>0)
         {
-        	--m;
-        	double v = x[0];
+        	double v = x[0]; // peek: max remaining element
         	
-        	if (sum == Double.NEGATIVE_INFINITY)
+        	if (sum == Double.NEGATIVE_INFINITY) // == Math.log(0.0)
         		sum = v;
         	else 
-        	{
-            	double d = v-sum;
+        	{ 
+            	double d = v-sum; // log-ratio of new term and partial sum
+            	double logm = m<logn.length?logn[m]:logn(m); // synchronized function is called only if m is too large
+            	double tail_bound = d+logm; // maximum contribution of remaining elements
+            	if (tail_bound<LOG_EPS) // would not change sum
+            	{
+//        			System.out.println("#**L.fastsum  m "+m+"/"+n+"\tsum "+sum+"\td "+d);
+            		break;
+            	}
 
             	double a = Math.log1p(Math.exp(d));
 
-            	if (d<LOG_EPS)
-            		break;
             	
 	        	sum += a;
         	}
+        	--m;
+        	// deletion of term at x[0]: decrease heap size and sink from position 0
         	double y = x[m];
-        	x[m]=v; // saving the element, but we could just forget about it ... 
+        	x[m]=v; // saving the element in the position after the heap, but we could just forget about it; at the end the x[] suffix is sorted, and the prefix is heap-ordered small terms 
         	sink(x, y, 0, m);
         }
         return sum;
         
+	}
+	
+	/**
+	 * Requesting a log-value that is not precalculated: extend the {@link #logn} array, and fill it in. 
+	 * Synchronized, so thread-blocking. Likely, never called bc logn[] is instantiated with a large capacity already.  
+	 * 
+	 * @param n
+	 * @return
+	 */
+	private static synchronized double logn(int n)
+	{
+		int len = logn.length;
+		if (n<len) return logn[n];
+		
+		
+		int cap = len;
+		do
+		{
+			cap += cap%3==0?cap/3:cap/2;
+		} while (cap <= n);
+		
+		logn = Arrays.copyOf(logn, cap);
+		for (int i=len; len<cap; len++)
+			logn[i]=Math.log(i);
+		return logn[n];
+	}
+	
+	/**
+	 * Precalculated values of log(0)=NEGATIVE_INFINITY, log(1)=0, log(2), log(3), ...
+	 */
+	private static double[] logn;
+	static 
+	{
+		final int maxn = 1<<16; // power of 2 ; it is unlikely we need to sum 64k terms bc the term count is bounded by the sum of copy numbers in a family
+		logn=new double[maxn];
+		for (int n=0; n<logn.length; n++)
+		{
+			logn[n]=Math.log(n);
+		}
+//		System.out.println("#**Logarithms.fastSum cutoff "+FAST_CUTOFF);
 	}
 	
     /**
@@ -137,6 +195,11 @@ public class Logarithms
     }
     
     
+    /**
+     * Test code.
+     * 
+     * @param args
+     */
     public static void main(String[] args)
     {
     	int N = 20;
