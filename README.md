@@ -1,1 +1,2 @@
-# count
+The Count is a software package for the evolutionary analysis of homolog family sizes (phylogenetic profiles), or other copy-number-type characters. The principal data consist of the homolog family sizes across multiple genomes: for each (gene) family, the table gives the number of homologs ("copy number") identified in each genome.
+Download dist/CountXXIII.jar and run as java -jar CountXXIII.jar for the Graphical User Interface. On MacOS, you can also install it as an application using the package in dist. 
