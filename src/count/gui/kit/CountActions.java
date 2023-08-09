@@ -375,4 +375,28 @@ public class CountActions
 	{
 		return new Common(name, createDolloIcon(PREFERRED_SIZE), do_it);
 	}
+	
+	public static Icon createQuitIcon(int size)
+	{
+		ImageIcon stop_icon = createImageIcon(size, "Stop24.gif");
+		return stop_icon;
+	}
+	
+	public static Action createQuit(String name, ActionListener do_it)
+	{
+		return new Common(name, createQuitIcon(PREFERRED_SIZE), do_it);
+	}
+	
+	public static Icon createAboutIcon(int size)
+	{
+		ImageIcon about_icon = createImageIcon(size, "About24.gif");
+		return about_icon;
+	}
+	
+	public static Action createAbout(String name, ActionListener do_it)
+	{
+		return new Common(name, createAboutIcon(PREFERRED_SIZE), do_it);
+	}
 }
+
+
