@@ -44,7 +44,7 @@ public class Count
      * Version string starting with a float value (integer part=major version); 
      * set to the date during development.
      */
-    public static final String APP_VERSION = "23.0802[CommandBuilder]";
+    public static final String APP_VERSION = "23.0809[Windows port]";
     
     /**
      * Name of the application.
