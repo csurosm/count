@@ -112,12 +112,10 @@ public class AppFrame extends JFrame
         this.setContentPane(panel_with_toolbar);
 // TOOLBAR	
         
+        setDesktop();
         
         menu_bar = new MenuBar();
         this.setJMenuBar(menu_bar);
-        
-        setDesktop();
-        
         setIconImage(getCountIcon().getImage());        
 
         setBounds(25,25,
@@ -128,9 +126,11 @@ public class AppFrame extends JFrame
         
         addRootPanel();
         
+        
+        
     }
     
-    private static final String ROOT_KEY = "\n__root__\n";
+    private static final String ROOT_KEY = "\n__root__\n"; // unlikely file name to be different from session keys
 	
 	private final Count app;
 
@@ -157,6 +157,8 @@ public class AppFrame extends JFrame
     private final List<Session> session_list;
     private int active_session;
     
+    private boolean is_desktop_set = false;
+    
     public UncaughtExceptionHandler getExceptionHandler()
     {
     	return exception_handler;
@@ -167,9 +169,28 @@ public class AppFrame extends JFrame
      */
     private void setDesktop()
     {
-    	Desktop desktop = Desktop.getDesktop();
-    	desktop.setQuitHandler((event,response)->doQuit());
-    	desktop.setAboutHandler(event->doAbout(false));
+    	try
+    	{
+	    	if (Desktop.isDesktopSupported())
+	    	{
+		    	Desktop desktop = Desktop.getDesktop();
+		    	this.is_desktop_set = true;
+		    	if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER))
+		    	{
+		    		desktop.setQuitHandler((event,response)->doQuit());
+		    	} else
+		    		this.is_desktop_set = false;
+		    	if (desktop.isSupported(Desktop.Action.APP_ABOUT))
+		    	{
+		    		desktop.setAboutHandler(event->doAbout(false));
+		    	} else
+		    		this.is_desktop_set = false;
+	    	}
+    	} catch (Exception E)
+    	{
+    		// some other stupid os
+    		this.is_desktop_set = false;
+    	}
     }
     
     public Count getApp()
@@ -501,6 +522,9 @@ public class AppFrame extends JFrame
     	bouton.setToolTipText("Save the currently displayed item");
     	bouton = createToolBar.addRemove("Remove", e->getActiveSession().doRemoveItem());
     	bouton.setToolTipText("Delete the currently displayed item without saving");
+    	createToolBar.addSeparator();
+    	bouton = createToolBar.addQuit("Quit", click->doQuit());
+    	bouton.setToolTipText("Quit the application without saving anything");
     	return createToolBar; 
     }
     
@@ -627,6 +651,18 @@ public class AppFrame extends JFrame
             session_menu.addSeparator();
             session_menu.add(close_session);
             session_menu.add(save_session);
+            
+            
+            if (!is_desktop_set)
+            {
+            	session_menu.addSeparator();
+            	JMenuItem quit = new JMenuItem(CountActions.createQuit("Quit "+Count.APP_TITLE, click->doQuit()));
+            	quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, 
+                        Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));             	
+            	JMenuItem about = new JMenuItem(CountActions.createAbout("About "+Count.APP_TITLE, click->doAbout(false)));
+            	session_menu.add(about);
+            	session_menu.add(quit);
+            }
             
             Session active = getActiveSession();
             load_session.setEnabled(session_list.isEmpty());
@@ -814,7 +850,7 @@ public class AppFrame extends JFrame
 
         Phylogeny main_phylo=null;
         
-        if (file_name != null)
+        if (dialog.hasFile())
         {
         	String new_session_key = Session.getSessionKey(file_name);
         	for (Session session: session_list)
@@ -828,7 +864,7 @@ public class AppFrame extends JFrame
         
         DataFile<Phylogeny> data_read = null;
         
-        if (file_name != null)
+        if (dialog.hasFile())
         {
             try 
             {
@@ -953,13 +989,16 @@ public class AppFrame extends JFrame
                     {
                         File selected_file = new File(directory,file_name);
                         BufferedReader BR = GeneralizedFileReader.guessBufferedReaderForInput(selected_file.getPath());
-                        List<ModelBundle> bundle_list = ModelBundle.readBundle(BR);
-                        BR.close();
-                        for (ModelBundle bundle: bundle_list)
+                        if (BR != null)
                         {
-                        	Session sesh = new Session(AppFrame.this, bundle);
-                        	addSession(sesh);
-                        	main_panel.repaint();
+	                        List<ModelBundle> bundle_list = ModelBundle.readBundle(BR);
+	                        BR.close();
+	                        for (ModelBundle bundle: bundle_list)
+	                        {
+	                        	Session sesh = new Session(AppFrame.this, bundle);
+	                        	addSession(sesh);
+	                        	main_panel.repaint();
+	                        }
                         }
                     } catch (java.io.IOException E)
                     {
@@ -1070,23 +1109,20 @@ public class AppFrame extends JFrame
     private void doInitSession()
     {
         String dialog_title = ("Open family size table");
-        FileDialog dialog  = new FancyFileDialog(this,dialog_title,FileDialog.LOAD);
+        FancyFileDialog dialog  = new FancyFileDialog(this,dialog_title,FileDialog.LOAD);
         dialog.setVisible(true);
         
-        String file_name = dialog.getFile();
-        if (file_name != null)
+        DataFile<AnnotatedTable> table_data = null;
+        if (dialog.hasFile())
         {
-            DataFile<AnnotatedTable> table_data = null;
-            String directory = dialog.getDirectory();
-            try
-            {
-	        	AnnotatedTable table 
-	        	= TableParser
-	        	.readTable(null, 
-	        			GeneralizedFileReader.guessReaderForInput(directory+file_name), 
-	        			false);
-	        		        	
+	        try
+	        {
+	            Reader R =  dialog.getReader();
+	        	AnnotatedTable table = TableParser.readTable(null, R, false);
+        		        	
 	            checkTableEmpty(table);
+	            String file_name = dialog.getFile();
+	            String directory = dialog.getDirectory();
 	            table_data = new DataFile<>(table, new File(directory, file_name));
 	        } catch (java.io.InterruptedIOException E)
 	        {
@@ -1101,9 +1137,9 @@ public class AppFrame extends JFrame
 	        {
 	        	exception_handler.handle(E, "A bug!", "Error while reading occurrence table from a file.");
 	        }   
-            if (table_data != null)
-            	initSession(table_data);
         }
+        if (table_data != null)
+        	initSession(table_data);
     }
     
     private void doImportTableData()
@@ -1470,7 +1506,7 @@ public class AppFrame extends JFrame
         dialog.setVisible(true);
         String file_name = dialog.getFile();
         
-        if (file_name != null)
+        if (dialog.hasFile())
         {
         	
         	Session sesh = getActiveSession();
@@ -1559,7 +1595,7 @@ public class AppFrame extends JFrame
         dialog.setVisible(true);
 
         String file_name = dialog.getFile();
-        if (file_name != null)
+        if (dialog.hasFile())
         {
             String directory = dialog.getDirectory();
             File rates_file = new File(directory,file_name);

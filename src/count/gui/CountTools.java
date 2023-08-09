@@ -236,6 +236,12 @@ public class CountTools extends JToolBar implements ChangeListener
 		return addAction(save, IS_SELECTED_SAVABLE.or(IS_SELECTED_EXPORTABLE));
 	}
 	
+	public JButton addQuit(String name, ActionListener do_it)
+	{
+		Action quit = CountActions.createQuit(name, do_it);
+		return addAction(quit, always->true);
+	}
+	
 	/**
 	 * Enables/disables all the added buttons using the associated rules. 
 	 * 
