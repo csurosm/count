@@ -753,10 +753,9 @@ public class ModelBundle implements CountXML
 	{
 		out.println(XML_DECLARATION);
 		java.util.Date now = java.util.Calendar.getInstance().getTime();
-		out.printf("<%s %s=\"%.4f\" %s=\"%d\" %s=\"%s\">\n"
+		out.printf("<%s %s=\"%.4f\" %s=\"%s\">\n"
 				, EMT_ROOT
 				, ATT_VERSION, Count.getAppVersionNumber()
-				, ATT_THREADS, Count.THREAD_PARALLELISM
 				, ATT_DATE, now.toString()
 				);
 		for (ModelBundle bundle: bundle_list)

@@ -193,7 +193,10 @@ public class CommandLine
 		    }
 	    	if (table_file != null)
 	    	{
-	    		out.println(getStandardHeader("Table file: "+table_file+"\t(hash "+table_data.getContent().tableHashCode())+")");
+	    		out.println(getStandardHeader("Table file: "+table_file+
+	    				(table_data==null
+	    					?""
+	    					:"\t(hash "+table_data.getContent().tableHashCode()+")")));
 	    	}
     		if (rates_file != null)
     			out.println(getStandardHeader("Rates file: "+rates_file));

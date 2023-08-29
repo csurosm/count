@@ -127,7 +127,10 @@ public class TableParser
 	                    {
 	                        taxon_order[j-1]=-1;
 	                        if (includes_properties)
-	                            property_names_in_input.add(fields[j]);
+	                        {	
+	                        	String prop_name = "".equals(fields[j])?"column"+Integer.toString(j):fields[j];
+	                            property_names_in_input.add(prop_name);
+	                        }
 	                    }
 	                }
                 }
@@ -166,6 +169,10 @@ public class TableParser
         
         R.close();
         table.setTable(parsed_sizes.toArray(new int[0][]),parsed_family_names.toArray(new String[0]));
+        
+//        // DEBUG
+//        System.out.println("#**TP.rT nF "+parsed_sizes.size()+"\tnames "+parsed_family_names.size()
+//        		+"\tprops "+property_names_in_input.size());
         
         if (includes_properties)
         {
