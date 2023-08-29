@@ -308,6 +308,18 @@ public class HistoryView
                 return tt +
                         "; click to sort rows, drag to rearrange columns";//, or double-click to split the table";
             }
+            
+            @Override
+            protected String getCellToolTip(int row, int col)
+            {
+            	String tooltip;
+            	if (col<model.firstHistoryColumn())
+            		tooltip = model.getCellToolTip(row, col);
+            	else
+            		tooltip = super.getCellToolTip(row, col);
+            	return tooltip;
+            }
+            
 		} // class FamilyScroll
 //		this.setDividerLocation(240);
 		this.setResizeWeight(0.25);
@@ -916,7 +928,8 @@ public class HistoryView
         PrintStream PS = new PrintStream(f);
         PS.println(CommandLine.getStandardHeader(getClass()));
         PS.println(CommandLine.getStandardRuntimeInfo());
-        PS.println(table_model.getTextTable());
+        table_model.printTable(PS);
+//        PS.println(table_model.getTextTable());
         
         if (PS.checkError()) // also flushes
         {

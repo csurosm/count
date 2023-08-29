@@ -16,6 +16,7 @@ package count.gui;
  */
 
 import java.awt.Color;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -495,19 +496,20 @@ class HistoryModel extends AnnotatedTableModel
     	
     }
 
-    @Override
-    public String getCellToolTip(int row_idx, int column_idx)
-    {
-    	int first = firstHistoryColumn();
-    	if (column_idx<first)
-    		return super.getCellToolTip(row_idx, column_idx);
-    	else
-    	{
-    		return "HistoryModel.getCellToolTip";
-    		
-    	}
-    	
-    }    
+//    @Override
+//    public String getCellToolTip(int row_idx, int column_idx)
+//    {
+//        System.out.println("#**HM.gCTT "+row_idx+","+column_idx);
+//    	int first = firstHistoryColumn();
+//    	if (column_idx<first)
+//    		return super.getCellToolTip(row_idx, column_idx);
+//    	else
+//    	{
+//    		return "HistoryModel.getCellToolTip";
+//    		
+//    	}
+//    	
+//    }    
     
     public String getTextTable()
     {
@@ -545,6 +547,41 @@ class HistoryModel extends AnnotatedTableModel
     	}
     	
     	return sb.toString();
+    }
+    
+    public void printTable(PrintStream out)
+    {
+    	int nF = this.getRowCount();
+    	int nC = this.getColumnCount();
+    	int fC = firstHistoryColumn();
+    	
+    	// column headers
+    	out.print("Family");
+    	for (int c=fC; c<nC; c++)
+    		out.printf("\t%s",getColumnName(c));
+    	out.println();
+    	
+    	AnnotatedTable tbl = this.getTable();
+    	for (int f=0; f<nF; f++)
+    	{
+    		out.print(tbl.getFamilyName(f));  
+    		for (int c=fC; c<nC; c++)
+    		{
+    			out.print("\t");
+    			Object v = getValueAt(f, c);
+    			int iv = ((Number)v).intValue();
+    			double dv = ((Number)v).doubleValue();
+    			
+    			if (iv==dv)
+    			{
+    				out.print(iv);
+    			} else
+    			{
+    				out.print(dv);
+    			}
+    		}    
+    		out.println();
+    	}
     }
     
     

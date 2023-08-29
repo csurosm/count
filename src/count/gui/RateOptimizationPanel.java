@@ -54,7 +54,7 @@ public class RateOptimizationPanel extends RateVariationPanel
     private static final int GRAPH_WIDTH = 200;
     private static final int GRAPH_HEIGHT = 48;
     private static final int STAGE_WIDTH = 300;
-    private static final int COUNTER_WIDTH = 80;
+    private static final int COUNTER_WIDTH = 120;
     private static final int COUNTER_HEIGHT = 48;
 	
 	public static final String PROPERTY_OPTIMIZATION_VALUE = "lnL"; 
@@ -282,7 +282,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 				
 				if (!Double.isNaN(delta) && delta<0.)
 				{
-					System.out.println("#*GOP.OT.process delta "+delta+"\tval "+value);
+//					System.out.println("#*ROP.OT.process delta "+delta+"\tval "+value);
 				} else
 				{
 					optimization_property_support.firePropertyChange(PROPERTY_OPTIMIZATION_ROUND, round-1, round);

@@ -223,7 +223,7 @@ public class AnnotatedTableModel extends AbstractTableModel
     {
         //System.out.println("#*FSTD.OTM.gCN col "+column_idx);
         if (column_idx==0)
-            return "";
+            return "Order";
         column_idx--;
 
         int num_props = data_table.getKnownPropertiesCount();
@@ -318,7 +318,7 @@ public class AnnotatedTableModel extends AbstractTableModel
     {
         Object val = getValueAt(row_idx, column_idx);
         if (column_idx==0)
-            return "Family index is "+val;
+            return "Family order is "+val;
         else column_idx--;
         
         int num_props = data_table.getKnownPropertiesCount();

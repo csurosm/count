@@ -858,7 +858,7 @@ public class CommandBuilderDialog extends JDialog
 	        copyB.addActionListener(button_listener);
 	
 	        button_box.add(saveB);
-	        button_box.add(printB);
+//	        button_box.add(printB); // printing onto console is useless
 	        button_box.add(copyB);
 	        button_box.add(closeB);
 	        button_box.add(Box.createHorizontalGlue());

@@ -689,7 +689,7 @@ public class AppFrame extends JFrame
             				Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
             data_menu.add(data_load_table);       
 
-            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nomatching columns as annotations)", e->doLoadTable(true)));
+            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nonmatching columns as annotations)", e->doLoadTable(true)));
 //            JMenuItem data_load_annotated = new JMenuItem("Open annotated table... (keep other columns as annotations)");
 //            data_load_annotated.addActionListener(e->doLoadTable(true));
             data_menu.add(data_load_annotated);
@@ -1170,7 +1170,10 @@ public class AppFrame extends JFrame
 //    				System.out.println("#**AF.bIT task done");
     				try {table_data = read_task.get();} 
     				catch (InterruptedException ignored) {}
-					catch (ExecutionException ignored) {}
+					catch (ExecutionException what_a_pity) 
+    				{
+						exception_handler.handle(what_a_pity, "Importing failed");						
+    				}
     		        if (table_data != null)
     		        {
     		            checkTableEmpty(table_data.getContent());
@@ -1506,6 +1509,8 @@ public class AppFrame extends JFrame
         dialog.setVisible(true);
         String file_name = dialog.getFile();
         
+//        // DEBUG
+//        System.out.println("#**AF.dLT "+with_annotation_columns+"\t"+file_name);
         if (dialog.hasFile())
         {
         	
@@ -1519,6 +1524,8 @@ public class AppFrame extends JFrame
         				Reader tableR = new InputStreamReader(stream);
         				AnnotatedTable table 
         	        	= TableParser.readTable(terminal_names,tableR, with_annotation_columns);
+//        		        // DEBUG
+//        				System.out.println("#**AF.dLT "+table.getFamilyCount()+"\tprops "+table.getKnownPropertiesCount());
         	            checkTableEmpty(table);
         				DataFile<AnnotatedTable> table_data = new DataFile<>(table, table_file);
         				return table_data;
@@ -1531,10 +1538,14 @@ public class AppFrame extends JFrame
     	                 && SwingWorker.StateValue.DONE == event.getNewValue())   
     			{
     				DataFile<AnnotatedTable> table_data=null;
-//    				System.out.println("#**AF.bIT task done");
+//    		        // DEBUG
+//    				System.out.println("#**AF.dLT task done");
     				try {table_data = load_task.get();} 
     				catch (InterruptedException swallowed) {}
-    				catch (ExecutionException swallowed) {}
+    				catch (ExecutionException something_happened_that_was_not_supposed_to) 
+    				{
+    					exception_handler.handle(something_happened_that_was_not_supposed_to, "Load failed");
+    				}
     				if (table_data!=null)
     		            sesh.addDataSet(table_data);
     			}
@@ -1616,8 +1627,11 @@ public class AppFrame extends JFrame
     				DataFile<GammaInvariant> rates_data=null;
 //    				System.out.println("#**AF.bIT task done");
     				try {rates_data = load_task.get();} 
-    				catch (InterruptedException swallowed) {}
-    				catch (ExecutionException swallowed) {}
+    				catch (InterruptedException ignored) {}
+    				catch (ExecutionException bummer) 
+    				{
+    					exception_handler.handle(bummer, "Loading failed");    					
+    				}
     				if (rates_data!=null)
     				{
     					sesh.addRates(rates_data, true);    					
