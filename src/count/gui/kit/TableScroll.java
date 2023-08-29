@@ -58,6 +58,9 @@ import javax.swing.table.TableColumnModel;
  * (ListeSelectionModel), and sorter (RowSorter). Scrolling, selection, and sorting  
  * is synchronized between the two tables. 
  * 
+ * TODO: refine the tool tip texts {@link #getCellToolTip(int, int)}; for table panels 
+ * it is redefined to use the model's getCellToolTip.  
+ * 
  * @param <TMODEL> underlying table model
  *
  * @author Mikl&oacute;s Cs&#369;r&ouml;s csurosm@gmail.com
@@ -254,15 +257,6 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     {
         JTable table = new JTable(model, column_model)
         {
-//        	@Override 
-//        	public void tableChanged(TableModelEvent e)
-//        	{
-//        		System.out.println("#**TS.cT/tC "
-//        				+e+"\ttyp "+e.getType()
-//        				+"\t"+e.getFirstRow()+".."+e.getLastRow()
-//        				+"\tcol "+e.getColumn());
-//        		super.tableChanged(e);
-//        	}
         	
             @Override
             protected JTableHeader createDefaultTableHeader() 
@@ -295,16 +289,17 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                 
                 String origi = super.getToolTipText(event);
                 String valinfo;
+                String cellinfo = TableScroll.this.getCellToolTip(row, col);
                 if (origi==null)
                 {
                 	Object v = getModel().getValueAt(row, col);
-                	valinfo = " is "+v.toString();
+                	valinfo = "(="+v.toString()+")";
 //                	Class<?> vclass = v==null?null:v.getClass();
 //                	valinfo = "// no tooltip for "+v+"\tclass "+vclass;
                 } else
-                	valinfo = " = "+origi;
+                	valinfo = "(="+origi+")";
                 	
-                return getCellToolTip(row, col)+valinfo;
+                return cellinfo+valinfo;
             }
             @Override
             public TableCellRenderer getCellRenderer(int row, int column)

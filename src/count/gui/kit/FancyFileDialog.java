@@ -288,7 +288,7 @@ public class FancyFileDialog extends FileDialog
 					in = new MonitoredStream(stream);
 				} catch (IOException E)
 				{
-					if (in.is_cancelled)
+					if (in==null || in.is_cancelled)
 					{
 						this.cancel(true);
 						return null;
@@ -302,6 +302,7 @@ public class FancyFileDialog extends FileDialog
 			@Override 
 			protected void done()
 			{
+				if (in==null) return;
 				try
 				{
 //					System.out.println("#**FFD.cT.dIB done "+Thread.currentThread());
