@@ -100,11 +100,11 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 	}
 	
 	/**
-	 * Sum of famjily multiplicities
+	 * Sum of family multiplicities
 	 * 
 	 * @return
 	 */
-	protected int getTotalFamilyCount()
+	public int getTotalFamilyCount()
 	{
 		return utable==null?factory.table.getFamilyCount():utable.getTotalFamilyCount();
 	}
@@ -502,7 +502,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 					} else
 					{
 						int parent = factory.tree.getParent(node);
-						double omeu = 1.0 - factory.extinction[parent];
+						double omeu =  factory.getExtinctionComplement(parent); // 1.0 - factory.extinction[parent];
 						// double epsi = factory.extinction[parent]/p;
 						dL[3*node+PARAMETER_LOSS]
 								= (node_means[parent]-omeu*edge_means[node])/p - omeu*edge_means[node]/(1.0-p);
@@ -667,7 +667,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 			if (r!=0.0)
 			{
 				double dLdr =  dL[3*node+PARAMETER_GAIN];
-				dL[3*node+PARAMETER_GAIN] = dLdr*(1.0-factory.extinction[node]); 
+				dL[3*node+PARAMETER_GAIN] = dLdr*factory.getExtinctionComplement(node); // (1.0-factory.extinction[node]); 
 				de[node] = dLdr*(-r);
 			}
 		} else
@@ -678,7 +678,8 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 			double dLdq = dL[3*node+PARAMETER_DUPLICATION];
 			double a = 1.0-q*factory.extinction[node];
 			double a2 = a*a;
-			dL[3*node+PARAMETER_DUPLICATION] = dLdq * (1.0-factory.extinction[node])/a2;
+			dL[3*node+PARAMETER_DUPLICATION] = dLdq * factory.getExtinctionComplement(node) //  (1.0-factory.extinction[node])
+												/a2;
 			// dL[3*node+PARAMETER_GAIN] does not change
 			de[node] = -dLdq*q_1*q/a2;
 		}
@@ -693,6 +694,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 			double p = factory.rates.getLossParameter(node);
 			double ε = factory.extinction[parent]/factory.getLossParameter(node);
 			double dLdpe = dL[3*node+PARAMETER_LOSS]+ε*de[parent];
+			double epsi1 = factory.getExtinctionComplement(node);
 			if (q==0.0)
 			{
 				// Poisson
@@ -700,8 +702,8 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 				if (r!=0.0)
 				{
 					double dLdr =  dL[3*node+PARAMETER_GAIN];
-					dL[3*node+PARAMETER_GAIN] = dLdr * (1.0-factory.extinction[node]); 
-					dL[3*node+PARAMETER_LOSS] = dLdpe * (1.0-factory.extinction[node]);
+					dL[3*node+PARAMETER_GAIN] = dLdr *  epsi1; // (1.0-factory.extinction[node]); 
+					dL[3*node+PARAMETER_LOSS] = dLdpe * epsi1; //(1.0-factory.extinction[node]);
 					de[node] = dLdpe * (1.0-p) - dLdr * r;
 				}
 			} else
@@ -710,11 +712,13 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 				double q_1 = factory.rates.getDuplicationParameterComplement(node);
 				double p_1 = factory.rates.getLossParameterComplement(node); 
 				double a = 1.0-q*factory.extinction[node];
-				dL[3*node+PARAMETER_LOSS] = dLdpe * (1.0-factory.extinction[node]) / a;
+				dL[3*node+PARAMETER_LOSS] = dLdpe * epsi1 // (1.0-factory.extinction[node]) 
+											/ a;
 				double dLdq = dL[3*node+PARAMETER_DUPLICATION];
 				double a2 = a*a;
 				dL[3*node+PARAMETER_DUPLICATION] = (dLdq - dLdpe * p_1 * factory.extinction[node]) 
-							* (1.0-factory.extinction[node])/a2;
+							* epsi1 //(1.0-factory.extinction[node])
+							/a2;
 				de[node] = (dLdpe * p_1 - dLdq * q) * q_1/a2;
 			}
 			assert Double.isFinite(dL[3*node+PARAMETER_DUPLICATION] );

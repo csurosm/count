@@ -115,6 +115,12 @@ public class Likelihood implements GLDParameters
 	
 	public double getExtinction(int node) { return extinction[node];}
 
+	public double getExtinctionComplement(int node)
+	{
+		double epsi = extinction[node];
+		return epsi == 1.0?extinction_complement[node]:1.0-epsi;
+	}
+	
 	private int threshold_width_absolute = Integer.MAX_VALUE;
 	private double threshold_width_relative = Double.POSITIVE_INFINITY;
 	
@@ -414,12 +420,12 @@ public class Likelihood implements GLDParameters
 		double epsi_1; // 1-epsilon: recalculate if epsilon is too close to 1.0
 		if (epsi==1.0)
 		{
-			epsi_1 = //this.extinction_complement[node] = 
+			epsi_1 = this.extinction_complement[node] = 
 				computeExtinctionComplement(node);
 //			System.out.println("#**L.sNP "+node+"\tepsi "+epsi+"\te1 "+epsi_1);
 		}
 		else
-			epsi_1 = //this.extinction_complement[node] = 
+			epsi_1 = this.extinction_complement[node] = 
 				1.0-epsi;
 		
 		double p = rates.getLossParameter(node);

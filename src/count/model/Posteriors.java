@@ -265,8 +265,8 @@ public class Posteriors
 		{
 			double[] J = getEdgeAncestor(node);
 			double[] K = inside.getEdgeLikelihoods(node);
-			double epsi = factory.extinction[node]
-					*(1.0-factory.getDuplicationParameter(node)); 
+			double epsi = factory.extinction[node] * factory.getDuplicationParameterComplement(node);
+					// *(1.0-factory.getDuplicationParameter(node)); 
 			return computeAncestorPosteriors(J, K, epsi);
 		}
 		

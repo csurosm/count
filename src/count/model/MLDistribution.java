@@ -17,6 +17,7 @@ package count.model;
 
 import static count.model.GLDParameters.PARAMETER_DUPLICATION;
 import static count.model.GLDParameters.PARAMETER_GAIN;
+import static count.model.GLDParameters.PARAMETER_LENGTH;
 import static count.model.GLDParameters.PARAMETER_LOSS;
 import static count.model.GLDParameters.PARAMETER_DUPLICATION_COMPLEMENT;
 import static count.model.GLDParameters.PARAMETER_LOSS_COMPLEMENT;
@@ -69,6 +70,8 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 				fixGain(node,true);
 				fixLoss(node,true);
 				fixDuplication(node,true);
+				// DEBUG
+				System.out.println("#**MLD() fix "+node+"\t// "+rates.toString(node));
 			}
 		}
 	}
@@ -106,7 +109,7 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 //	private final ProfileTable table; 
 	
 	private final Gradient gradient;
-
+	
 	private boolean optimization_by_quasiNewton = true; // if false, use conjugate gradient (slower)
 	
 	private boolean do_gradient_descent = false; // if true, start with a few rounds of gradient descent (slower) 
@@ -153,6 +156,8 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 	public void fixLoss(int node, boolean not_optimized)
 	{
 		optimize_parameters[3*node+PARAMETER_LOSS]=!not_optimized;
+//		// DEBUG
+//		System.out.println("#**MLD.fL "+node+"\t"+optimize_parameters[3*node+PARAMETER_LOSS]);
 	}
 	public void fixDuplication(int node, boolean not_optimized)
 	{
@@ -162,14 +167,20 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 	@Override
 	public void fixNodeParameters(int node, boolean do_not_optimize)
 	{
-		fixGain(node, do_not_optimize);
-		fixLoss(node, do_not_optimize);
-		fixDuplication(node, do_not_optimize);
+//		// DEBUG
+//		System.out.println("#**MLD.fNP "+node+"\t"+do_not_optimize);
+		fixGain(node, do_not_optimize || rates.getGainParameter(node)==0.0);
+		fixLoss(node, do_not_optimize || rates.getLossParameter(node)==1.0);
+		fixDuplication(node, do_not_optimize || rates.getDuplicationParameter(node)==0.0);
 	}
 	
-
+	
 	private void initModelParameters()
 	{
+		int nfam = gradient.getTotalFamilyCount();
+		double prob_small = 0.5/nfam;
+//		double prob_big_threshold = 1.0-prob_small_threshold;
+		
 		int num_nodes = rates.getTree().getNumNodes();
 		distribution_params.clear();
 		for (int node=0; node<num_nodes; node++)
@@ -226,20 +237,24 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 							distribution_params.add(newLogistic(new DuplicationParameter(node), MAX_PROB_NOT1));
 						}
 					}
+					
 //					ModelParameter dpar = new Logistic(new DuplicationParameter(node), 1.0-1e-9);
 //					distribution_params.add(dpar);
 				}
 				if (optimize_loss) 
 				{
+					ModelParameter lpar;
 					if (track_complements && !is_duprate_bounded)
 					{
-						distribution_params.add(new BoundedLogistic(new LossParameter(node)));
+						lpar = new BoundedLogistic(new LossParameter(node));
 					} else
 					{
-						distribution_params.add(newLogistic(new LossParameter(node), MAX_PROB_NOT1));
+						lpar = newLogistic(new LossParameter(node), MAX_PROB_NOT1);
 					}
-//					ModelParameter lpar = new Logistic(new LossParameter(node));
-//					distribution_params.add(lpar);
+					// lpar = bracketedLogistic(new LossParameter(node),prob_small );
+					distribution_params.add(lpar);
+					// DEBUG
+					System.out.println("#**MLD.iMP "+node+"\tloss "+lpar);
 				}
 			} else
 			{
@@ -450,7 +465,10 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 		@Override
 		public void set(double p)
 		{
-			node_parameters[node][PARAMETER_LOSS]=p;
+			if (track_complements)
+				set(p, 1.0-p);
+			else
+				node_parameters[node][PARAMETER_LOSS]=p;
 //			rates.setParameters(node, node_parameters[node][PARAMETER_GAIN], p, node_parameters[node][PARAMETER_DUPLICATION]);
 		}
 		
@@ -486,39 +504,65 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 		}
 	}
 	
-//	private class LossComplementParameter implements ModelParameter
-//	{
-//		LossComplementParameter(int node)
-//		{
-//			this.node = node;
-//			double p1 = rates.getLossParameterComplement(node);
-//			node_parameters[node][PARAMETER_LOSS]=1.0-p1;
-//		}
-//		private final int node;		
-//		@Override
-//		public double get()
-//		{
-//			return 1.0-node_parameters[node][PARAMETER_LOSS];
-//		}
-//		@Override
-//		public void set(double p1)
-//		{
-//			assert (Double.isFinite(p1));
-//			assert (0.0<=p1);
-//			assert (p1<1.0);
-//			node_parameters[node][PARAMETER_LOSS]=1.0-p1;
-//		}
-//		@Override 
-//		public double dL(double[] gradient)
-//		{
-//			return -gradient[3*node+PARAMETER_LOSS];
-//		}
-//		@Override 
-//		public String toString()
-//		{
-//			return "1p"+node+"="+get();
-//		}
-//	}
+	private class LossComplementParameter implements BoundedParameter
+	{
+		LossComplementParameter(int node)
+		{
+			this.node = node;
+			double p1 = rates.getLossParameterComplement(node);
+			
+			node_parameters[node][PARAMETER_LOSS_COMPLEMENT]=p1;
+			node_parameters[node][PARAMETER_LOSS]=rates.getLossParameter(node);
+		}
+		private final int node;		
+		@Override
+		public double get()
+		{
+			return node_parameters[node][PARAMETER_LOSS_COMPLEMENT];
+		}
+		@Override
+		public void set(double p1)
+		{
+			if (track_complements)
+				set(p1, 1.0-p1);
+			else
+			{
+				assert (Double.isFinite(p1));
+				assert (0.0<=p1);
+				assert (p1<1.0);
+				node_parameters[node][PARAMETER_LOSS_COMPLEMENT]=p1;
+			}
+		}
+		@Override
+		public void set(double p1, double p)
+		{
+			node_parameters[node][PARAMETER_LOSS_COMPLEMENT]=p1;
+			node_parameters[node][PARAMETER_LOSS]=p;
+		}
+		@Override
+		public double getComplement()
+		{
+			double p = node_parameters[node][PARAMETER_LOSS];
+			return p;
+		}
+		@Override 
+		public double dL(double[] gradient)
+		{
+			double dLdp = gradient[3*node+PARAMETER_LOSS];
+			if (is_duprate_bounded) // transformation from (p, q) to (p, λ)
+			{
+				double dLdq = gradient[3*node+PARAMETER_DUPLICATION];
+				double dl_ratio = rates.getDuplicationRate(node)/rates.getLossRate(node);
+				dLdp += dLdq * dl_ratio;
+			}
+			return -dLdp;
+		}
+		@Override 
+		public String toString()
+		{
+			return "1p"+node+"="+get();
+		}
+	}
 	
 //	private class DuplicationComplementParameter implements ModelParameter
 //	{
@@ -638,7 +682,10 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 		@Override
 		public void set(double λ)
 		{		
-			node_parameters[node][PARAMETER_DUPLICATION]=λ;
+			if (track_complements && !is_duprate_bounded)
+				set(λ, 1.0-λ);
+			else
+				node_parameters[node][PARAMETER_DUPLICATION]=λ;
 //			rates.setDuplicationRate(node, λ);
 		}
 		@Override 
@@ -873,7 +920,19 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
 		boolean[] opt_par = new boolean[3*num_nodes];
 		for (int node=0; node<num_nodes; node++)
 		{
-//			if (tree.isRoot(node))
+			if (tree.isRoot(node))
+			{
+				opt_par[3*node+PARAMETER_GAIN] = rates.getGainParameter(node)>0.0;
+				opt_par[3*node+PARAMETER_LOSS] = (rates.getLossParameter(node)<1.0);
+				opt_par[3*node+PARAMETER_DUPLICATION] = rates.getDuplicationParameter(node)>0.0;
+//				// DEBUG
+//				System.out.println("#**MLD.oP root "+node
+//						+"\tog "+opt_par[3*node+PARAMETER_GAIN]
+//						+"\tod "+opt_par[3*node+PARAMETER_DUPLICATION]
+//						+"\tol "+opt_par[3*node+PARAMETER_LOSS]
+//						+"\t// "+rates.toString(node)
+//						);
+			} else
 			{
 				opt_par[3*node + PARAMETER_GAIN] = rates.getGainParameter(node)>0.0;
 				opt_par[3*node+PARAMETER_LOSS] = (rates.getLossParameter(node)<1.0);
@@ -1148,7 +1207,6 @@ public class MLDistribution extends ML implements Count.UsesThreadpool // via Gr
         double score = O.optimize(eps, maxiter);
         double bic_pty = 0.5*O.getModelParameterCount()*Math.log(table.getFamilyCount());
 		
-//		out.println("#SCORE "+score);
 		out.println("#SCORE "+score+"\tBICpty "+bic_pty+"\tregularized "+(score+bic_pty));
         
 		out.println("#TREE "+NewickParser.printTree(cli.getTree()));

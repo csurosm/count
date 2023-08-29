@@ -151,97 +151,96 @@ public abstract class ML
 		}
 	}
 	
+	/**
+	 * Sets up a parameter in the range epsilon ... (1-epsilon)
+	 * 
+	 * @param theta
+	 * @param epsilon
+	 * @return parameter for unconstrained optimization
+	 */
+	protected static Logistic bracketedLogistic(ModelParameter theta, double epsilon)
+	{
+		Bracketed bracket = new Bracketed(theta, epsilon);
+		double y = bracket.get();
+		if (y>1.0)
+		{
+			double oldθ = theta.get();
+			bracket.set(MAX_PROB_NOT1);
+			double newθ = theta.get();
+			System.out.println("#*ML.bL "+theta+" too large "+oldθ+"; resetting");
+		} else if (y<0.0)
+		{
+			double oldθ = theta.get();
+			bracket.set(1.0-MAX_PROB_NOT1);
+			double newθ = theta.get();
+			System.out.println("#*ML.bL "+theta+" too small "+oldθ+"; resetting");
+		}
+		return new Logistic(bracket);
+	}
+	
+	/**
+	 * Transforms parameter  ε  ≤ θ ≤ (1-ε) to [0,1].
+	 * 
+	 * @author csuros
+	 *
+	 */
+	protected static class Bracketed implements ModelParameter
+	{
+		protected Bracketed (ModelParameter theta, double eps) 
+		{
+			this.offset = eps;
+			this.range = (1.0-2.0*eps);
+			this.theta = theta;
+		}
+		private final ModelParameter theta;
+		private final double offset;
+		private final double range;
+
+		@Override
+		public double get()
+		{
+			double θ = theta.get();
+			double y = (θ-offset)/range;
+			if (y>1.0) // DEBUG
+			{
+				System.out.println("#**ML.B.get "+theta+"\ty" +y);
+			}
+			return y;
+		}
+		
+		@Override
+		public void set(double y)
+		{
+			double θ = y*range + offset;
+			theta.set(θ);
+			if (y>1.0) // DEBUG
+			{
+				System.out.println("#**ML.B.set "+theta+"\ty" +y);
+				
+			}
+		}
+		@Override 
+		public double dL(double[] gradient)
+		{
+			double d = theta.dL(gradient);
+			return d*range;
+		}
+
+		@Override 
+		public String toString()
+		{
+			return this.getClass().getSimpleName()+"["+theta.toString()+"]-"+offset+"/"+range;
+		}
+	}
+	
+	
 //	/**
-//	 * Sets up a parameter in the range epsilon * max ... (1-epsilon)*max
-//	 * 
-//	 * @param theta
-//	 * @param max_value
-//	 * @return parameter for unconstrained optimization
-//	 */
-//	protected static Logistic bracketedLogistic(ModelParameter theta, double max_value)
-//	{
-//		Bracketed bracket = new Bracketed(theta, max_value);
-//		double y = bracket.get();
-//		if (y>1.0)
-//		{
-//			double oldθ = theta.get();
-//			bracket.set(MAX_PROB_NOT1);
-//			double newθ = theta.get();
-//			System.out.println("#*ML.bL "+theta+" too large "+oldθ+"; resetting");
-//		} else if (y<0.0)
-//		{
-//			double oldθ = theta.get();
-//			bracket.set(0.0);
-//			double newθ = theta.get();
-//			System.out.println("#*ML.bL "+theta+" too small "+oldθ+"; resetting");
-//		}
-//		return new Logistic(bracket);
-//	}
-//	
-//	/**
-//	 * Transforms parameter  ε A ≤ θ ≤ (1-ε)A to [0,1].
-//	 * 
-//	 * @author csuros
+//	 * Logistic transformations for range [ε,1-ε]
 //	 *
 //	 */
-//	protected static class Bracketed implements ModelParameter
-//	{
-//		protected Bracketed (ModelParameter theta, double max_value) 
-//		{
-//			this(theta, max_value, EPS);
-//		}
-//		
-//		protected Bracketed(ModelParameter theta, double max_value, double eps)
-//		{
-//			this.offset = eps*max_value;
-//			this.range = (1.0-2.0*eps)*max_value;
-//			this.theta = theta;
-//		}
-//		private final ModelParameter theta;
-//		private final double offset;
-//		private final double range;
-//
-//		@Override
-//		public double get()
-//		{
-//			double θ = theta.get();
-//			double y = (θ-offset)/range;
-//			if (y>1.0)
-//			{
-//				System.out.println("#**ML.B.get "+theta+"\ty" +y);
-//			}
-//			return y;
-//		}
-//		
-//		@Override
-//		public void set(double y)
-//		{
-//			double θ = y*range + offset;
-//			theta.set(θ);
-//			if (y>1.0)
-//			{
-//				System.out.println("#**ML.B.set "+theta+"\ty" +y);
-//				
-//			}
-//		}
-//		@Override 
-//		public double dL(double[] gradient)
-//		{
-//			double d = theta.dL(gradient);
-//			return d*range;
-//		}
-//
-//		@Override 
-//		public String toString()
-//		{
-//			return this.getClass().getSimpleName()+"["+theta.toString()+"]-"+offset+"/"+range;
-//		}
-//	}
-	
-	
 //	public static class BracketedLogistic implements ModelParameter
 //	{
-//		BracketedLogistic(double eps, double max_value)
+//		BracketedLogistic(ModelParameter theta, double eps, double max_value)
 //		{
 //			this.eps = eps;
 //			this.scale = (1.0-2.0*eps)*max_value;
@@ -415,6 +414,12 @@ public abstract class ML
 			return d;
 		}
 	}
+	
+
+	
+	
+	
+	
 	
 //	protected static class EpsilonLogistic implements ModelParameter
 //	{

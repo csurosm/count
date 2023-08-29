@@ -1337,7 +1337,15 @@ public class MLMixedRate extends ML
 				opt_par[4*node+PARAMETER_LOSS] = false;
 				opt_par[4*node+PARAMETER_DUPLICATION] = rates.getDuplicationParameter(node)>0.0;
 				double len = rates.getEdgeLength(node);
-				opt_par[4*node+PARAMETER_LENGTH] = Double.isFinite(len) && len>0.0;				
+				opt_par[4*node+PARAMETER_LENGTH] = Double.isFinite(len) && len>0.0;	
+				
+				// DEBUG
+				System.out.println("#**MLMR.oR root "+node
+						+"\tog "+opt_par[4*node+PARAMETER_GAIN]
+						+"\tod "+opt_par[4*node+PARAMETER_DUPLICATION]
+						+"\tol "+opt_par[4*node+PARAMETER_LENGTH]
+						+"\t// "+rates.toString(node)
+						);
 			} else
 			{
 				opt_par[4*node+PARAMETER_GAIN] = rates.getGainParameter(node)>0.0;
