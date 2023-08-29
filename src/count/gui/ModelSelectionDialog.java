@@ -86,7 +86,7 @@ public class ModelSelectionDialog extends JDialog
 	private static final double OPT_EPS = 1.0/(1<<20);
 	private static final int OPT_NUM_FAMILIES = 100;
 	
-	private static final boolean WANT_GENERAL_VARIATION = false;
+	private static final boolean WANT_GENERAL_VARIATION = false; // if true, dup- and gain-rate discrete-Gamma variation is enabled
 	
 	/**
 	 * Initializes the starting models.  
