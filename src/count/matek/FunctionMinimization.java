@@ -32,6 +32,10 @@ import java.util.function.Function;
 */
 public class FunctionMinimization 
 {
+	/**
+	 * Messages on standard output / console.
+	 */
+	private static final boolean REPORT_UNUSUAL = false; 
 
     private FunctionMinimization(){}
     
@@ -606,7 +610,8 @@ public class FunctionMinimization
 
         if(slope>=0.0)
         {
-        	System.out.println("#**FM.lnsrch slope "+slope+"\tg "+Arrays.toString(g)+"\tp "+Arrays.toString(p));
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.lnsrch slope "+slope+"\tg "+Arrays.toString(g)+"\tp "+Arrays.toString(p));
         	
         	System.arraycopy(xold, 0, x, 0, xold.length);
         	f[0] = fold;
@@ -665,7 +670,8 @@ public class FunctionMinimization
             { // Convergence on Delta x. For zero finding, the calling program should verify the convergence. 
                 if (myminf<f[0])
                 {
-                	System.out.println("#**FM.lnsrch skip/+\t"+f[0]+"->"+myminf);
+                	if (REPORT_UNUSUAL)
+                		System.out.println("#**FM.lnsrch skip/+\t"+f[0]+"->"+myminf);
                     for(int i=0;i<n;i++)
                     {
                         x[i]=myminx[i]; 
@@ -685,7 +691,8 @@ public class FunctionMinimization
                 {
                     if (myminf<f[0])
                     {
-                    	System.out.println("#**FM.lnsrch skip/-\t"+f[0]+"->"+myminf);
+                    	if (REPORT_UNUSUAL)
+                    		System.out.println("#**FM.lnsrch skip/-\t"+f[0]+"->"+myminf);
                         for(int i=0;i<n;i++)
                         {
                             x[i]=myminx[i]; 
@@ -807,7 +814,7 @@ public class FunctionMinimization
             sum+=p[i]*p[i]; 
 //            max_p = Double.max(max_p, Math.abs(p[i]));
         }
-        double stpmax=  DFP_STPMX*Math.max(Math.sqrt(sum), 1.0);  // Numerical Recipes: DFP_STPMX*Math.max(Math.sqrt(sum),(double)n);   
+        double stpmax= DFP_STPMX*Math.max(Math.sqrt(sum),(double)n); // versions 23.xx < 23.0820 DFP_STPMX*Math.max(Math.sqrt(sum), 1.0);  // Numerical Recipes: DFP_STPMX*Math.max(Math.sqrt(sum),(double)n);   
 //        double stpmaxmax =  DFP_STPMX*Math.max(max_p, 1.0); 
 //        System.out.println("#*FM.dfpmin stpmax "+stpmax+"\t(maxmax "+stpmaxmax+")\tsum "+sum+"\tn "+n+"\titmax "+dfp_itmax+"\tNRstpmax "+DFP_STPMX*Math.max(Math.sqrt(sum),(double)n)
 //        		+"\tsqrsum "+Math.sqrt(sum)+"\tmaxp "+max_p);
@@ -817,7 +824,8 @@ public class FunctionMinimization
         double[] pnew=new double[n]; 
         double[] dg=new double[n];
         double[] hdg=new double[n]; 
-        for(int its=1;its<=dfp_itmax;its++)
+        int its;
+        for(its=1;its<=dfp_itmax;its++)
         { // Main loop over the iterations. 
         	
 //        	try
@@ -848,7 +856,7 @@ public class FunctionMinimization
             } 
             if(test<DFP_TOLX)
             { 
-//            	System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test);
+            	System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test+"\tdone/delta"+"\t// "+DFP_TOLX); // DEBUG
                 return fret[0]; 
             } 
             for(int i=0;i<n;i++)
@@ -864,10 +872,10 @@ public class FunctionMinimization
             } 
             if(test<gtol)
             { 
+            	System.out.println("#**FM.dfp "+its+"\tgrad "+test+"\tdone/gradient"); // DEBUG
                 return fret[0]; 
             } 
             else {
-//            	System.out.println("#**FM.dfp "+its+"\tgrad "+test);
             }
             
             for(int i=0;i<n;i++)
@@ -945,7 +953,11 @@ public class FunctionMinimization
             
         } // and go back for another iteration. 
         if (iterations == null) 
-        	System.out.println("#**FM.dfpmin: Too many iterations in dfpmin"); 
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.dfpmin: Too many iterations in dfpmin"); 
+        
+    	System.out.println("#**FM.dfp "+its+"\tdone/iter"); // DEBUG
+
         
         return fret[0];
     }    
@@ -1075,7 +1087,8 @@ public class FunctionMinimization
 //            System.out.println("#*FM.powell iter "+iter+"\tfp "+fp+"\tfret "+fret);
         } // Back for another iteration.
         if (iterations == null)
-        	System.out.println("#**FM.powell Too many iterations in powell");
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.powell Too many iterations in powell");
 
     	return fret;
     }
@@ -1156,7 +1169,8 @@ public class FunctionMinimization
 			}
 		} // iterations
         if (iterations == null)
-        	System.out.println("#**FM.powell Too many iterations in frprmn");
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.powell Too many iterations in frprmn");
         return fret;
     }
     
