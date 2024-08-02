@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -979,15 +978,18 @@ public class NewickParser
 //    		}
     	} // relabel
     	
+    	boolean want_nodeid = filter_file==null && relabel_file==null;
     	if (filter_file==null && relabel_file==null)
         {
             for (Phylogeny.Node node: tree.getNodes())
             {
-                out.println("#** node "+node);
+            	String name = node.isLeaf()?node.getName():node.getNodeIdentifier();
+            	String type = node.isLeaf()?"LEAF":"NODE";
+                out.println("#"+type+"\t"+name+"\t"+node.getIndex()+"\t"+node.toString());
             }
         	line_breaks = true;
         }
-        out.println(printTree(tree, false, true, line_breaks, false));
+        out.println(printTree(tree, false, true, line_breaks, want_nodeid));
     	
     }
     

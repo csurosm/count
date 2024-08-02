@@ -1,4 +1,19 @@
 package count.ds;
+/*
+ * Copyright 2023 Mikl&oacute;s Cs&#369;r&ouml;s.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -335,6 +350,14 @@ public class TreeTraversal
         return size;
     }
     
+    /**
+     * Iterative implementation of depth calculation in tree (running time 
+     * proportional to depth).
+     * 
+     * @param tree
+     * @param node
+     * @return
+     */
     public static int depth(IndexedTree tree, int node)
     {
     	int d = 0;
@@ -344,6 +367,24 @@ public class TreeTraversal
     		d++;
     	}
     	return d;
+    }
+    
+    /**
+     * Recursive implementation of height computation (running time proportional to subtree size).
+     * @param tree
+     * @param node
+     * @return
+     */
+    public static int height(IndexedTree tree, int node)
+    {
+    	int hc = -1;
+    	for (int ci=0; ci<tree.getNumChildren(node); ci++)
+    	{
+    		int child = tree.getChild(node, ci);
+    		int h = height(tree, child);
+    		hc = Integer.max(h, hc);
+    	}
+    	return 1+hc;
     }
     
     public static int[] getPathToRoot(IndexedTree tree, int node)

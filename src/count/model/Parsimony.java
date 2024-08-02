@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveTask;
 
+import bad.machine.Logarithms;
 import count.Count;
 import count.ds.IndexedTree;
 import count.ds.Phylogeny;
@@ -31,7 +32,7 @@ import static count.io.CommandLine.OPT_OUTPUT;
  * @author csuros
  *
  */
-public class Parsimony 
+public class Parsimony implements Count.UsesThreadpool //, GLDParameters
 {
 	public static double DEFAULT_GAIN_PENALTY = 2.0;
 	public static double DEFAULT_DUPLICATION_PENALTY = 1.0;
@@ -71,7 +72,7 @@ public class Parsimony
 	{
 		if (thread_pool == null && 1<Count.THREAD_PARALLELISM) // && Count.THREAD_UNIT_TASK<Integer.MAX_VALUE)
 		{
-			System.out.println("#**P.threadPool init: "+Count.THREAD_PARALLELISM+" threads on "+Thread.currentThread());
+//			System.out.println("#**P.threadPool init: "+Count.THREAD_PARALLELISM+" threads on "+Thread.currentThread());
 			thread_pool =  Count.threadPool(); // new ForkJoinPool(Count.THREAD_PARALLELISM);	
 		}
 		return thread_pool;
@@ -1056,7 +1057,184 @@ public class Parsimony
 	} // WagnerProfile
 	
 	
-	
+//	/**
+//	 * Parsimony penalties for {@link setPenalties(double, double, double)}
+//	 * calculated by fitting to log-odds scores from the argument.
+//	 * 
+//	 * @return [gain, loss/death, dup]
+//	 */
+//	private double[] fitParsimonyPenalty(double[][] log_trans)
+//	{
+//		// calcukate log-odds scores
+//		double[][] w=new double[log_trans.length][];
+//		for (int n=0; n<w.length; n++)
+//		{
+//			w[n]=new double[log_trans[n].length];
+//			for (int m=0; m<w[n].length; m++)
+//			{
+//				w[n][m] = log_trans[n][n]-log_trans[n][m];
+////				System.out.println("#**DEM.fPP n "+n+"\tm "+m+"\tw "+w[n][m]);
+//			}
+//		}
+//		
+//		double avg_m=0.0;
+//		double avg_w0m = 0.0;
+//		//double tsum = 0.0;
+//		
+//		double log_tsum = Double.NEGATIVE_INFINITY;
+//		
+//		
+//		{
+//			int m=w[0].length;
+//			while (m>1)
+//			{
+//				
+//			}
+//		}
+//		for (int m=1; m<w[0].length; m++)
+//		{
+//			double t = log_trans[0][m];
+//			if (t!=Double.NEGATIVE_INFINITY)
+//			{
+//				log_tsum = Logarithms.add(log_tsum, t);
+//				double p = Math.exp(t);
+//				
+//				
+//				avg_m += p*m;
+//				avg_w0m += p*w[0][m];
+//			}
+//		}
+//		
+//		
+////		System.out.println("#**DEM.fPP summ "+avg_m+"\tsumw "+avg_w0m+"\ttsum "+tsum);
+//		
+//		avg_m /= tsum;
+//		avg_w0m /= tsum;
+//		
+//		double inc_num = 0.0;
+//		double inc_denom = 0.0;
+//		for (int m=1; m<w[0].length; m++)
+//		{
+//			double t = trans[0][m];
+//			if (t!=0.0)
+//			{
+//				double dm = (m-avg_m);
+//				inc_num += t*w[0][m]*dm;
+//				inc_denom += t*dm*dm;
+//			}
+//		}		
+//		for (int n=1; n<w.length; n++)
+//		{
+//			for (int d=1, m=n+d; m<w[n].length; m++, d++)
+//			{
+//				double t = trans[n][m];
+//				if (t!=0.0)
+//				{
+//					inc_num += t*w[n][m]*d;
+//					inc_denom += t*d*d;
+//				}
+//			}
+//		}
+//		double opt_inc = inc_num/inc_denom;
+//		double opt_gain = avg_w0m-opt_inc*avg_m;
+////		System.out.println("#**DEM.fPP inc_num "+inc_num+"\tinc_den "+inc_denom
+////				+"\topt_inc "+opt_inc+"\topt_gain "+opt_gain);
+//		
+//		tsum=0.0;
+//		double avg_n=0.0;
+//		double avg_wn0 = 0.0;
+//		for (int n=1; n<w.length; n++)
+//		{
+//			double t = trans[n][0];
+//			if (t!=0.0)
+//			{
+//				tsum += t;
+//				avg_n += t*n;
+//				avg_wn0 += t*w[n][0];
+//			}
+//		}
+////		System.out.println("#**DEM.fPP sumn "+avg_n+"\tsumw "+avg_wn0+"\ttsum "+tsum);
+//
+//		avg_n /= tsum;
+//		avg_wn0 /= tsum;
+//		
+//		double dec_num=0.0;
+//		double dec_denom=0.0;
+//		for (int n=1; n<w.length; n++)
+//		{
+//			double t = trans[n][0];
+//			if (t!=0.0)
+//			{
+//				double dn = n-avg_n;
+//				dec_num += t*w[n][0]*dn;
+//				dec_denom += t*dn*dn;
+//			}
+//		}
+//		for (int n=2; n<w.length; n++)
+//		{
+//			for (int d=1, m=n-d; m>0; d++, m--)
+//			{
+//				double t = trans[n][m];
+//				if (t!=0.0)
+//				{
+//					dec_num += t*w[n][m]*d;
+//					dec_denom += t*d*d;
+//				}
+//			}
+//		}
+//
+//		
+//		double opt_dec = dec_num/dec_denom;
+//		double opt_loss = avg_wn0-opt_dec*avg_n;
+////		System.out.println("#**DEM.fPP dec_num "+dec_num+"\tdec_den "+dec_denom
+////				+"\topt_dec "+opt_dec+"\topt_loss "+opt_loss);
+//		
+//		double pty_dup = opt_inc/opt_dec;
+//		double pty_gain = (opt_gain+opt_inc)/opt_dec;
+//		double pty_loss = (opt_loss+opt_dec)/opt_dec;
+//		
+//		
+//		Count.out.println("#**DEM.fitP gain "+pty_gain+"\tloss "+pty_loss+"\tdup "+pty_dup);
+//		double[] pty = new double[3];
+//		pty[PARAMETER_GAIN] = pty_gain;
+//		pty[PARAMETER_LOSS] = pty_loss;
+//		pty[PARAMETER_DUPLICATION] = pty_dup;
+//		
+////		for (int n=0; n<w.length; n++)
+////		{
+////			for (int m=0; m<w[n].length && m<n; m++)
+////			{
+////				double c =   (n-m)*opt_dec;
+////				double v = (n-m)*1.0;
+////				
+////				if (m==0)
+////				{
+////					c += opt_loss;
+////					v += pty_loss-1.0;
+////				}
+////				double e = (w[n][m]-c)/w[n][m];
+////				System.out.println("#**DEM.fitP\t"+n+"\t"+m+"\t"+trans[n][m]+"\t"+w[n][m]+"\t"+c+"\t"+e+"\t"+(v*opt_dec)+"\t"+v);
+////			}
+////			for (int m=n+1; m<w[n].length; m++)
+////			{
+////				double c = (m-n)*opt_inc;
+////				double v = (m-n)*pty_dup;
+////				if (n==0)
+////				{
+////					c += opt_gain;
+////					v += pty_gain-pty_dup;
+////				}
+////
+////				double e = (w[n][m]-c)/w[n][m];
+////				System.out.println("#**DEM.fitP\t"+n+"\t"+m+"\t"+trans[n][m]+"\t"+w[n][m]
+////						+"\t"+c+"\t"+e+"\t"+(v*opt_dec)+"\t"+v);
+////			}
+////		}
+//		
+//		
+//		return pty;
+//	}
+		
 	
 	public static class SPRExplorer
 	{

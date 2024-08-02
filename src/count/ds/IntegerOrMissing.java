@@ -1,14 +1,4 @@
 package count.ds;
-
-import java.awt.Component;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableCellRenderer;
-
-import count.gui.kit.RoundedDouble;
-
 /*
  * Copyright 2022 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
@@ -24,6 +14,16 @@ import count.gui.kit.RoundedDouble;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import java.awt.Component;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableCellRenderer;
+
+import count.gui.kit.RoundedDouble;
+
 
 /**
  * Class for nonnegative integers + missing entries (any negative integer)

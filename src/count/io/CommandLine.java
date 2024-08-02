@@ -15,20 +15,16 @@
  */
 package count.io;
 
-import static count.io.CommandLine.OPT_OUTPUT;
-import static count.io.CommandLine.OPT_RND;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 
-import ca.umontreal.iro.evolution.genecontent.RateVariation.FileFormatException;
 import count.Count;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
@@ -36,10 +32,17 @@ import count.matek.DiscreteDistribution;
 import count.matek.Poisson;
 import count.matek.NegativeBinomial;
 import count.matek.ShiftedGeometric;
-import count.model.FreeMixedModel;
 import count.model.GammaInvariant;
-import count.model.MLPhylogeny;
+import count.model.MixedRateModel;
+import count.model.RateVariationModel;
 import count.model.TreeWithRates;
+import count.model.old.BasicRateVariation;
+import count.model.old.FreeMixedModel;
+
+import static count.model.GLDParameters.PARAMETER_DUPLICATION;
+import static count.model.GLDParameters.PARAMETER_GAIN;
+import static count.model.GLDParameters.PARAMETER_LOSS;
+
 
 /**
  * Common initialization of problem instance from the command line. 
@@ -91,16 +94,47 @@ public class CommandLine
 	    		{
 	    			opt = args[arg_idx].substring(2);
 	    			arg_idx++;
-	    			if (arg_idx<args.length && !args[arg_idx].startsWith("-"))
-	    				val = args[arg_idx++];
+	    			if (arg_idx<args.length)
+	    			{
+	    				if (args[arg_idx].startsWith("-"))
+	    				{
+	    					// negative number?
+	    					if (args[arg_idx].length()==1 
+	    							|| Character.isDigit(args[arg_idx].charAt(1)))
+							{
+		    					val = args[arg_idx++];
+							} else
+							{
+//								System.out.println("#**CLI() skipping "+args[arg_idx]);
+							}
+	    				}
+	    				else
+	    				{
+	    					val = args[arg_idx++];
+	    				}
+	    			}
 	    		}
 	    	} else
 	    	{
 	    		opt = args[arg_idx].substring(1);
     			arg_idx++;
-    			if (arg_idx<args.length && !args[arg_idx].startsWith("-"))
-    				val = args[arg_idx++];
-	    	}
+				if (args[arg_idx].startsWith("-"))
+				{
+					// negative number?
+					if (args[arg_idx].length()==1 
+							|| Character.isDigit(args[arg_idx].charAt(1)))
+					{
+    					val = args[arg_idx++];
+					} else
+					{
+//						System.out.println("#**CLI() skipping "+args[arg_idx]);
+					}
+				}
+				else
+				{
+					val = args[arg_idx++];
+				}
+			}
 	    	cli_options.setProperty(opt, val);
 //	    	System.out.println("#**CL() got '"+opt+"':'"+val+"'");
 	    }
@@ -174,15 +208,27 @@ public class CommandLine
 	    if (rates_file != null && !NO_FILE.equals(rates_file) && tree!=null)
 	    {
 		    BufferedReader B = new BufferedReader(GeneralizedFileReader.guessReaderForInput(rates_file));
-		    GammaInvariant input_model = RateVariationParser.readRates(B, tree);
-		    FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, input_model);
+		    
+		    MixedRateModel input_model = RateVariationParser.readModel(B, tree);
+		    if (input_model instanceof GammaInvariant)
+		    {
+		    	FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, (GammaInvariant)input_model);
+			    model_data = new DataFile<>((GammaInvariant)input_model, new File(rates_file));
+			    free_model_data = new DataFile<>(free_model, new File(rates_file));
+			    variation_data = new DataFile<>(RateVariationModel.convert((GammaInvariant)input_model),  new File(rates_file));
+		    } else
+		    {
+		    	assert (input_model instanceof RateVariationModel);
+		    	model_data = null;
+		    	free_model_data = null;
+		    	variation_data = new DataFile<>((RateVariationModel)input_model, new File(rates_file));
+		    }
 		    B.close();
-		    model_data = new DataFile<>(input_model, new File(rates_file));
-		    free_model_data = new DataFile<>(free_model, new File(rates_file));
 	    } else
 	    {
 	    	model_data = null;
 	    	free_model_data = null;
+	    	variation_data = null;
 	    }
 	
 	    if (num_mandatory_arguments>0)
@@ -198,7 +244,10 @@ public class CommandLine
 		    }
 	    	if (table_file != null)
 	    	{
-	    		out.println(getStandardHeader("Table file: "+table_file+"\t(hash "+table_data.getContent().tableHashCode())+")");
+	    		out.println(getStandardHeader("Table file: "+table_file+
+	    				(table_data==null
+	    					?""
+	    					:"\t(hash "+table_data.getContent().tableHashCode()+")")));
 	    	}
     		if (rates_file != null)
     			out.println(getStandardHeader("Rates file: "+rates_file));
@@ -253,18 +302,84 @@ public class CommandLine
 	private final Class<?> cli_for_class;
 
 	
-	public TreeWithRates getRates(){ return getModel().getBaseModel();}
+	public Class<?> getMainClass(){ return cli_for_class;}
+	public TreeWithRates getRates()
+	{ 
+		if (model_data != null)
+		{
+			return getGammaModel().getBaseModel();
+		} else
+		{
+			return getVariationModel().getBaseModel();
+		}
+	}
 	public AnnotatedTable getTable() { return DataFile.getContent(table_data);}
 	public DataFile<AnnotatedTable> getTableData(){ return table_data;}
 	public Phylogeny getTree() { return DataFile.getContent(tree_data);}
 	public DataFile<Phylogeny> getTreeData(){ return tree_data;}
-	public GammaInvariant getModel() { return DataFile.getContent(model_data);}
+	public GammaInvariant getGammaModel() { return DataFile.getContent(model_data);}
 	public FreeMixedModel getFreeModel() { return DataFile.getContent(free_model_data);}
 	public DataFile<GammaInvariant> getModelData(){ return model_data;}
+	
+	/**
+	 * Returns a {@link RateVariationModel} datafile if 
+	 * constant rates or RateVariationModel input file, or 
+	 * a {@link GammaInvariant} datafile if 
+	 * GammaInvariant input file with rate variation.
+	 * 
+	 * @return
+	 */
+	public DataFile<MixedRateModel> getMixedRateModelData()
+	{
+		if (model_data != null)
+		{
+			GammaInvariant gamma_model = getGammaModel();
+			int ncat = gamma_model.getNumActiveClasses();
+			if (ncat==1)
+			{
+				return new DataFile<>((MixedRateModel) getVariationModel(), variation_data.getFile());
+			} else 
+				return new DataFile<>((MixedRateModel)getGammaModel(), model_data.getFile());
+		}
+		else if (variation_data == null)
+			return null;
+		else
+		{
+			return new DataFile<>((MixedRateModel) getVariationModel(), variation_data.getFile());
+		}
+	}
+	
+	
+	
+	public RateVariationModel getVariationModel()
+	{
+		return DataFile.getContent(variation_data);
+	}
+	
+	/**
+	 * DEBUG code 
+	 * @return
+	 */
+	public BasicRateVariation getBasicVariationModel()
+	{
+		RateVariationModel var_model = getVariationModel();
+		BasicRateVariation basic_var = new BasicRateVariation(var_model);
+		return basic_var;
+	}
+	
+	public MixedRateModel getMixedrateModel()
+	{
+		if (model_data != null)
+			return getGammaModel();
+		else
+			return getVariationModel();
+	}
+	
 	
 	private final DataFile<Phylogeny> tree_data;
 	private final DataFile<AnnotatedTable> table_data;
 	private final DataFile<GammaInvariant> model_data;
+	private final DataFile<RateVariationModel> variation_data;
 	
 	private final DataFile<FreeMixedModel> free_model_data;
 	
@@ -296,6 +411,7 @@ public class CommandLine
 	public static final String OPT_FILTER = "filter";
 	
 	public static final String OPT_SPR = "walk";
+	public static final String OPT_NNI = "nni";
 	public static final String OPT_BUILD = "build";
 	public static final String OPT_REROOT = "reroot";
 	public static final String OPT_CONTRACT = "contract";
@@ -303,21 +419,27 @@ public class CommandLine
 	public static final String OPT_TOUR = "tour";
 	public static final String OPT_SEARCH = "search";
 	public static final String OPT_PLACE = "place";
+	public static final String OPT_NEAR = "near";
 	
 	public static final String OPT_BOOTSTRAP = "bootstrap";
 
 	public static final String OPT_PARSIMONY = "parsimony";
 	public static final String OPT_PARSIMONY_FIT = OPT_PARSIMONY+".fit";
 	
+	public static final String OPT_PVALUE = "pvalue";
+	
 	
     public static final String OPT_GAIN = "gain";
     public static final String OPT_DUPLICATION = "duplication";
     public static final String OPT_LOSS = "loss";
     
+    
 	public final static String OPT_ROWCOUNT = "n";
 	
 	public final static String OPT_RND = "rnd";
 
+	public static final String OPT_ROOT = "root";
+	public static final String OPT_LIST = "list";
 	
 	public static final String OPT_MODEL_CATEGORIES = "k";
 	public static final String OPT_MODEL_GAIN_CATEGORIES = "gain_k";
@@ -325,12 +447,21 @@ public class CommandLine
 	public static final String OPT_MODEL_DUPLICATION_CATEGORIES = "duplication_k";
 	public static final String OPT_MODEL_FORBIDDEN_GAIN = "forbidden_gain";
 	public static final String OPT_MODEL_FORBIDDEN_DUPLICATION = "forbidden_duplication";
-	public static final String OPT_MODEL_ROOT_PRIOR = "root"; 
+	public static final String OPT_MODEL_ROOT_PRIOR = OPT_ROOT; 
 	
 	public static final String OPT_MODEL_UNIFORM_DUPLICATION = "uniform_duplication";
 	public static final String OPT_MODEL_UNIFORM_GAIN = "uniform_gain";
 	
-
+	public static final String OPT_STATISTICS = "stats";
+	public static final String OPT_ANCESTRAL = "ancestral";
+	public static final String OPT_HISTORY = "history";
+	
+	public static final String OPT_REINIT = "reinit";
+	
+	
+//	public static final String PREFIX_ANCESTRAL = "#ANCESTRAL";
+//	public static final String PREFIX_HISTORY = "#HISTORY";
+	
 	/**
 	 * 
 	 * @param opt optional argument name (without starting dashes) 
@@ -389,6 +520,17 @@ public class CommandLine
 			
 		} 
 		return getOptionDistribution;
+	}
+	
+	public static String encodeDistributionOption(DiscreteDistribution D)
+	{
+		StringBuilder sb = new StringBuilder(D.getClass().getSimpleName());
+		double[] params = D.getParameters();
+		for (int pidx=0; pidx<params.length; pidx++) 
+		{
+			sb.append(",").append(params[pidx]);
+		}
+		return sb.toString();
 	}
 	
 	public PrintStream getOutput(String opt, PrintStream default_value) throws java.io.FileNotFoundException
@@ -516,6 +658,19 @@ public class CommandLine
         return relative;	
 	}
 	
+	public static int parseOptionParameterType(String par_str)
+	{
+		if (par_str==null) return -1;
+		if (OPT_GAIN.equals(par_str))
+			return PARAMETER_GAIN;
+		else if (OPT_LOSS.equals(par_str))
+			return PARAMETER_LOSS;
+		else if (OPT_DUPLICATION.equals(par_str) )
+			return PARAMETER_DUPLICATION;
+		
+		return -1;
+	}
+	
 	
 	private void setCommonOptions()
 	{
@@ -542,13 +697,19 @@ public class CommandLine
         
         java.util.Properties Props=System.getProperties();
 
-        String system = Props.getProperty("os.name", "[unknown OS]")+" "+Props.getProperty("os.version","[Unknown version]")+" "+Props.getProperty("os.arch","[Unknown architecture]");
-        String java = Props.getProperty("java.vm.name","[Unknown VM]")+" "+Props.getProperty("java.vm.version","[Unknown version]")+" ("+Props.getProperty("java.runtime.version","[Unknwon runtime]")+") "+Props.getProperty("java.vm.info","")+", "+Props.getProperty("java.vm.vendor","[Uknown vendor]");
+        String system = Props.getProperty("os.name", "[Unknown OS]")
+        		+" "+Props.getProperty("os.version","[Unknown version]")
+        		+" "+Props.getProperty("os.arch","[Unknown architecture]");
+        String java = Props.getProperty("java.vm.name","[Unknown VM]")
+        		+" "+Props.getProperty("java.vm.version","[Unknown version]")
+        		+" ("+Props.getProperty("java.runtime.version","[Unknown runtime]")
+        		+") "+Props.getProperty("java.vm.info","")
+        		+", "+Props.getProperty("java.vm.vendor","[Unknown vendor]");
         String cwd = Props.getProperty("user.dir","[unknown]");
 
         StringBuilder message = new StringBuilder();
         message.append(getStandardHeader("System: ")).append(system);
-        message.append("\n").append(getStandardHeader("Java engine:")).append(java);
+        message.append("\n").append(getStandardHeader("Java engine: ")).append(java);
         message.append("\n").append(getStandardHeader("Date: ")).append(now);
         message.append("\n").append(getStandardHeader("Current directory: ")).append(cwd);
         return message.toString();

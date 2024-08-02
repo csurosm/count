@@ -123,6 +123,16 @@ public class UniqueProfileTable implements ProfileTable
 		return unique_profiles.get(family).multiplicity;
 	}
 	
+	/**
+	 * Index for family in this table 
+	 * 
+	 * @param original_family_index family index in instantiating table
+	 * @return index here for the same family profile
+	 */
+	public int getUniqIndex(int original_family_index)
+	{
+		return this.uniq_family[original_family_index];
+	}
 	
 	
 //	public Iterator<Integer> getOriginalFamilies(int uniq_idx)

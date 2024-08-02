@@ -16,6 +16,8 @@ package count;
  * limitations under the License.
  */
 
+
+import java.io.PrintStream;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -34,115 +36,22 @@ import count.io.CommandLine;
  */
 public class Count 
 {
-    public static final String APP_TITLE = "Count XXIII";
-    public static final String APP_VERSION = "23.0727[Import table]";
-    
 	/**
-	 * Number of families handled by one thread. Set to {@link Integer#MAX_VALUE} to 
-	 * calculate without parallelization. 
+	 * Official app name.
 	 */
-	public static int THREAD_UNIT_TASK = 64; //Integer.MAX_VALUE; //64; // so many families are processed by one thread in a unit task 
-	public static int THREAD_PARALLELISM = 
-			(3*Runtime.getRuntime().availableProcessors()+3)/4; // 0.75*vCPU rounded up; if vCPU<4, then ==vCPU; set to 1 for no parallelism
-	
-//	private static ForkJoinPool thread_pool=null;
-//	/**
-//	 * Initializad only once, if {@link #THREAD_PARALLELISM} is greater than 1.
-//	 * 
-//	 * @return
-//	 */
-//	public static ForkJoinPool threadPool()
-//	{
-//		if (thread_pool == null && 1<THREAD_PARALLELISM && THREAD_UNIT_TASK<Integer.MAX_VALUE)
-//		{
-//			System.out.println("#**C.threadPool init: "+THREAD_PARALLELISM+" threads.");
-//			thread_pool = new ForkJoinPool(THREAD_PARALLELISM);	
-//		}
-//		return thread_pool;
-//	}
-	
-	/**
-	 * Instantiates a new thread pool based on the current value of {@link #THREAD_PARALLELISM} 
-	 * @return null if {@link #THREAD_PARALLELISM} is not greater than 1
-	 */
-	public static ForkJoinPool threadPool()
-	{
-		ForkJoinPool pool = null;
-		if (1<THREAD_PARALLELISM )
-		{
-			pool = new ForkJoinPool(THREAD_PARALLELISM);	
-//			System.out.println("#**C.threadPool init: "+THREAD_PARALLELISM+" threads for "+pool+"\ton thread "+Thread.currentThread());
-		}
-		return pool;
-	}
-	
-	public static int unitTask(int task_count)
-	{
-		return unitTask(task_count, THREAD_UNIT_TASK);
-	}
-	
-	public static int unitTask(int task_count, int max_unit_task)
-	{
-		if (max_unit_task<=0) throw new IllegalArgumentException("Count.unitTask: max_unit_task must be positive (got "+max_unit_task+")");
-		if (max_unit_task == Integer.MAX_VALUE || THREAD_PARALLELISM==1)
-			return task_count;
-
-		int avg_load  = (task_count+THREAD_PARALLELISM-1)/THREAD_PARALLELISM;
-		int unitTask = Integer.min(avg_load, max_unit_task); 
-//		System.out.println("#**C.unitTask "+task_count+"/"+THREAD_PARALLELISM+" threads: avg "+avg_load+"\tmax "+max_unit_task+"\tset "+unitTask);
-		return unitTask;
-		// want u*	THREAD_PARALLELISM <= task_count
-		// u = task_count/THREAD_PARALLELISM;
-	}
-	
+    public static final String APP_TITLE = "Count XXIV";
     /**
-     * Initialize from command line
-     * 
-     * @param args command-line arguments
-     * @throws Exception if there is a problem with the command-line arguments
+     * Version string starting with a float value (integer part=major version); 
+     * set to the date during development.
      */
-    public Count(String[] args) throws Exception
-    {
-    	this.cli = new CommandLine(args, getClass(), 0);
-    }
-    /**
-     * Frame in which the execution is done.
-     */
-    private AppFrame top_frame;
-	
-    private final CommandLine cli;
-    
-    private void createAndShowGUI() 
-    {
-        top_frame = new AppFrame(this);
-        count.gui.UncaughtExceptionHandler handler = top_frame.getExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler(handler);
-        	
-        if (cli.getTree()==null) 
-        {
-	        top_frame.doAbout(true);
-        } else
-        {
-        	Session sesh = new Session(top_frame, cli.getTreeData());
-        	top_frame.addSession(sesh);
-        	if (cli.getTableData() != null)
-        	{
-        		sesh.addDataSet(cli.getTableData());
-        	}
-        	if (cli.getModelData()!= null)
-        	{
-        		sesh.addRates(cli.getModelData(), true);
-        	}
-        }
-        top_frame.setVisible(true);
-    }
+    public static final String APP_VERSION = "24.08.02-beta";
     
     /**
      * Name of the application.
      * 
      * @return app title
      */
-    public final static String getAppTitle()
+    private final static String getAppTitle()
     {
     	return APP_TITLE;
     }
@@ -152,11 +61,16 @@ public class Count
      * 
      * @return app version string
      */
-    public final static String getAppVersion()
+    private final static String getAppVersion()
     {
     	return APP_VERSION;
     }
     
+    /**
+     * Numerical part of app version.
+     * 
+     * @return
+     */
     public final static double getAppVersionNumber()
     {
     	int dot = -1;
@@ -183,6 +97,114 @@ public class Count
     
     public final static String getAppFullName()
     { return getAppTitle()+" "+getAppVersion();}
+    
+    
+	/**
+	 * Number of threads allocated in thread pools
+	 * ; set to 1 for no multithreading. 
+	 * (Different classes use their own static 
+	 * thread pools.)  
+	 * Default value is 0.75*<var>vCPU</var> rounded up; so if <var>vCPU</var>&lt;4, 
+	 * then equals <var>vCPU</var>.
+	 */
+	public static int THREAD_PARALLELISM = 
+			(3*Runtime.getRuntime().availableProcessors()+3)/4; // 
+	/**
+	 * Number of families handled by one thread
+	 * at a time. Set to {@link Integer#MAX_VALUE} to 
+	 * calculate on a single thread. 
+	 */
+	public static int THREAD_UNIT_TASK = 64; //Integer.MAX_VALUE; //64; // so many families are processed by one thread in a unit task 
+	
+	
+	/**
+	 * Empty interface to indicate that a class is multithreaded
+	 * 
+	 */
+	public static interface UsesThreadpool{}
+	
+	/**
+	 * Instantiates a new thread pool based on the 
+	 * current value of {@link #THREAD_PARALLELISM} 
+	 * @return null if {@link #THREAD_PARALLELISM} is not greater than 1
+	 */
+	public static ForkJoinPool threadPool()
+	{
+		ForkJoinPool pool = null;
+		if (1<THREAD_PARALLELISM)
+		{
+			pool = new ForkJoinPool(THREAD_PARALLELISM);	
+//			System.out.println("#**C.threadPool init: "+THREAD_PARALLELISM+" threads for "+pool+"\ton thread "+Thread.currentThread());
+		}
+		return pool;
+	}
+	
+	public static int unitTask(int task_count)
+	{
+		return unitTask(task_count, THREAD_UNIT_TASK);
+	}
+	
+	public static int unitTask(int task_count, int max_unit_task)
+	{
+		if (max_unit_task<=0) throw new IllegalArgumentException("Count.unitTask: max_unit_task must be positive (got "+max_unit_task+")");
+		if (max_unit_task == Integer.MAX_VALUE || THREAD_PARALLELISM==1)
+			return task_count;
+
+		int avg_load  = (task_count+THREAD_PARALLELISM-1)/THREAD_PARALLELISM;
+		int unitTask = Integer.min(avg_load, max_unit_task); 
+//		System.out.println("#**C.unitTask "+task_count+"/"+THREAD_PARALLELISM+" threads: avg "+avg_load+"\tmax "+max_unit_task+"\tset "+unitTask);
+		return unitTask;
+		// want u*	THREAD_PARALLELISM <= task_count
+		// u = task_count/THREAD_PARALLELISM;
+	}
+	
+	public static PrintStream out = System.out;
+	
+    /**
+     * Initialize from command line
+     * 
+     * @param args command-line arguments
+     * @throws Exception if there is a problem with the command-line arguments
+     */
+    public Count(String[] args) throws Exception
+    {
+    	this.cli = new CommandLine(args, getClass(), 0);
+    }
+    /**
+     * Frame in which the execution is done.
+     */
+    private AppFrame top_frame;
+	
+    private final CommandLine cli;
+    
+    /**
+     * Launches the Swing application; call from event queue
+     */
+    private void createAndShowGUI() 
+    {
+        top_frame = new AppFrame(this);
+        count.gui.UncaughtExceptionHandler handler = top_frame.getExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler(handler);
+        	
+        if (cli.getTree()==null) 
+        {
+	        top_frame.doAbout(true);
+        } else
+        {
+        	Session sesh = new Session(top_frame, cli.getTreeData());
+        	top_frame.addSession(sesh);
+        	if (cli.getTableData() != null)
+        	{
+        		sesh.addDataSet(cli.getTableData());
+        	}
+        	if (cli.getMixedRateModelData()!= null)
+        	{
+        		sesh.addRates(cli.getMixedRateModelData(), true);
+        	}
+        }
+        top_frame.setVisible(true);
+    }
+    
     
     
     /**

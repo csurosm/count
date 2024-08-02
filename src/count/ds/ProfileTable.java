@@ -189,7 +189,14 @@ public interface ProfileTable
 	}
 	
 	
-	
+	/**
+	 * A table with as many profiles as leaves: each profile has a single copy 
+	 * at a single leaf. Stores only the instantiating tree; profiles 
+	 * for {@link #getFamilyProfile(int)} are created on the fly. 
+ 
+	 * @param tree
+	 * @return
+	 */
 	public static ProfileTable singletonTable(IndexedTree tree)
 	{
 		ProfileTable singletons
@@ -228,6 +235,11 @@ public interface ProfileTable
 		 return singletons;
 	}
 	
+	/** 
+	 * A table with a single profile : all-0. 
+	 * @param tree
+	 * @return
+	 */
 	public static ProfileTable emptyProfile(IndexedTree tree)
 	{
 		ProfileTable empty 
@@ -269,6 +281,12 @@ public interface ProfileTable
 		
 	}
 	
+	/**
+	 * An empty table with no profiles. 
+	 * 
+	 * @param tree
+	 * @return
+	 */
 	public static ProfileTable emptyTable(IndexedTree tree)
 	{
 		ProfileTable empty = new ProfileTable()

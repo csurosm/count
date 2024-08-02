@@ -85,19 +85,6 @@ public class AnnotatedTablePanel
      */
     private JLabel selected_rows_information;
 
-//    /**
-//     * A semaphore variable for managing the displayed
-//     * information about the current family selection.
-//     * Families can be selected by usual table selection,
-//     * or by a double-click in a cell. In the latter case,
-//     * the information can be set by the selectSimilarFamilies()
-//     * method. The default information is displayed by a ListSelectionListener
-//     * for the family table. This variable is set to false in
-//     * order to disable the update by the selection listener
-//     * when the family selection is done by a computation.
-//     *
-//     */
-//    protected boolean update_selected_rows_information = true;
 
     /**
      * Returns the underlying data file.
@@ -153,7 +140,8 @@ public class AnnotatedTablePanel
             @Override
             protected String getCellToolTip(int row, int col)
             {
-                return model.getCellToolTip(row, col);
+            	String tooltip = model.getCellToolTip(row, col);
+            	return tooltip;
             }
 
             
@@ -247,6 +235,15 @@ public class AnnotatedTablePanel
 
         table.setRowSelectionInterval(0,0);
     }
+    
+    
+    public void setPhyleticProfileColoring(Color[] leaf_colors)
+    {
+    	
+    	table_scroll.getModel().setPhyleticProfileColoring(table_scroll.getHeaderTable(), leaf_colors);
+    	table_scroll.getModel().setPhyleticProfileColoring(table_scroll.getDataTable(), leaf_colors);
+    }
+    
 
 
 //    private void displaySelectionInfo(String text)
@@ -352,6 +349,10 @@ public class AnnotatedTablePanel
             throw new IOException("Cannot write the table.");
         }
         PS.close();
+        
+        data.setFile(f);
+        data.setDirty(false);
 	}
+	
 
 }

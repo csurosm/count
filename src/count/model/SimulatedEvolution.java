@@ -28,17 +28,19 @@ import java.util.function.ToIntFunction;
 
 import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;
-import count.ds.IntegerOrMissing;
 import count.ds.Phylogeny;
 import count.ds.TreeTraversal;
-import count.ds.AnnotatedTable.PhyleticProfile;
-import count.gui.HistoryView;
 import count.io.CommandLine;
 import count.io.TableParser;
 import count.model.Posteriors.FamilyEvent;
 
 import static count.io.CommandLine.OPT_MINCOPY;
 import static count.io.CommandLine.OPT_ROWCOUNT;
+
+import static count.io.CommandLine.OPT_ANCESTRAL;
+import static count.io.CommandLine.OPT_HISTORY;
+import static count.io.CommandLine.OPT_STATISTICS;
+
 /**
  * Precise, simulation of copy number evolution based 
  * on copy-level discrete events. 
@@ -437,6 +439,11 @@ public class SimulatedEvolution
 //				return member_count;
 			}
 			
+			public int getNodeTrueCount(int node, boolean want_unobserved)
+			{
+				return sum(P->P.getTrueMemberCount(node), want_unobserved);
+			}
+			
 			public int getEdgeSurvivalCount(int node,  boolean want_unobserved)
 			{
 				return sum(P->P.getEdgeSurvival(node), want_unobserved);
@@ -569,6 +576,12 @@ public class SimulatedEvolution
 		}
 		
 //		
+		/**
+		 * Number of copies at a node which survive at subtree leaves 
+		 * 
+		 * @param node
+		 * @return
+		 */
 		int getMemberCount(int node)
 		{
 			return surviving_copies.get(node).size();
@@ -598,6 +611,12 @@ public class SimulatedEvolution
 			return s;
 		}
 		
+		/**
+		 * All copies at a node (event those without surviving descendants)
+		 * 
+		 * @param node
+		 * @return
+		 */
 		int getTrueMemberCount(int node)
 		{
 			return node_copies.get(node).size();
@@ -826,8 +845,9 @@ public class SimulatedEvolution
 	public static void main(String[] args) throws Exception
 	{
 		PrintStream out = System.out;
+		
 		CommandLine cli = new CommandLine(args, SimulatedEvolution.class, 1);
-		if (cli.getModel() == null)
+		if (cli.getMixedrateModel() == null)
 			throw new IllegalArgumentException("Specify the rates model");
 		int num_rows;
 		if (cli.getTable() == null)
@@ -850,7 +870,7 @@ public class SimulatedEvolution
 		
 		out.println(CommandLine.getStandardHeader("Families: -"+OPT_ROWCOUNT+" "+num_rows));
 		out.println(CommandLine.getStandardHeader("Minimum observed: -"+OPT_MINCOPY+" "+min_obs));
-		MixedRateModel input_model = cli.getModel();
+		MixedRateModel input_model = cli.getMixedrateModel();
 		if (cli.getFreeModel()!=null)
 		{
 			input_model= cli.getFreeModel();
@@ -864,90 +884,188 @@ public class SimulatedEvolution
 		Table table = S.table(num_rows, min_obs); //  SimulatedEvolution.table(input_model, num_rows, min_obs);
 		table.fillTable();
 
-		System.out.println(TableParser.getFormattedTable(table, false));
+//		out.println(TableParser.getFormattedTable(table, false));
+		TableParser.printFormattedTable(out, table, false);
+		
+		
+		// other info on the table 
+		boolean want_stats = cli.getOptionBoolean(OPT_STATISTICS, cli.getTable()!=null);
+		boolean want_ancestral = cli.getOptionBoolean(OPT_ANCESTRAL, false);
+		boolean want_families = cli.getOptionBoolean(OPT_HISTORY, want_ancestral);
+		
+		
 		Phylogeny phylo = cli.getTree();
-		int[] profile_distribution = new int[phylo.getNumLeaves()+1];
 		
-		for (int f=0; f<table.getFamilyCount(); f++)
+		if (want_stats)
 		{
-//			Table.ObservedProfile obs = table.getObservedProfile(f);
-			int profile_size = table.getLineageCount(f);
-			profile_distribution[profile_size]++;
-		}
-		int[] template_distribution;
-		if (cli.getTable()==null)
-			template_distribution=null;
-		else
-		{
-			AnnotatedTable input_table = cli.getTable();
-			template_distribution = new int[profile_distribution.length];
-			for (int f=0; f<input_table.getFamilyCount(); f++)
-			{
-				int size = input_table.getLineageCount(f);
-				template_distribution[size]++;
-			}
-		}
-		System.out.println("#DISTRIBUTION\tsize\tsim"+(template_distribution==null?"":"\tinput"));
-		
-		for (int s=0; s<profile_distribution.length; s++)
-		{
-			System.out.print("#DISTRIBUTION\t"+s+"\t"+profile_distribution[s]);
-			if (template_distribution!=null)
-			{
-				double diff = profile_distribution[s]-template_distribution[s];
-				if (template_distribution[s]!=0)
-					diff/=template_distribution[s];
-				System.out.printf("\t%d\t%.3f", template_distribution[s], diff);
-			}
-			System.out.println();
-		}
-		
-		
-		Arrays.fill(profile_distribution, 0);
-		for (int f=0; f<table.getFamilyCount(); f++)
-		{
-			Table.ObservedProfile obs = table.getObservedProfile(f);
-
-			for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
-			{
-				int c = obs.getNodeSurvivalCount(leaf, false);
-				if (c>0)
-					profile_distribution[leaf]++;
-			}
+			int[] profile_distribution = new int[phylo.getNumLeaves()+1];
 			
-		}
-		if (template_distribution!=null)
-		{
-			Arrays.fill(template_distribution, 0);
-			AnnotatedTable input_table = cli.getTable();
-			for (int f=0; f<input_table.getFamilyCount(); f++)
+			for (int f=0; f<table.getFamilyCount(); f++)
 			{
-				int[] copies = input_table.getFamilyProfile(f);
-				for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+	//			Table.ObservedProfile obs = table.getObservedProfile(f);
+				int profile_size = table.getLineageCount(f);
+				profile_distribution[profile_size]++;
+			}
+			int[] template_distribution;
+			if (cli.getTable()==null)
+				template_distribution=null;
+			else
+			{
+				AnnotatedTable input_table = cli.getTable();
+				template_distribution = new int[profile_distribution.length];
+				for (int f=0; f<input_table.getFamilyCount(); f++)
 				{
-					int c = copies[leaf];
-					if (c>0)
-						template_distribution[leaf]++;
+					int size = input_table.getLineageCount(f);
+					template_distribution[size]++;
 				}
 			}
-		}
-		
-		System.out.println("#FAMILIES\tnode\tsim"+(template_distribution==null?"":"\tinput"));
-		
-		for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
-		{
-			System.out.print("#FAMILIES\t"+phylo.getIdent(leaf)+"\t"+profile_distribution[leaf]);
+			out.println("#DISTRIBUTION\tsize\tsim"+(template_distribution==null?"":"\tinput"));
+			
+			for (int s=0; s<profile_distribution.length; s++)
+			{
+				out.print("#DISTRIBUTION\t"+s+"\t"+profile_distribution[s]);
+				if (template_distribution!=null)
+				{
+					double diff = profile_distribution[s]-template_distribution[s];
+					if (template_distribution[s]!=0)
+						diff/=template_distribution[s];
+					out.printf("\t%d\t%.3f", template_distribution[s], diff);
+				}
+				out.println();
+			}
+			
+			
+			Arrays.fill(profile_distribution, 0);
+			for (int f=0; f<table.getFamilyCount(); f++)
+			{
+				Table.ObservedProfile obs = table.getObservedProfile(f);
+	
+				for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+				{
+					int c = obs.getNodeSurvivalCount(leaf, false);
+					if (c>0)
+						profile_distribution[leaf]++;
+				}
+				
+			}
 			if (template_distribution!=null)
 			{
-				double diff = profile_distribution[leaf]-template_distribution[leaf];
-				if (template_distribution[leaf]!=0)
-					diff/=template_distribution[leaf];
-				System.out.printf("\t%d\t%.3f", template_distribution[leaf], diff);
+				Arrays.fill(template_distribution, 0);
+				AnnotatedTable input_table = cli.getTable();
+				for (int f=0; f<input_table.getFamilyCount(); f++)
+				{
+					int[] copies = input_table.getFamilyProfile(f);
+					for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+					{
+						int c = copies[leaf];
+						if (c>0)
+							template_distribution[leaf]++;
+					}
+				}
 			}
-			System.out.println();
+			
+			out.println("#FAMILIES\tnode\tsim"+(template_distribution==null?"":"\tinput"));
+			
+			for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+			{
+				out.print("#FAMILIES\t"+phylo.getIdent(leaf)+"\t"+profile_distribution[leaf]);
+				if (template_distribution!=null)
+				{
+					double diff = profile_distribution[leaf]-template_distribution[leaf];
+					if (template_distribution[leaf]!=0)
+						diff/=template_distribution[leaf];
+					out.printf("\t%d\t%.3f", template_distribution[leaf], diff);
+				}
+				out.println();
+			}
 		}
 
 		
+		if (want_ancestral || want_families)
+		{
+			String prefix_ancestral = "#"+OPT_ANCESTRAL.toUpperCase();
+			String prefix_families = "#"+OPT_HISTORY.toUpperCase();
+			
+			int n = phylo.getNumNodes();
+			// integer counts 
+			int[] lineage_family_present = new int[n];
+			int[] lineage_family_present_corrected = new int[n];
+			int[] lineage_family_multi = new int[n];
+			int[] lineage_family_gain = new int[n];
+			int[] lineage_family_loss = new int[n];
+			int[] lineage_family_expand = new int[n];
+			int[] lineage_family_contract = new int[n];
+			
+			int[] lineage_copies_surviving = new int[n];
+			int[] lineage_copies_true = new int[n];
+			
+			if (want_families)
+			{
+				out.println(prefix_families+"\tfamily\tnodeidx\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.");
+			}
+			
+			for (int f=0; f<table.getFamilyCount(); f++)
+			{
+				Table.ObservedProfile obs = table.getObservedProfile(f);
+				for (int node=0; node<n; node++)
+				{
+					int fp = obs.getFamilyPresent(node, false);
+					int fpc = obs.getFamilyPresent(node, true);
+					int fm = obs.getFamilyMulti(node, false);
+					int[] fevents = obs.getFamilyEvents(node, false);
+					int fgain = fevents[FamilyEvent.GAIN.ordinal()];
+					int floss = fevents[FamilyEvent.LOSS.ordinal()];
+					int fexpand =fevents[FamilyEvent.EXPAND.ordinal()];
+					int fcontract = fevents[FamilyEvent.CONTRACT.ordinal()];
+					
+					int fsurviving = obs.getNodeSurvivalCount(node, false);
+					int ftruecopies = obs.getNodeTrueCount(node, true);
+					
+					if (want_families)
+					{
+						out.printf("%s\t%d\t%d", prefix_families, f, node);
+						out.printf("\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" 
+									, fp, fm, fpc
+									, fgain, floss, fexpand, fcontract
+									, fsurviving, ftruecopies);
+					}
+					
+					lineage_family_present[node] += fp;
+					lineage_family_multi[node] += fm;
+					lineage_family_present_corrected[node] += fpc;
+					lineage_family_gain[node] += fgain;
+					lineage_family_loss[node] += floss;
+					lineage_family_expand[node] += fexpand;
+					lineage_family_contract[node] += fcontract;
+					
+					lineage_copies_surviving[node] += fsurviving;
+					lineage_copies_true[node] += ftruecopies;
+				} // for node
+			} // for family
+			if (want_ancestral)
+			{
+				out.println(prefix_ancestral+"\tnode\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.");
+				for (int node = 0; node<n; node++)
+				{
+					int fp = lineage_family_present[node];
+					int fm = lineage_family_multi[node];
+					int fpc = lineage_family_present_corrected[node];
+					int fgain = lineage_family_gain[node];
+					int floss = lineage_family_loss[node];
+					int fexpand = lineage_family_expand[node];
+					int fcontract = lineage_family_contract[node];
+					
+					int fsurviving = lineage_copies_surviving[node];
+					int ftruecopies = lineage_copies_true[node];
+					
+					out.printf("%s\t%s", prefix_ancestral, phylo.getIdent(node));
+					out.printf("\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" 
+								, fp, fm, fpc
+								, fgain, floss, fexpand, fcontract
+								, fsurviving, ftruecopies);
+				}
+			}
+		} // want_ancestral or want_families
 	}
 	
 }

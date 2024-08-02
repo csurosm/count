@@ -131,7 +131,7 @@ class HistoryTreePanel extends TreePanel
 			// row selection in totals_table and node selection in tree display is synchronized
 					
 		    TableRowSorter<SelectionTotals> sorter = new TableRowSorter<>(selection_totals);
-			        totals_scroll.setRowSorter(sorter);
+			totals_scroll.setRowSorter(sorter);
 			totals_scroll.synchronizeModelSelection(this.getSelectionModel());
 			
 		}

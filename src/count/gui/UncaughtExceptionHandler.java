@@ -30,6 +30,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
+import static count.Count.APP_TITLE;
+import static count.Count.APP_VERSION;
+
 /**
  * Class for handling exception via a popup dialog that gives the details. 
  * 
@@ -151,7 +154,7 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
         String java = Props.getProperty("java.vm.name","[Unknown VM]")+" "+Props.getProperty("java.vm.version","[Unknown version]")+" ("+Props.getProperty("java.runtime.version","[Unknwon runtime]")+") "+Props.getProperty("java.vm.info","")+", "+Props.getProperty("java.vm.vendor","[Uknown vendor]");
         
         StringBuilder message = new StringBuilder();
-        message.append("<p>Version: ").append(app.getApp().getAppTitle()).append(" v").append(app.getApp().getAppVersion());
+        message.append("<p>Version: ").append(APP_TITLE).append(" v").append(APP_VERSION);
         message.append("<br>System: ").append(system);
         message.append("<br>Java engine: ").append(java);
         message.append("<br>UIManager: ").append(javax.swing.UIManager.getLookAndFeel().getName());
@@ -195,7 +198,7 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
         msg_pane.setPreferredSize(new Dimension(900, 600));
         msg_pane.setMinimumSize(new Dimension(80, 30));   
         
-        Object[] button_text = {"So be it", "Quit "+app.getApp().getAppTitle()};
+        Object[] button_text = {"So be it", "Quit "+APP_TITLE};
         
         int ans = JOptionPane.showOptionDialog(app,msg_pane,title,
                 JOptionPane.OK_CANCEL_OPTION,JOptionPane.ERROR_MESSAGE,

@@ -25,8 +25,10 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JRadioButton;
+import javax.swing.JTabbedPane;
 import javax.swing.event.TableModelEvent;
 
 import count.ds.AnnotatedTable;
@@ -88,17 +90,21 @@ public class PosteriorsView extends HistoryView
 		table_family_class = new ArrayList<>();
 
 		int num_classes = posteriors.getClassCount();
-		for (int c=0; c<num_classes; c++)
+		
+		if (1<num_classes)
 		{
-			String class_name = "Class "+Integer.toString(c);
-			HistoryModel.Column<RoundedDouble> probs = table_model.newDoubleColumn(class_name, "Posterior probability for "+class_name.toLowerCase());
-			int class_column  = table_model.add(probs, FAMILY_PRESENT_COLOR);
-//			System.out.println("#**PV.iDS class "+c+"\tcol "+class_column
-//					+", after "+table_model.getColumnName(table_model.firstHistoryColumn()+class_column-1));
-			
-			table_family_class.add(probs);
+			for (int c=0; c<num_classes; c++)
+			{
+				String class_name = "Class "+Integer.toString(c);
+				HistoryModel.Column<RoundedDouble> probs = table_model.newDoubleColumn(class_name, "Posterior probability for "+class_name.toLowerCase());
+				int class_column  = table_model.add(probs, FAMILY_PRESENT_COLOR);
+	//			System.out.println("#**PV.iDS class "+c+"\tcol "+class_column
+	//					+", after "+table_model.getColumnName(table_model.firstHistoryColumn()+class_column-1));
+				
+				table_family_class.add(probs);
+			}
+			table_model.fireTableStructureChanged();
 		}
-		table_model.fireTableStructureChanged();
 	}		
 	
 	private Component createMincopiesControl()
@@ -201,6 +207,39 @@ public class PosteriorsView extends HistoryView
 	{
         getTreeControl().addControlAt(2, createMincopiesControl());
         getLineageControl().add(createMincopiesControl());
+        
+        JTabbedPane selected_rows_display = this.getSelectedRowsDisplay();
+		String table_legend = "<p>The inferred counts are posterior expectations across selected families. "
+				+ "Copy statistics (copies, births and deaths) "
+				+ "count "
+				+ "	<b>ancestral</b> copies at each node <var>u</var>, or "
+				+ "the ancestral copy change "
+				+ "in the lineage leading to <var>u</var>. "
+				+ "Ancestral copies have at least one "
+				+ "descendant ortholog copy at the leaves in the subtree of <var>u</var>."
+				+ "Copy statistics thus track the provenance of the observed copies at "
+				+ "the terminal nodes. Deaths are copies at the parent which <var>u</var> "
+				+ "does not inherit; births are ancestral copies originating at <var>u</var> "
+				+ "by duplication or gain."
+				+ "</p>"
+				+ "<p>Family statistics track the history of family repertoires, and  "
+				+ "count the families that have at least one copy "
+				+ "at the ancestor, with or without descendant orthologs. "
+				+ "(Thus, more families may be inferred than ancestral copies.) "
+				+ "Families with multiple copies are also inferred, and changes "
+				+ "to and from 0 (gain and loss), or between single- and multiple-members "
+				+ "(contraction and expansion)."
+				+"</p>"
+//				+ "<p>In the family table, "
+//				+ "rarity is the negative log-likelihood of the family profile, "
+//				+ "as -10 log<sub>10</sub> <var>L</var>(profile). Family statistics "
+//				+ "(gains, losses, expansions, contractions) "
+//				+ "are summed across all nodes</p>."
+				;
+		JEditorPane table_explain = new JEditorPane("text/html", table_legend);
+        table_explain.setEditable(false);		
+		selected_rows_display.addTab("Legend", table_explain);
+        
 	}
 	
 //	@Override
@@ -291,8 +330,8 @@ public class PosteriorsView extends HistoryView
 			L0 = Logarithms.add(L0, unobserved[i].getLL());
 		}
 		double p_unobs = Math.exp(L0);
-		double p_obs = -Math.expm1(L0); 
-		double Lobs = Math.log(p_obs);
+		double p_obs = -Math.expm1(L0); // 1-exp(L0)
+		double Lobs = Logarithms.logToLogComplement(L0);
 		
 		table_family_score.setCorrection(-EVIDENCE_SCALE*Lobs);
 		table_model.fireTableChanged(new TableModelEvent(table_model, 
@@ -348,11 +387,12 @@ public class PosteriorsView extends HistoryView
 					double N = P.getNodeMean(node);
 					double S = P.getEdgeMean(node);
 					delta_member_count[node] += factor[i]*N;
-					delta_member_birth[node] += factor[i]*(N-S);
+					double birth = P.getBirthMean(node);
+					delta_member_birth[node] += factor[i]*birth;
 					if (!phylo.isRoot(node))
 					{
-						double parentN = P.getNodeMean(phylo.getParent(node));
-						delta_member_death[node] += factor[i]*(parentN-S);
+						double death = P.getDeathMean(node);
+						delta_member_death[node] += factor[i]*(death);
 					}
 					double[] pN = P.getNodeAncestor(node);
 					delta_family_present[node] += factor[i] * (1.0-pN[0]);
@@ -393,6 +433,9 @@ public class PosteriorsView extends HistoryView
 	protected void computeDone()
 	{
 		computation_cancel.setVisible(false);
+		
+		if (getTableScroll().getDataTable().getSelectedRowCount()==0)
+				getTableScroll().getDataTable().selectAll();
 	}
 	
 	@Override
@@ -414,13 +457,16 @@ public class PosteriorsView extends HistoryView
 			double S = P.getEdgeMean(node);
 			
 			table_member_count.get(node).setValue(f, N);
-			table_member_birth.get(node).setValue(f, N-S);
-			double death = 0.0;
+			double birth = P.getBirthMean(node);
+			table_member_birth.get(node).setValue(f, birth);
+			double death;
 			
-			if (!phylo.isRoot(node))
+			if (phylo.isRoot(node))
 			{
-				int parent = phylo.getParent(node);
-				death = P.getNodeMean(parent)-S;
+				death = 0.0;
+			} else 
+			{
+				death = P.getDeathMean(node);
 			}
 			table_member_death.get(node).setValue(f, death);
 			

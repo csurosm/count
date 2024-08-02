@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveTask;
 
+import count.Count;
 import count.ds.IndexedTree;
 import count.ds.ProfileTable;
 import count.ds.UniqueProfileTable;
@@ -44,7 +45,7 @@ import static count.model.Likelihood.PARAMETER_LENGTH;
  * @author csuros
  *
  */
-public class MixedRateGradient 
+public class MixedRateGradient implements Count.UsesThreadpool
 {
 	public MixedRateGradient(MixedRateModel.RateMultipliers mixed_model, ProfileTable table)
 	{
@@ -65,20 +66,35 @@ public class MixedRateGradient
 	private final MixedRateModel.RateMultipliers mixed_model;
 	private final UniqueProfileTable table;
 	
-	/**
-	 * Same thread pool across different instantiations.
-	 * (Not likely to be an issue through GUI but 
-	 * in a big model-selection procedure, this class might be instantiated many times.)  
-	 */
-	private static final ForkJoinPool pool;
-	static 
-	{
-		if (THREAD_PARALLELISM>1)
-			pool = new ForkJoinPool(THREAD_PARALLELISM);			
-		else
-			pool = null;
-	}
+//	/**
+//	 * Same thread pool across different instantiations.
+//	 * (Not likely to be an issue through GUI but 
+//	 * in a big model-selection procedure, this class might be instantiated many times.)  
+//	 */
+//	private static final ForkJoinPool pool;
+//	static 
+//	{
+//		if (THREAD_PARALLELISM>1)
+//			pool = new ForkJoinPool(THREAD_PARALLELISM);			
+//		else
+//			pool = null;
+//	}
 
+	private static ForkJoinPool thread_pool=null;
+	/**
+	 * Initializad only once, if {@link Count#THREAD_PARALLELISM} is greater than 1.
+	 * 
+	 * @return
+	 */
+	protected synchronized static ForkJoinPool threadPool()
+	{
+		if (thread_pool == null && 1<Count.THREAD_PARALLELISM) // && Count.THREAD_UNIT_TASK<Integer.MAX_VALUE)
+		{
+//			System.out.println("#**G.threadPool init: "+Count.THREAD_PARALLELISM+" threads on "+Thread.currentThread());
+			thread_pool = Count.threadPool(); // new ForkJoinPool(Count.THREAD_PARALLELISM);	
+		}
+		return thread_pool;
+	}
 	
 	/**
 	 * First cells for classes with non-0 class probability; empty cells up to @link #mixed_model} class count 
@@ -418,63 +434,84 @@ public class MixedRateGradient
 	public double getLL()
 	{
 		if (cachedLL != 0.0) return cachedLL;
-		double LL = 0.0;
 		int F = table.getFamilyCount();
-		if (pool != null && F>THREAD_UNIT_TASK)
+		final ForkJoinPool pool = threadPool();
+		final int unit_task = Count.unitTask(F);
+
+		class PartialSum extends RecursiveTask<Double>
 		{
-			// thread task for a subset of families
-			class PartialSum extends RecursiveTask<Double>
+			PartialSum(int min_idx, int max_idx)
 			{
-				PartialSum(int min_idx, int max_idx)
-				{
-					this.max_idx = max_idx;
-					this.min_idx = min_idx;
-				}
-				
-				private final int min_idx;
-				private final int max_idx;
-				
-				@Override
-				public Double compute()
-				{
-					if (max_idx-min_idx>THREAD_UNIT_TASK)
-					{
-						int mid = (min_idx+max_idx)/2;
-						PartialSum left = new PartialSum(min_idx, mid);
-						left.fork();
-						PartialSum right = new PartialSum(mid, max_idx);
-						return right.compute()+left.join();
-					} else
-					{
-						double LL=0.0;
-						for (int f=min_idx; f<max_idx; f++)
-						{
-							Profile G = getProfile(f); // recalculate instead of saving them across all families
-							double Gll = G.getLogLikelihood();
-							LL += Gll*table.getMultiplicity(f);
-						}
-						return LL;
-					}
-				}
+				this.max_idx = max_idx;
+				this.min_idx = min_idx;
 			}
-			if (num_classes==0) computeClasses();
 			
-			LL = pool.invoke(new PartialSum(0,F));
-		} else
-		{
-			for (int f=0; f<F; f++)
+			private final int min_idx;
+			private final int max_idx;
+			
+			@Override
+			public Double compute()
 			{
-				Profile G = getProfile(f); // recalculate instead of saving them across all families
-				double Gll = G.getLogLikelihood();
-				if (Double.isNaN(Gll))
+				if (max_idx-min_idx>THREAD_UNIT_TASK)
 				{
-					System.out.println("#**MRG.gLL "+f+"\t"+Gll);
+					int mid = (min_idx+max_idx)/2;
+					PartialSum left = new PartialSum(min_idx, mid);
+					left.fork();
+					PartialSum right = new PartialSum(mid, max_idx);
+					return right.compute()+left.join();
+				} else
+				{
+					double LL=0.0;
+					for (int f=min_idx; f<max_idx; f++)
+					{
+						Profile G = getProfile(f); // recalculate instead of saving them across all families
+						double Gll = G.getLogLikelihood();
+						LL += Gll*table.getMultiplicity(f);
+					}
+					return LL;
 				}
-				
-				LL += Gll*table.getMultiplicity(f);
 			}
 		}
-		cachedLL = LL;
+		PartialSum bigjob = new PartialSum(0, F);
+		
+		double LL;
+		try
+		{
+			if (num_classes==0) computeClasses(); // do not initialize from a forked thread
+			if (F>unit_task)
+			{
+				LL = pool.invoke(bigjob);
+			} else
+			{
+				LL = bigjob.compute();
+			}
+			cachedLL = LL;
+		} catch (Throwable t)
+		{
+			// could be out of memory, or out of threads, or numerical error, or whatever else			
+			throw new RuntimeException(t);  
+		}
+		
+//		if (pool != null)
+//		{
+//			// thread task for a subset of families
+//			
+//			LL = pool.invoke(new PartialSum(0,F));
+//		} else
+//		{
+//			for (int f=0; f<F; f++)
+//			{
+//				Profile G = getProfile(f); // recalculate instead of saving them across all families
+//				double Gll = G.getLogLikelihood();
+//				if (Double.isNaN(Gll))
+//				{
+//					System.out.println("#**MRG.gLL "+f+"\t"+Gll);
+//				}
+//				
+//				LL += Gll*table.getMultiplicity(f);
+//			}
+//		}
+//		cachedLL = LL;
 		
 		return LL;
 	}
@@ -620,8 +657,11 @@ public class MixedRateGradient
 //		System.out.println("#*MRG.gCG\tL0 "+L0+"\tp0 "+Math.exp(L0)+"\tcorr0 "+corr0+"\temptyLL "+Arrays.toString(emptyLL)+"\temptyRD "+Arrays.toString(emptyRD[0])+"\temptyD "+Arrays.toString(emptyD));
 		int nF = table.getFamilyCount();
 		
-		if (pool != null &&  nF>THREAD_UNIT_TASK)
-		{
+		final ForkJoinPool pool = threadPool();
+		final int unit_task = Count.unitTask(nF);
+		
+//		if (pool != null &&  nF>THREAD_UNIT_TASK)
+//		{
 			class PartialD extends RecursiveTask<double[]>
 			{
 				PartialD(int min_idx, int max_idx)
@@ -673,29 +713,44 @@ public class MixedRateGradient
 			} // Task
 			
 			if (num_classes==0) computeClasses(); // do not initialize from a forked thread
-
-			return pool.invoke(new PartialD(0, nF));
-		} else
-		{
-			double[] D = new double[4*num_nodes];
-			
-			for (int f=0; f<nF; f++)
+			PartialD bigjob = new PartialD(0, nF);
+			double[] getCorrectedGradient;
+			try
 			{
-				Profile G = getProfile(f); // recalculate instead of saving them across all families
-				double[] classLL = G.getClassLikelihoods();
-				double[][] rate_gradients = G.getRateGradients();
-				double[] famD = getFullParameterGradient(classLL, rate_gradients);
-				
-				assert (famD.length == D.length);
-				for (int pidx=0; pidx<D.length; pidx++)
+				if (nF>unit_task)
 				{
-					D[pidx] += (famD[pidx]+corr0*emptyD[pidx])*table.getMultiplicity(f);
+					getCorrectedGradient = pool.invoke(bigjob);
+				} else
+				{
+					getCorrectedGradient = bigjob.compute();
 				}
+			}catch (Throwable t)
+			{
+				// could be out of memory, or out of threads, or numerical error, or whatever else			
+				throw new RuntimeException(t);  
 			}
-//			System.out.println("#**MRG.gCG "+corr0+"\t"+Arrays.toString(D));
-			
-			return D;
-		}
+			return getCorrectedGradient;
+//		} else
+//		{
+//			double[] D = new double[4*num_nodes];
+//			
+//			for (int f=0; f<nF; f++)
+//			{
+//				Profile G = getProfile(f); // recalculate instead of saving them across all families
+//				double[] classLL = G.getClassLikelihoods();
+//				double[][] rate_gradients = G.getRateGradients();
+//				double[] famD = getFullParameterGradient(classLL, rate_gradients);
+//				
+//				assert (famD.length == D.length);
+//				for (int pidx=0; pidx<D.length; pidx++)
+//				{
+//					D[pidx] += (famD[pidx]+corr0*emptyD[pidx])*table.getMultiplicity(f);
+//				}
+//			}
+////			System.out.println("#**MRG.gCG "+corr0+"\t"+Arrays.toString(D));
+//			
+//			return D;
+//		}
 	}
 	
 		
@@ -1013,7 +1068,7 @@ public class MixedRateGradient
 //        		, tree);
 		count.ds.Phylogeny tree = cli.getTree();
 		count.ds.AnnotatedTable table = cli.getTable();
-		GammaInvariant input_model = cli.getModel();
+		GammaInvariant input_model = cli.getGammaModel();
         MixedRateGradient mixedG = new MixedRateGradient(input_model, table);
         if (cli.getOptionValue(CommandLine.OPT_TRUNCATE)!=null)
         {

@@ -42,7 +42,7 @@ public class Grapher extends JLabel implements PropertyChangeListener
     public Grapher(int width, int height)
     {
         super();
-        this.history_plot = new SparkLine(width, height, 100);
+        this.history_plot = new SparkLine(width-4, height, 100);
         setIcon(history_plot);
         setOpaque(true);
     }

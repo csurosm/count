@@ -21,6 +21,7 @@ import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 
 import count.ds.IndexedTree;
+import count.ds.TreeTraversal;
 import count.gui.kit.RoundedDouble;
 import count.gui.kit.TableScroll;
 import count.model.Likelihood;
@@ -82,6 +83,12 @@ public class RatesTable extends TableScroll<RatesTable.Model>
     {
     	// do nothing
     }
+    
+    /**
+     * 
+	 * Extra attribute columns per node: 2 if depth and height; 1 if depth only; 0 if none 
+     */
+    private static final int NODE_ATTRIBUTE_COUNT =0 ; //= 2; 
 	
     /**
      * Our TableModel that tracks the updates to the underlying model parameters.
@@ -118,6 +125,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         {
             return 1 // node index
             	+1   // node name
+            	+NODE_ATTRIBUTE_COUNT
             	+3	 // rate parameters
             	+1	 // absence 
             	+3   // GLD parameters
@@ -139,13 +147,27 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         		else 
         			return getTree().getIdent(node);
         	}
+        	
+        	
+        	if (0<NODE_ATTRIBUTE_COUNT)
+        	{
+            	++this_col;
+            	if (column == this_col)
+            		return Integer.valueOf(TreeTraversal.depth(getTree(), node));
+            	if (1<NODE_ATTRIBUTE_COUNT)
+            	{
+	            	++this_col;
+	            	if (column == this_col)
+	            		return Integer.valueOf(TreeTraversal.height(getTree(), node));
+            	}
+        	}
         	double len = rates_model.getEdgeLength(node);
         	++this_col;
         	if (column == this_col)
         		return new RoundedDouble(rates_model.getLossRate(node)*len);
         	++this_col;
         	if (column == this_col)
-        		return new RoundedDouble(rates_model.getDuplicationRate(node)*len);
+        		return new RoundedDouble(rates_model.getDuplicationRate(node)/rates_model.getLossRate(node));
         	++this_col;
         	if (column == this_col)
         		return new RoundedDouble(rates_model.getGainRate(node));
@@ -160,7 +182,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         		return new RoundedDouble(rates_model.getDuplicationParameter(node));
         	++this_col;
         	if (column == this_col)
-        		return new RoundedDouble(rates_model.getGainParameter(node));
+        		return new RoundedDouble(rates_model.getUniversalGainParameter(node));
         	++this_col;
         	if (column == this_col)
         		return new RoundedDouble(factory.getLossParameter(node));
@@ -169,7 +191,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         		return new RoundedDouble(factory.getDuplicationParameter(node));
         	++this_col;
         	if (column == this_col)
-        		return new RoundedDouble(factory.getGainParameter(node));
+        		return new RoundedDouble(factory.getUniversalGainParameter(node));
         	
         	
         	throw new IllegalArgumentException(".getValueAt --- column index must be 0.."+this_col+" [got "+column+"]");        	
@@ -184,6 +206,20 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         	++this_col;
         	if (column == this_col)
                 return "Node";
+        	
+        	if (0<NODE_ATTRIBUTE_COUNT)
+        	{
+            	++this_col;
+            	if (column == this_col)
+            		return "Depth";
+            	if (1<NODE_ATTRIBUTE_COUNT)
+            	{
+	            	++this_col;
+	            	if (column == this_col)
+	            		return "Height";
+            	}
+        	}
+
         	++this_col;
             if (column==this_col)
                 return "Loss rate";
@@ -198,22 +234,22 @@ public class RatesTable extends TableScroll<RatesTable.Model>
                 return "Extinction";
         	++this_col;
             if (column==this_col)
-                return "p (loss param)";
+                return "p (loss)";
         	++this_col;
             if (column==this_col)
-                return "q (duplication param)";
+                return "q (duplication)";
         	++this_col;
             if (column==this_col)
-                return "κ/r (gain param)";
+                return "r (gain)";
         	++this_col;
             if (column==this_col)
-                return "p~ survival param";
+                return "p~ (loss survival)";
         	++this_col;
             if (column==this_col)
-                return "q~ duplication param";
+                return "q~ (duplication survival)";
         	++this_col;
             if (column==this_col)
-                return "κ/r~ gain param";
+                return "r~ (gain survival)";
             
             throw new IllegalArgumentException(".getColumnName --- column index must be 0.."+this_col+" [got "+column+"]");
         }
@@ -227,7 +263,19 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         	++this_col;
         	if (column == this_col)
                 return String.class;
-            else return RoundedDouble.class;
+        	if (0<NODE_ATTRIBUTE_COUNT)
+        	{
+            	++this_col;
+            	if (column == this_col)
+            		return Integer.class;
+            	if (1<NODE_ATTRIBUTE_COUNT)
+            	{
+	            	++this_col;
+	            	if (column == this_col)
+	            		return Integer.class;
+            	}
+        	}
+        	return RoundedDouble.class;
         }	
         
         String getColumnDescription(int column)
@@ -238,12 +286,24 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         	++this_col;
         	if (column == this_col)
                 return "Node name";
+        	if (0<NODE_ATTRIBUTE_COUNT)
+        	{
+            	++this_col;
+            	if (column == this_col)
+            		return "Node depth (root=0)";
+            	if (1<NODE_ATTRIBUTE_COUNT)
+            	{
+	            	++this_col;
+	            	if (column == this_col)
+	            		return "Node height (leaf=0)";
+            	}
+        	}
         	++this_col;
             if (column==this_col)
                 return "Total loss rate";
         	++this_col;
             if (column==this_col)
-                return "Total duplication rate";
+                return "Relative duplication rate";
         	++this_col;
             if (column==this_col)
                 return "Gain rate";
@@ -258,7 +318,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
                 return "Duplication parameter for the geometric distribtion of descendants from 1 parental copy (inparalogs)";
         	++this_col;
             if (column==this_col)
-                return "Gain parameter for Poisson or Pólya distribution of copies gained from outside (xenologs)";
+                return "Gain parameter for copies gained from outside (xenologs)";
         	++this_col;
             if (column==this_col)
                 return "Survival loss parameter for conserved (non-extinct) copies";

@@ -55,6 +55,7 @@ import count.gui.kit.TableIcon;
 import count.gui.kit.TreeIcon;
 
 import count.model.GammaInvariant;
+import count.model.MixedRateModel;
 
 /**
  * GUI component (JTree) for displaying a {@link count.io.ModelBundle}. 
@@ -409,7 +410,7 @@ public class BundleTree extends JTree
 					Entry rnode = bundle.getEntry(rates_id);
 					assert (rnode != null);
 					assert (rnode.isRatesEntry());
-					DataFile<GammaInvariant> rates_data = rnode.getRatesData();
+					DataFile<MixedRateModel> rates_data = rnode.getRatesData();
 					Entry tnode = rnode.getClosestAncestor(TREES);
 					DataFile<Phylogeny> tree_data = tnode.getTreeData();
 					Phylogeny selected_phylo = tree_data.getContent();
@@ -453,7 +454,7 @@ public class BundleTree extends JTree
 					Entry rnode = bundle.getEntry(rates_id);
 					assert (rnode != null);
 					assert (rnode.isRatesEntry());
-					DataFile<GammaInvariant> rates_data = rnode.getRatesData();
+					DataFile<MixedRateModel> rates_data = rnode.getRatesData();
 					
 					String srnd = enode.getAttributeValue(CountXML.ATT_RND);
 					long rnd_seed = Long.parseLong(srnd);
@@ -476,6 +477,8 @@ public class BundleTree extends JTree
 				{
 					// what is this?
 				}
+				
+				//((HistoryView) node.getComponent()).setPhyleticProfileColoring(getLeafColors());
 			} else // data not null
 			{
 				if ("true".equals(enode.getAttributeValue(CountXML.ATT_BINARY)))
@@ -495,12 +498,12 @@ public class BundleTree extends JTree
 		{
 			// not any of the three types: this is the root
 		}
+		setSelectedNode(node);
 		
 		// DEBUG
 //		System.out.println("#**BT.sComp "+enode+"\tnode "+node+"\tcomp "+node.getComponent()
 //			+"\tctype "+(node.getComponent()==null?null:node.getComponent().getClass().getName()));
 		
-		setSelectedNode(node);
 		
 		
 		for (int ci=0; ci<node.getChildCount(); ci++)
@@ -579,7 +582,7 @@ public class BundleTree extends JTree
     	if (tree.isLeaf(node))
     	{
     		colors[node] = (min_hue+max_hue)/2.0f;
-    	} else // weighing by subtree heights
+    	} else 
     	{
     		int nc = tree.getNumChildren(node);
     		float[] child_wt = new float[nc];
@@ -588,8 +591,10 @@ public class BundleTree extends JTree
     		while (ci < nc)
     		{
     			int child = tree.getChild(node, ci);
+    			float wt = heights[child]+1f; // weighing by subtree heights
+    			wt = 1f; // better separation for clade colors 
     			tot_wt += 
-    			child_wt[ci] = heights[child]+1f;
+    			child_wt[ci] = wt;
     			ci++;
     		}
     		while (ci>0)
@@ -611,6 +616,43 @@ public class BundleTree extends JTree
     	}
     	return colors;
     }	
+    
+    private class Zuum extends Zoom<TreePanel> implements Removable, SavableData<Phylogeny>
+    {
+		Zuum(TreePanel panel, DataFile<Phylogeny> tree_data)
+		{
+			super(panel);
+	        Box control_bar =  this.getControlBar();
+	        control_bar.removeAll();
+	        control_bar.add(panel.createLayoutChooser());
+	        control_bar.add(Box.createHorizontalGlue());
+	        control_bar.add(getSpinner());
+	        this.tree_data = tree_data;
+		}
+		private final DataFile<Phylogeny> tree_data;
+		@Override
+		public boolean remove()
+		{
+			if (getTreePanel().getTreeData().getContent() == main_phylo)
+				return false;
+			// check if there are any dependent rates / history reconstructions
+			
+//			Session sesh = Session.getSession(this);
+//			return sesh.getRatesBrowser().getSelectedPrimaryItem()==null;
+			return true;
+		}
+		@Override
+		public DataFile<Phylogeny> getDataFile() 
+		{
+			return tree_data;
+		}
+		@Override
+		public void saveData(File f) throws IOException 
+		{
+			getTreePanel().saveData(f);
+		}
+    }
+    
 	private JComponent newTreeDisplay(final DataFile<Phylogeny> tree_data)
 	{
 		if (tree_comparator == null)
@@ -619,42 +661,42 @@ public class BundleTree extends JTree
 		}
 	    final TreePanel panel = coloredTreePanel(tree_data);
 	    
-	    class Zuum extends Zoom<TreePanel> implements Removable, SavableData<Phylogeny>
-		{
-			Zuum()
-			{
-				super(panel);
-		        Box control_bar =  this.getControlBar();
-		        control_bar.removeAll();
-		        control_bar.add(panel.createLayoutChooser());
-		        control_bar.add(Box.createHorizontalGlue());
-		        control_bar.add(getSpinner());
-			}
-			
-			@Override
-			public boolean remove()
-			{
-				if (getTreePanel().getTreeData().getContent() == main_phylo)
-					return false;
-				// check if there are any dependent rates / history reconstructions
-				
-//				Session sesh = Session.getSession(this);
-//				return sesh.getRatesBrowser().getSelectedPrimaryItem()==null;
-				return true;
-			}
-			@Override
-			public DataFile<Phylogeny> getDataFile() 
-			{
-				return tree_data;
-			}
-			@Override
-			public void saveData(File f) throws IOException 
-			{
-				getTreePanel().saveData(f);
-			}
-		}	
+//	    class Zuum extends Zoom<TreePanel> implements Removable, SavableData<Phylogeny>
+//		{
+//			Zuum()
+//			{
+//				super(panel);
+//		        Box control_bar =  this.getControlBar();
+//		        control_bar.removeAll();
+//		        control_bar.add(panel.createLayoutChooser());
+//		        control_bar.add(Box.createHorizontalGlue());
+//		        control_bar.add(getSpinner());
+//			}
+//			
+//			@Override
+//			public boolean remove()
+//			{
+//				if (getTreePanel().getTreeData().getContent() == main_phylo)
+//					return false;
+//				// check if there are any dependent rates / history reconstructions
+//				
+////				Session sesh = Session.getSession(this);
+////				return sesh.getRatesBrowser().getSelectedPrimaryItem()==null;
+//				return true;
+//			}
+//			@Override
+//			public DataFile<Phylogeny> getDataFile() 
+//			{
+//				return tree_data;
+//			}
+//			@Override
+//			public void saveData(File f) throws IOException 
+//			{
+//				getTreePanel().saveData(f);
+//			}
+//		}	
 	    
-	    Zuum addTree = new Zuum();
+	    Zuum addTree = new Zuum(panel, tree_data);
 	    return addTree;
 	}
 	
@@ -774,9 +816,36 @@ public class BundleTree extends JTree
             D.setIcon(true, node_selected);
             D.setIcon(false, node_unsel);
             
+            
+            
+            
+            
             ++node;
         }
 	}
+	
+	
+	public Color[] getLeafColors()
+	{
+		JComponent selected_tree_embedding_panel =  getSelectedNode(BundleTree.TREES).getComponent();
+		if (selected_tree_embedding_panel ==null || !Zuum.class.isInstance(selected_tree_embedding_panel))
+		{
+			
+			throw new UnsupportedOperationException("Looking for "+Zuum.class+"; got "	
+					+(selected_tree_embedding_panel==null?"null":selected_tree_embedding_panel.getClass().getName()));
+		}
+		Zuum zuum = (Zuum) selected_tree_embedding_panel;
+		TreePanel tree_panel = zuum.getTreePanel();
+		int num_leaves = tree_panel.getTreeData().getContent().getNumLeaves();
+				
+		Color[] leaf_colors = new Color[num_leaves];
+		for (int leaf=0; leaf<num_leaves; leaf++)
+		{
+			leaf_colors[leaf] = tree_panel.getNode(leaf).getIcon(true).getFillColor();
+		}
+		return leaf_colors;
+	}
+		
 	
 	/**
 	 * Sets the main phylogeny, and initializes {@link #terminal_hues} and {@link #tree_comparator}.
@@ -822,6 +891,7 @@ public class BundleTree extends JTree
 			decorateByMainTree(history_view.getTreePanel());
 			setComponent(history_view);
 			history_view.computeAll();
+			
 		}
 		
 		protected JComponent getComponent()
@@ -833,7 +903,7 @@ public class BundleTree extends JTree
 		{
 			ModelBundle.Entry enode = getEntry();
 			assert enode.isRatesEntry();
-			DataFile<GammaInvariant> rates_data = enode.getRatesData();
+			DataFile<MixedRateModel> rates_data = enode.getRatesData();
 			RateVariationPanel rates_panel = new RateVariationPanel(rates_data);
 			return rates_panel;
 		}
@@ -884,7 +954,7 @@ public class BundleTree extends JTree
 			return child;
 		}
 		
-		protected Node addRates(DataFile<GammaInvariant> rates_data, RateVariationPanel rates_panel)
+		protected Node addRates(DataFile<MixedRateModel> rates_data, RateVariationPanel rates_panel)
 		{
 			Entry enode = getEntry();
 			Entry erates = enode.addRates(rates_data);
@@ -1017,6 +1087,10 @@ public class BundleTree extends JTree
             		}
             	} 
             }
+            Color tree_bg = BundleTree.this.getBackground();
+            this.setBackground(tree_bg);
+            this.setBackgroundNonSelectionColor(tree_bg);
+            this.setBackgroundSelectionColor(tree_bg==Color.WHITE?Color.BLUE:Color.DARK_GRAY);
             return this;
         }
 		

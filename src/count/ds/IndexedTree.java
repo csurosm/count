@@ -1,4 +1,6 @@
+package count.ds;
 /*
+
  * Copyright 2021 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package count.ds;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -165,6 +166,22 @@ public interface IndexedTree
     public default boolean isRoot(int node_idx)
     {
         return getParent(node_idx)<0;
+    }
+    
+    /**
+     * Sibling index; if parent is binary. 
+     * 
+     * @param node
+     * @return
+     */
+    public default int getSibling(int node)
+    {
+    	assert (! isRoot(node));
+    	int parent = getParent(node);
+    	assert (getNumChildren(parent)==2);
+    	int sib = getChild(parent, 0);
+    	if (sib==node) sib = getChild(parent,1);
+    	return sib;
     }
     
     /**

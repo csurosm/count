@@ -194,8 +194,8 @@ public class SparkLine implements Icon
 
             double scale_x =
                     max_history == 0
-                    ?(getIconWidth()-legend_width)/((double)(num_steps))
-                    :(getIconWidth()-legend_width)/((double)(max_history));
+                    ?(getIconWidth()-legend_width-SPARK_DIAMETER)/((double)(num_steps))
+                    :(getIconWidth()-legend_width-SPARK_DIAMETER)/((double)(max_history));
 
 //            double half_height = getIconHeight()*0.5-ACCENT_DIAMETER;
 

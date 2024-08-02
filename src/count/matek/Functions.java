@@ -101,6 +101,26 @@ public class Functions
     }
     
     /**
+     * Values 0..capacity-1 are precomputed exactly; later values are approximated 
+     * by {@link #gammln(double)}. 
+     * 
+     * 
+     * @param log_offset
+     * @param capacity
+     * @return
+     */
+    public static RisingFactorial newRisingFactorialForLog(double log_offset, int capacity)
+    {
+    	double offset = Math.exp(log_offset);
+    	if (offset == 0.0 && log_offset != Double.NEGATIVE_INFINITY)
+    	{
+    		offset = Double.MIN_NORMAL; 
+    	}
+    	RisingFactorial F = new RisingFactorial(offset, log_offset, capacity);
+    	return F;
+    }
+    
+    /**
      * Class for generalized rising factorials. 
      * 
      * @author csuros
@@ -118,6 +138,7 @@ public class Functions
 		public RisingFactorial(double offset, int capacity)
 		{
 			this.offset = offset; 
+			this.log_offset = Math.log(offset);
 			precomputed_rising = new double[capacity];
 			double c = offset; 
 			double s = 0.0;
@@ -126,6 +147,22 @@ public class Functions
 				precomputed_rising[n]=s;
 				s+=Math.log(c);
 				c=c+1.0;
+			}
+			gammln_offset = gammln(offset);
+		}
+		
+		private RisingFactorial(double offset, double log_offset, int capacity)
+		{
+			this.offset = offset;
+			this.log_offset = log_offset;
+			this.precomputed_rising = new double[capacity];
+			double log_c = log_offset;
+			double s = 0.0;
+			for (int n=0; n<capacity; n++)
+			{
+				precomputed_rising[n]=s;
+				s += log_c;
+				log_c = Logarithms.add(log_c, 0.0); // c=c+1.0;
 			}
 			gammln_offset = gammln(offset);
 		}
@@ -144,6 +181,7 @@ public class Functions
 		private final double[] precomputed_rising;
 		private final double offset;
 		private final double gammln_offset;
+		private final double log_offset;
 		
 		/**
 		 * Logarithm of the rising factorial log (k(k+1)...(k+n-1)). 

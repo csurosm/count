@@ -19,6 +19,7 @@ package count.io;
  * Interface for anything that can be removed.
  *
  * @author Mikl&oacute;s Cs&#369;r&ouml;s
+ * @deprecated
  */
 public interface Removable 
 {

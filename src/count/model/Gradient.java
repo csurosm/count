@@ -18,12 +18,15 @@ package count.model;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveTask;
+import java.util.Arrays;
 
 import count.Count;
 import count.ds.ProfileTable;
 import count.ds.UniqueProfileTable;
 import count.io.CommandLine;
 import count.io.NewickParser;
+import count.matek.ArraySum;
+import count.matek.FunctionMinimization;
 import count.matek.Logarithms;
 
 import static count.io.CommandLine.OPT_MINCOPY;
@@ -40,7 +43,7 @@ import static count.model.GLDParameters.PARAMETER_LOSS;
  * @author Miklós Csűrös
  *
  */
-public class Gradient extends Posteriors
+public class Gradient extends Posteriors implements Count.UsesThreadpool
 {
 	public Gradient(TreeWithRates rates, ProfileTable table)
 	{
@@ -54,6 +57,20 @@ public class Gradient extends Posteriors
 		}
 		this.min_copies = Integer.min(2,table.minCopies());
 	}
+	
+	public Gradient(Likelihood factory)
+	{
+		super(factory);
+		if (factory.table instanceof UniqueProfileTable)
+		{
+			this.utable = (UniqueProfileTable) factory.table; 
+		}else
+		{
+			this.utable = null;
+		}
+		this.min_copies = Integer.min(2,factory.table.minCopies());
+	}
+	
 	/**
 	 * Same as the instantiating table, if it 
 	 * was a UniqueProfileTable; or else null. 
@@ -86,6 +103,127 @@ public class Gradient extends Posteriors
 		factory.computeParameters();
 		this.cachedLL = 0.0;
 	}
+
+	@Override
+	public void setCalculationWidthThresholds(int absolute, double relative)
+	{
+		super.setCalculationWidthThresholds(absolute, relative);
+		this.cachedLL = 0.0;
+	}
+	
+	
+	private static int DEFAULT_TRUNCATE_ABSOLUTE = 6;
+	private static double DEFAULT_TRUNCATE_RELATIVE = 1.0;
+	/**
+	 * Tries to increase/decrease absolute an relative calculation width parameters 
+	 * for better estimation of true likelihood and gradient (with max 
+	 * calculation width).
+	 * 
+	 * @param tol
+	 * @return log-likelihood
+	 */
+	public double adjustCalculationWidth(double tol)
+	{
+		int absolute = getCalculationWidthAbsolute();
+		double relative = getCalculationWidthRelative();
+		
+		double current_LL = getCorrectedLL();
+		// need to increase?
+		double step_size = Math.log(2.0)/3.0;
+		
+		
+		boolean adjustCalculationWidth=false;
+		
+		int num_adjustments = 0;
+		
+		int dabs =0, drel = 0;
+		
+		final int maxiter = 8;
+		boolean adjusted_in_iteration=true;
+		while (adjusted_in_iteration && num_adjustments < maxiter)
+		{
+			adjusted_in_iteration = false;
+			
+			{ // try changing absolute
+				
+				int next_absolute = Integer.max(absolute+1,(int)Math.ceil(Math.exp(Math.log(absolute)+step_size)));
+				this.setCalculationWidthThresholds(next_absolute, relative);
+				
+				double next_LL = getCorrectedLL();
+				
+				double next_delta = next_LL-current_LL;
+				double next_rdiff = Math.abs(next_delta/current_LL); 
+				
+				if (tol < next_rdiff )
+				{
+					absolute = next_absolute;
+					current_LL = next_LL;
+					adjusted_in_iteration = adjustCalculationWidth = true;
+					++num_adjustments;
+					++dabs;
+				} else if (DEFAULT_TRUNCATE_ABSOLUTE < absolute)
+				{
+					int prev_absolute = Integer.max(Integer.min((int)Math.ceil(Math.exp(Math.log(absolute)-step_size)), absolute-1), DEFAULT_TRUNCATE_ABSOLUTE);
+					this.setCalculationWidthThresholds(prev_absolute, relative);
+					
+					double prev_LL = getCorrectedLL();
+					double prev_delta = prev_LL-current_LL;
+					double prev_rdiff = Math.abs(prev_delta/current_LL);
+					
+					if (prev_rdiff < tol)
+					{
+						absolute = prev_absolute;
+						current_LL = prev_LL;
+						adjusted_in_iteration = adjustCalculationWidth = true;
+						++num_adjustments;
+						--dabs;
+					}
+				}
+				
+			}
+			{
+				// try changing relative
+				double next_rel = Math.exp(Math.log(relative)+step_size);
+				this.setCalculationWidthThresholds(absolute, next_rel);
+				
+				double next_LL = getCorrectedLL();
+				
+				double next_delta = next_LL-current_LL;
+				double next_rdiff = Math.abs(next_delta/current_LL); 
+				
+				if (tol < next_rdiff)
+				{
+					relative = next_rel;
+					current_LL = next_LL;
+					adjusted_in_iteration = adjustCalculationWidth = true;
+					++num_adjustments;
+					++drel;
+				} else if (DEFAULT_TRUNCATE_RELATIVE < relative)
+				{
+					double prev_rel = Double.max(DEFAULT_TRUNCATE_RELATIVE, Math.exp(Math.log(relative)-step_size));
+					this.setCalculationWidthThresholds(absolute, prev_rel);
+					
+					double prev_LL = getCorrectedLL();
+					double prev_delta = prev_LL-current_LL;
+					double prev_rdiff = Math.abs(prev_delta/current_LL);
+					if (prev_rdiff < tol)
+					{
+						relative = prev_rel;
+						current_LL = prev_LL;
+						adjusted_in_iteration = adjustCalculationWidth = true;
+						++num_adjustments;
+						--drel;
+					}
+				}
+			} 			
+		} // while changes		
+		this.setCalculationWidthThresholds(absolute, relative);
+		System.out.println("#**G.aCW setting "+absolute+","+relative);		
+		
+		return current_LL;
+		
+	}
+	
 	
 	/**
 	 * 
@@ -100,11 +238,11 @@ public class Gradient extends Posteriors
 	}
 	
 	/**
-	 * Sum of famjily multiplicities
+	 * Sum of family multiplicities
 	 * 
 	 * @return
 	 */
-	protected int getTotalFamilyCount()
+	public int getTotalFamilyCount()
 	{
 		return utable==null?factory.table.getFamilyCount():utable.getTotalFamilyCount();
 	}
@@ -118,7 +256,7 @@ public class Gradient extends Posteriors
 	{
 		if (thread_pool == null && 1<Count.THREAD_PARALLELISM) // && Count.THREAD_UNIT_TASK<Integer.MAX_VALUE)
 		{
-			System.out.println("#**G.threadPool init: "+Count.THREAD_PARALLELISM+" threads on "+Thread.currentThread());
+//			System.out.println("#**G.threadPool init: "+Count.THREAD_PARALLELISM+" threads on "+Thread.currentThread());
 			thread_pool = Count.threadPool(); // new ForkJoinPool(Count.THREAD_PARALLELISM);	
 		}
 		return thread_pool;
@@ -273,11 +411,12 @@ public class Gradient extends Posteriors
 		// LL-F*log(1-exp(L0))
 		double p_not0  = -Math.expm1(L0); // ok with L0== -infinity
 		
-//		System.out.println("#**MRG.gCLL uncorr "+LL+"\tunobs "+L0+"\tp "+p_not0);
-		LL -= nF*Math.log(p_not0);
 		
-		assert (!Double.isNaN(LL));
-		return LL;
+		double LLcorr = LL-nF*Math.log(p_not0);
+//		System.out.println("#**G.gCLL uncorr "+LL+"\tunobs "+L0+"\tp "+p_not0+"\tLLcorr "+LLcorr);
+		
+		assert (!Double.isNaN(LLcorr));
+		return LLcorr;
 	}
 	
 	/**
@@ -401,28 +540,291 @@ public class Gradient extends Posteriors
 		}
 		final Posteriors.Profile post;
 		
-//		/**
-//		 * Multiplicity of a 
-//		 * family: 
-//		 * if owner Gradient was instantiated
-//		 * with a UniqueProfileTable, 
-//		 * then the family's multiplicity, or else 1. 
-//		 * 
-//		 * @return
-//		 */
-//		int getMultiplicity()
-//		{
-//			return utable == null?1:utable.getMultiplicity(post.inside.family_idx);
-//		}
+		
 		
 		/**
 		 * Gradient of the uncorrected log-likelihood.
 		 * Index is 3*<var>node</var>+<var>i</var> where <var>i</var>={@link GLDParameters#PARAMETER_DUPLICATION},
 		 * {@link GLDParameters#PARAMETER_GAIN}, {@link GLDParameters#PARAMETER_LOSS}.
 		 * 
+		 * Numerically stable version that works with very small 
+		 * parameter values too. 
+		 * 
 		 * @return gradient array
 		 */
-		double[] getSurvivalGradient()
+		protected double[] getSurvivalGradient()
+		{
+			int num_nodes = factory.tree.getNumNodes();
+			double[] dL = new double[num_nodes*3];// return value
+
+			for (int node=0; node<num_nodes; node++)
+			{
+				double log1_q = factory.getLogDuplicationComplement(node); // Math.log(q1); // Math.log1p(-q); //Math.log(1.0-q); // 
+				double log_q = factory.getLogDuplicationParameter(node);
+				
+				double log_mean_Sv = post.getLogEdgeMean(node);
+				double log_mean_Nv = post.getLogNodeMean(node);
+
+				// II.a gain
+				if (log_q==Double.NEGATIVE_INFINITY) 
+				{
+					// Poisson
+					double r = factory.getGainParameter(node);
+					if (r!=0.0)
+					{
+						double log_mean_Nv_Sv = post.getLogNodeIncrease(node);
+						double log_r = Math.log(r);
+						//dL[3*node+PARAMETER_GAIN] = Math.expm1(log_mean_Nv_Sv-log_r);
+						
+						double dLdg = Logarithms.ldiffValue(Logarithms.ldiff(log_mean_Nv_Sv-log_r, 0.0));
+						dL[3*node+PARAMETER_GAIN] = dLdg;
+					}
+				} else
+				{
+					// Pólya
+					double κ = factory.getGainParameter(node);
+					double[] log_Nv_Sv = post.getLogNodePosteriorIncrease(node);
+					double log_kappa = Math.log(κ);
+					if (κ!=0.0)
+					{
+						double log_dLdk = Double.NEGATIVE_INFINITY;
+						for (int i=0; i<log_Nv_Sv.length; i++)
+						{
+							double log_denom = (κ<i)
+									?Math.log(i)+Math.log1p(κ/i)
+									:log_kappa+Math.log1p(i/κ);
+							
+							log_dLdk = Logarithms.add(log_dLdk, log_Nv_Sv[i]-log_denom);
+						}
+						double loglog1_q = Logarithms.logitToLogLogComplement(log_q-log1_q);
+						dL[3*node+PARAMETER_GAIN] 
+								= Math.exp(log_dLdk) + log1_q;
+						double dLdk = Logarithms.ldiffValue(Logarithms.ldiff(log_dLdk, loglog1_q));
+						dL[3*node+PARAMETER_GAIN] = dLdk;
+					}
+					double log_mean_Nv_Sv = Double.NEGATIVE_INFINITY;
+					for (int i=0; i<log_Nv_Sv.length; i++)
+					{
+						log_mean_Nv_Sv = Logarithms.add(log_mean_Nv_Sv, log_Nv_Sv[i]);
+					}
+					// DEBUG
+					
+//					dL[3*node+PARAMETER_DUPLICATION]
+//							= Math.exp(log_mean_Nv_Sv-log_q)
+//								-Math.exp(Logarithms.add(log_mean_Sv, log_kappa)-log1_q);
+					
+					//log_mean_Nv_Sv = Math.log(Double.max(0.0,Math.exp(log_mean_Nv)-Math.exp(log_mean_Sv)));
+					
+					double[] log_dLdq = Logarithms.ldiff(log_mean_Nv_Sv-log_q, Logarithms.add(log_mean_Sv, log_kappa)-log1_q);
+					double dLdq = Logarithms.ldiffValue(log_dLdq);
+					dL[3*node+PARAMETER_DUPLICATION] = dLdq;
+					
+//					double diff_means = Math.exp(log_mean_Nv_Sv)-((Math.exp(log_mean_Nv)-Math.exp(log_mean_Sv)));
+//					double err_means = Math.abs(diff_means/Math.exp(log_mean_Nv_Sv));
+//					
+//					if (dLdq == 0.0 && !Logarithms.ldiffIsZero(log_dLdq))
+////							|| err_means>1.0)
+//					{
+//						int uniqf = post.inside.family_idx;
+//						System.out.println("#**G.P.gSG "
+//								+uniqf+"("+utable.getLineageCount(uniqf)+"/"+utable.getMemberCount(uniqf)+")"
+//								+"\t"+node
+//								+"\t"+err_means+"/"+diff_means
+//								+"\tNvSv "+log_mean_Nv_Sv+"/"+Math.exp(log_mean_Nv_Sv)
+//									+"\tSv "+log_mean_Sv+"/"+Math.exp(log_mean_Sv)
+//									+"\tNv "+log_mean_Nv+"/"+Math.exp(log_mean_Nv)
+//									+"\tNv-Sv "+(Math.exp(log_mean_Nv)-Math.exp(log_mean_Sv))
+//									+"\tNvSv/q "+Math.exp(log_mean_Nv_Sv-log_q)
+//									+"\tSv/1_q "+Math.exp(log_mean_Sv-log1_q)
+//									+"\tkp/1_q "+Math.exp(log_kappa-log1_q)
+//								+"\tlq "+log_q+"/"+Math.exp(log_q)
+//								+"\tl1q "+log1_q+"/"+Math.exp(log1_q)
+//								+"\tlkappa "+log_kappa
+//								+"\tdL "+dL[3*node+PARAMETER_DUPLICATION]
+//								+"\tdLlogit "+dL[3*node+PARAMETER_DUPLICATION]
+//										*Math.exp(log_q+log1_q));
+//					}
+				}
+				
+				double logp = factory.getLogLossParameter(node);
+				double log1_p = factory.getLogLossComplement(node);
+				if (log1_p!=Double.NEGATIVE_INFINITY)   // (logp!=0.0)
+				{
+					double log_mean_Nu_Sv = post.getLogEdgeDecrease(node); 
+					
+					
+					if (factory.tree.isRoot(node)) // untested model setting
+					{
+//						dL[3*node+PARAMETER_LOSS] =
+//								Math.exp(log_mean_Nu_Sv-logp)-Math.exp(log_mean_Sv-log1_p);
+						double dLdp =  Logarithms.ldiffValue(Logarithms.ldiff(log_mean_Nu_Sv-logp, log_mean_Sv-log1_p));
+						dL[3*node+PARAMETER_LOSS] = dLdp;
+						throw new UnsupportedOperationException("Root with loss<1 was never tested.");
+					} else
+					{
+						int parent = factory.tree.getParent(node);
+						
+						// do not enforce high precision
+						// log_mean_Nu_Sv = Math.log(Double.max(0.0,Math.exp(post.getLogNodeMean(parent)-Math.exp(log_mean_Sv))));
+//						double log_szer2; 
+//						if (factory.tree.getNumChildren(parent)==2)
+//						{
+//							log_szer2 = factory.getLogLossComplement(factory.tree.getSibling(node));
+//						} else
+//						{
+//							double epsi = factory.getExtinction(parent);
+//							log_szer2 = Math.log1p(-Math.exp(factory.getLogExtinction(parent)-logp));
+//						}			
+						double log1_e;
+						if (factory.tree.getNumChildren(parent)==2)
+						{
+							log1_e = factory.getLogLossComplement(factory.tree.getSibling(node));
+						} else
+						{
+							log1_e = Logarithms.logToLogComplement(factory.getLogExtinction(node)-logp);
+						}			
+						
+						
+						double lt1 = log_mean_Nu_Sv-logp;
+						//double lt2 = log_mean_Sv+log_szer2-log1_p;
+						double lt2 = log_mean_Sv+log1_e-log1_p;
+						
+						// fixing a math error in the formulas: a mising 1-p*epsilon denominator
+						// 1-pe = 1-p + p*(1-e)
+						double log1_pe = Logarithms.add(log1_p, logp+log1_e);
+						lt1-=log1_pe;
+						lt2-=log1_pe;
+						
+//						dL[3*node+PARAMETER_LOSS] =
+//								Math.exp(lt1)
+//								-Math.exp(lt2);	
+						
+						double[] log_dLdp = Logarithms.ldiff(lt1, lt2);
+						double dLdp = Logarithms.ldiffValue(log_dLdp);
+						dL[3*node+PARAMETER_LOSS] = dLdp;
+						
+//						if (dLdp == 0.0 && !Logarithms.ldiffIsZero(log_dLdp))
+//						{
+//							System.out.println("#**G.P.gSG "
+//							+post.inside.family_idx
+//							+"\t"+node
+//							+"\tNuSv "+log_mean_Nu_Sv+"\tSv "+log_mean_Sv
+//							+"\tlp "+logp+"\tl1p "+log1_p+"\tl1e "+log1_e
+//							+"\t"+Arrays.toString(log_dLdp)
+//							+"\tdL "+dL[3*node+PARAMETER_LOSS]
+//							+"\tdLlogit "+dL[3*node+PARAMETER_LOSS]
+//									*Math.exp(logp+log1_p));
+//							
+//						}
+						
+					}
+				}
+				
+			} // for node
+			return dL;
+		}
+
+		/**
+		 * Gradient by logit p~, logit q~, log kappa/log r~
+		 * 
+		 * @return
+		 */
+		protected double[] getLogitSurvivalGradient()
+		{
+			int num_nodes = factory.tree.getNumNodes();
+			double[] dL = new double[num_nodes*3];// return value
+
+			for (int v=0; v<num_nodes; v++) // for all nodes v 
+			{		
+				double log_Sv = post.getLogEdgeMean(v);
+				/*
+				 * derivative by logit p
+				 */
+				int jloss = 3*v+PARAMETER_LOSS; // parameter index
+				double log_Nu_Sv = post.getLogEdgeDecrease(v); 
+				double log_p = factory.getLogLossParameter(v);
+				double log1_p = factory.getLogLossComplement(v);
+				if (factory.tree.isRoot(v) || log1_p == Double.NEGATIVE_INFINITY) // p==1.0 
+				{
+					dL[jloss] = 0.0;
+				} else
+				{
+					int u = factory.tree.getParent(v);
+					double log1_e; // non-extinction at v's siblings
+					if (factory.tree.getNumChildren(u)==2)
+					{
+						log1_e = factory.getLogLossComplement(factory.tree.getSibling(v));
+					} else
+					{
+						log1_e = Logarithms.logToLogComplement(factory.getLogExtinction(u)-log_p);
+					}		
+					double log1_eu = factory.getLogExtinctionComplement(u);
+					double dpos = log_Nu_Sv+log1_p-log1_eu;
+					double dneg = log_Sv+log_p+log1_e-log1_eu;
+					dL[jloss]  = Logarithms.ldiffValue(Logarithms.ldiff(dpos, dneg));
+				}
+				/*
+				 * derivative by log-gain, and logit-duplication
+				 */
+				int jgain = 3*v+PARAMETER_GAIN;
+				int jdup = 3*v+PARAMETER_DUPLICATION;
+				double log1_q = factory.getLogDuplicationComplement(v);  
+				double log_q = factory.getLogDuplicationParameter(v);
+				double log_Nv_Sv = post.getLogNodeIncrease(v);
+				if (log_q==Double.NEGATIVE_INFINITY)
+				{
+					// Poisson model
+					double log_r = factory.getLogGainParameter(v);
+					
+					dL[jgain] = Logarithms.ldiffValue(Logarithms.ldiff(log_Nv_Sv, log_r));
+					dL[jdup] = 0.0;
+				} else
+				{
+					assert (Double.isFinite(log_q));
+					// Polya model
+					double log_kappa = factory.getLogGainParameter(v);
+					double κ = Math.exp(log_kappa);
+					double[] tNv_Sv = post.getLogNodePosteriorIncrease(v); // difference of tail probabilities					
+					double dpos = tNv_Sv[0]; // first term
+					for (int i=1; i<tNv_Sv.length; i++)
+					{
+						// ln(k/(k+i)) = ln(1/(1+i/k)) =-ln(1+i/k) for i<k
+						// = ln (k/i)-ln(1+k/i) for k<i
+						double log_k_ki;
+						if (i<κ)
+						{
+							log_k_ki = -Math.log1p(i/κ);
+						} else
+						{
+							log_k_ki = log_kappa - Math.log(i) -Math.log1p(κ/i);
+						}
+						dpos = Logarithms.add(dpos, tNv_Sv[i]+log_k_ki);
+					}
+					// gain
+					double loglog1_q = Logarithms.logitToLogLogComplement(log_q-log1_q);	
+					double dneg = log_kappa + loglog1_q;
+					dL[jgain] = Logarithms.ldiffValue(Logarithms.ldiff(dpos,dneg));
+					// duplication
+					dpos = log_Nv_Sv+log1_q;
+					dneg = Logarithms.add(log_Sv, log_kappa) + log_q;			
+					dL[jdup] = Logarithms.ldiffValue(Logarithms.ldiff(dpos, dneg));
+				}
+			} // for all nodes v
+			return dL;
+			
+		}
+		
+		
+		/**
+		 * Gradient of the uncorrected log-likelihood.
+		 * Index is 3*<var>node</var>+<var>i</var> where <var>i</var>={@link GLDParameters#PARAMETER_DUPLICATION},
+		 * {@link GLDParameters#PARAMETER_GAIN}, {@link GLDParameters#PARAMETER_LOSS}.
+		 * 
+		 * Derivative by p is not correct. 
+		 * 
+		 * @return gradient array
+		 */
+		double[] oldSurvivalGradient()
 		{
 			// I. compute the posterior means and tails
 			double[] node_means = post.getNodeMeans(); // array of expected values across the nodes
@@ -433,19 +835,21 @@ public class Gradient extends Posteriors
 			
 			for (int node=0; node<num_nodes; node++)
 			{
-				double[] Ncdf = post.getNodeCDF(node);
-				double[] Ntail 
-					= node_tails[node] = new double[Ncdf.length];
-				for (int ell=0; ell<Ncdf.length-1; ell++) // last entry is 1.0
-					Ntail[ell]=1.0-Ncdf[ell];
-				double[] Scdf = post.getEdgeCDF(node);
-				double[] Stail 
-					= edge_tails[node] = new double[Ntail.length];
-				
-				assert (Scdf.length <= Stail.length); 
-				
-				for (int s=0; s<Scdf.length-1; s++)
-					Stail[s]=1.0-Scdf[s];
+				node_tails[node] = post.getNodeTail(node);
+				edge_tails[node] = post.getEdgeTail(node);
+//				double[] Ncdf = post.getNodeCDF(node);
+//				double[] Ntail 
+//					= node_tails[node] = new double[Ncdf.length];
+//				for (int ell=0; ell<Ncdf.length-1; ell++) // last entry is 1.0
+//					Ntail[ell]=1.0-Ncdf[ell];
+//				double[] Scdf = post.getEdgeCDF(node);
+//				double[] Stail 
+//					= edge_tails[node] = new double[Ntail.length];
+//				
+//				assert (Scdf.length <= Stail.length); 
+//				
+//				for (int s=0; s<Scdf.length-1; s++)
+//					Stail[s]=1.0-Scdf[s];
 			}
 			
 			
@@ -455,6 +859,7 @@ public class Gradient extends Posteriors
 			for (int node=0; node<num_nodes; node++)
 			{
 				double q = factory.getDuplicationParameter(node);
+				double q1 = factory.getDuplicationParameterComplement(node);
 				if (q==0.0)
 				{
 					// Poisson
@@ -473,28 +878,40 @@ public class Gradient extends Posteriors
 						double dLdk = 0.0;
 						double[] Ntail = node_tails[node];
 						double[] Stail = edge_tails[node];
-						
-						for (int i=0; i<Ntail.length; i++)
+						assert (Stail.length<=Ntail.length);
 						{
-							dLdk += (Ntail[i]-Stail[i])/(κ + i);
+							int i; 
+							for (i=0; i<Stail.length; i++)
+							{
+								double Nu_Su = Double.max(0.0, Ntail[i]-Stail[i]);
+								dLdk += Nu_Su/(κ + i);
+							}
+							for (; i<Ntail.length; i++)
+							{
+								double Nu_Su = Ntail[i];
+								dLdk += Nu_Su/(κ + i);
+							}
 						}
-						double log1_q = Math.log1p(-q); //Math.log(1.0-q); // 
+						double log1_q = Math.log(q1); // Math.log1p(-q); //Math.log(1.0-q); // 
 						dL[3*node+PARAMETER_GAIN] 
 								= dLdk + log1_q;// d/dκ
 						
 						assert !Double.isNaN(dL[3*node+PARAMETER_GAIN] );
 					}
+					
+					
 					dL[3*node+PARAMETER_DUPLICATION]
 							= (node_means[node]-edge_means[node])/q
-							- (edge_means[node]+ κ)/(1.0-q); // d/dq
+							- (edge_means[node]+ κ)/q1; // d/dq
 				}
 				double p = factory.getLossParameter(node);
+				double p1 = factory.getLossParameterComplement(node);
 				if (p!=1.0)
 				{
-					if (factory.tree.isRoot(node))
+					if (factory.tree.isRoot(node)) // untested model setting
 					{
 						dL[3*node+PARAMETER_LOSS]
-								= (1.0-edge_means[node])/p - edge_means[node]/(1.0-p);
+								= (1.0-edge_means[node])/p - edge_means[node]/p1;
 //						if (! Double.isFinite(dL[3*node+PARAMETER_LOSS] ))
 //						{
 //							System.out.println("#**G.P.gSG dloss "+dL[3*node+PARAMETER_LOSS]+"\tSn "+edge_means[node]+"\tp "+p+"\t// "+factory.rates.toString(node));
@@ -502,10 +919,10 @@ public class Gradient extends Posteriors
 					} else
 					{
 						int parent = factory.tree.getParent(node);
-						double omeu = 1.0 - factory.extinction[parent];
+						double omeu =  factory.getExtinctionComplement(parent); // 1.0 - factory.extinction[parent];
 						// double epsi = factory.extinction[parent]/p;
 						dL[3*node+PARAMETER_LOSS]
-								= (node_means[parent]-omeu*edge_means[node])/p - omeu*edge_means[node]/(1.0-p);
+								= (node_means[parent]-omeu*edge_means[node])/p - omeu*edge_means[node]/p1;
 //						if (! Double.isFinite(dL[3*node+PARAMETER_LOSS] ))
 //						{
 //							System.out.println("#**G.P.gSG dloss "+dL[3*node+PARAMETER_LOSS]+"\tNp "+node_means[parent]+"\tSn "+edge_means[node]+"\tome "+omeu+"\tp "+p+"\t// "+factory.rates.toString(node)
@@ -534,28 +951,33 @@ public class Gradient extends Posteriors
 		
 		for (int node=0; node<num_nodes; node++)
 		{
-			double q = factory.getDuplicationParameter(node);
-			if (q==0.0)
+			//double q = factory.getDuplicationParameter(node);
+			double log1_q = factory.getLogDuplicationComplement(node) ;
+			double log_q = factory.getLogDuplicationParameter(node);
+			
+			if  (log_q == Double.NEGATIVE_INFINITY) // (log1_q==0.0)
 			{
 				// Poisson
-				double r = factory.getGainParameter(node);
-				if (r!=0.0)
-				{
+//				double r = factory.getGainParameter(node);
+//				if (r!=0.0)
+//				{
 					dL[3*node+PARAMETER_GAIN] 
 							=  - 1.0; // d/dr
-				}
+//				}
 			} else
 			{
 				// Pólya
 				double κ = factory.getGainParameter(node);
-				if (κ!=0.0)
-				{
-					double log1_q = Math.log1p(-q); // Math.log(1.0-q); // Mat.log1p(-q)
+				//double log1_q = factory.getLogDuplicationComplement(node) ; // Math.log1p(-q); // Math.log(1.0-q); // Mat.log1p(-q)
+//				if (κ!=0.0)
+//				{
 					dL[3*node+PARAMETER_GAIN] 
 							= log1_q;// d/dκ
-				}
+//				}
+				double log_kappa = factory.getLogGainParameter(node);
+				
 				dL[3*node+PARAMETER_DUPLICATION]
-						= -κ/(1.0-q); // d/dq
+						= - Math.exp(log_kappa-log1_q);//   κ/(1.0-q); // d/dq
 			}
 		}	
 		int root = num_nodes-1; assert (root == factory.tree.getRoot());
@@ -644,6 +1066,76 @@ public class Gradient extends Posteriors
 		return survival_gradient;
 	}
 	
+	/**
+	 * Calculates gradient by logit-p, logit-q, log-kappa/log-r; 
+	 * replaces entries of the input array.
+	 * 
+	 * @param survival_gradient from {@link Profile#getLogitSurvivalGradient()} 
+	 * @return same array, with updated entries
+	 */
+	public double[] convertToLogitDistributionGradient(double[] survival_gradient)
+	{
+		double[] dL = survival_gradient; // return value
+		int num_nodes = factory.tree.getNumNodes();
+		double[] dde = new double[num_nodes]; // d/dε
+		
+		int v=factory.tree.getRoot();
+		while (0<=v)
+		{
+			// parameter indices
+			int jloss = 3*v+PARAMETER_LOSS;
+			int jdup  = 3*v+PARAMETER_DUPLICATION;
+			int jgain = 3*v+PARAMETER_GAIN;
+			
+			double log_e = factory.getLogExtinction(v);
+			if (factory.tree.isRoot(v) || factory.rates.getLogLossComplement(v) ==Double.NEGATIVE_INFINITY)
+			{
+				if (factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) // (q==0.0)			
+				{
+					// Poisson
+					dde[v] = -Math.exp(log_e)*dL[jgain];
+					assert (dL[jloss]==0.0);
+					assert (dL[jdup] ==0.0);
+				} else
+				{
+					// Polya
+					dde[v] = -Math.exp(log_e)*dL[jdup];
+				}
+			} else
+			{
+				int u=factory.tree.getParent(v);
+
+				double log_p = factory.getLogLossParameter(v);
+				double log1_p = factory.getLogLossComplement(v);
+				
+				double log_dedp = log1_p-factory.getLogExtinctionComplement(u); 
+				double dLdpe = dL[jloss] + Math.exp(log_dedp)*dde[u];
+				
+				double log_dpdp = factory.rates.getLogLossParameter(v)-log_p; 
+				dL[jloss] = dL[jloss] * Math.exp(log_dpdp);
+				
+				if (factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) // (q==0.0)
+				{
+					// Poisson
+					double log_dpde = log_e-log_p;
+					dde[v] = Math.exp(log_dpde) * dLdpe - Math.exp(log_e)*dL[jgain];
+					assert (dL[jdup]==0.0);
+				} else
+				{
+					// Polya
+					double log_dpde = factory.getLogDuplicationComplement(v)+log_e-log_p;
+					double log_dpdq = log_dpde + factory.rates.getLogDuplicationParameter(v);
+					
+					double dLdq = dL[jdup];
+					dL[jdup] = dLdq - Math.exp(log_dpdq)*dLdpe;
+					dde[v] = Math.exp(log_dpde)*dLdpe - Math.exp(log_e)*dLdq;
+				}
+			}
+			
+			--v;
+		} // for all nodes in preorder	
+		return dL;
+	}
 	
 	/**
 	 * Calculates the gradient by distribution parameters from the gradient by survival parameters. 
@@ -660,14 +1152,15 @@ public class Gradient extends Posteriors
 		int node = factory.tree.getRoot();
 		// init at the root 
 		double q = factory.rates.getDuplicationParameter(node);
-		if (q==0.0)
+		double log_q = factory.rates.getLogDuplicationParameter(node);
+		if (log_q==Double.NEGATIVE_INFINITY) // (q==0.0)
 		{
 			// Poisson
 			double r = factory.rates.getGainParameter(node);
 			if (r!=0.0)
 			{
 				double dLdr =  dL[3*node+PARAMETER_GAIN];
-				dL[3*node+PARAMETER_GAIN] = dLdr*(1.0-factory.extinction[node]); 
+				dL[3*node+PARAMETER_GAIN] = dLdr*factory.getExtinctionComplement(node); // (1.0-factory.extinction[node]); 
 				de[node] = dLdr*(-r);
 			}
 		} else
@@ -676,23 +1169,38 @@ public class Gradient extends Posteriors
 			
 			double q_1 = factory.rates.getDuplicationParameterComplement(node);
 			double dLdq = dL[3*node+PARAMETER_DUPLICATION];
-			double a = 1.0-q*factory.extinction[node];
+			double e_1 = factory.getExtinctionComplement(node);
+			double a = q_1 + q*e_1; // 1-qe = 1-q + q(1-e)
+					   //1.0-q*factory.getExtinction(node);
 			double a2 = a*a;
-			dL[3*node+PARAMETER_DUPLICATION] = dLdq * (1.0-factory.extinction[node])/a2;
+			dL[3*node+PARAMETER_DUPLICATION] = dLdq * e_1 //  (1.0-factory.extinction[node])
+												/a2;
 			// dL[3*node+PARAMETER_GAIN] does not change
 			de[node] = -dLdq*q_1*q/a2;
 		}
 		assert Double.isFinite(dL[3*node+PARAMETER_DUPLICATION] );
 		assert Double.isFinite(dL[3*node+PARAMETER_LOSS] );
 		assert Double.isFinite(dL[3*node+PARAMETER_GAIN] );
+//		{ // DEBUG
+//			System.out.println("#**G.gDG "+node
+//					+"\tdLdlp "+dL[3*node+PARAMETER_LOSS]*factory.rates.getLossParameter(node)*factory.rates.getLossParameterComplement(node)
+//					+"\tdLdlq "+dL[3*node+PARAMETER_DUPLICATION]*factory.rates.getDuplicationParameter(node)*factory.rates.getDuplicationParameterComplement(node)
+//					+"\tdLdlg "+dL[3*node+PARAMETER_GAIN]*factory.rates.getGainParameter(node)
+//					+"\tdLdle "+de[node]*factory.getExtinction(node)*factory.getExtinctionComplement(node)
+//				);
+//		}
 		while (node>0)
 		{
 			--node;
 			int parent = factory.tree.getParent(node);
 			q = factory.rates.getDuplicationParameter(node);
 			double p = factory.rates.getLossParameter(node);
-			double ε = factory.extinction[parent]/factory.getLossParameter(node);
+			double ε = 
+				    factory.tree.getNumChildren(parent)==2
+				    ?factory.getLossParameter(factory.tree.getSibling(node))
+				    :factory.getExtinction(parent)/factory.getLossParameter(node);
 			double dLdpe = dL[3*node+PARAMETER_LOSS]+ε*de[parent];
+			double epsi1 = factory.getExtinctionComplement(node);
 			if (q==0.0)
 			{
 				// Poisson
@@ -700,26 +1208,63 @@ public class Gradient extends Posteriors
 				if (r!=0.0)
 				{
 					double dLdr =  dL[3*node+PARAMETER_GAIN];
-					dL[3*node+PARAMETER_GAIN] = dLdr * (1.0-factory.extinction[node]); 
-					dL[3*node+PARAMETER_LOSS] = dLdpe * (1.0-factory.extinction[node]);
-					de[node] = dLdpe * (1.0-p) - dLdr * r;
+					dL[3*node+PARAMETER_GAIN] = dLdr *  epsi1; // (1.0-factory.extinction[node]); 
+					dL[3*node+PARAMETER_LOSS] = dLdpe * epsi1; //(1.0-factory.extinction[node]);
+					de[node] = dLdpe * factory.rates.getLossParameterComplement(node) - dLdr * r;
 				}
+				
 			} else
 			{
 				// Pólya or geometric
 				double q_1 = factory.rates.getDuplicationParameterComplement(node);
 				double p_1 = factory.rates.getLossParameterComplement(node); 
-				double a = 1.0-q*factory.extinction[node];
-				dL[3*node+PARAMETER_LOSS] = dLdpe * (1.0-factory.extinction[node]) / a;
+				//double a = 1.0-q*factory.getExtinction(node);
+				double dp_dp = Math.exp(factory.getLogLossComplement(node)-factory.rates.getLogLossComplement(node));
+				
+				double dLdp = dL[3*node+PARAMETER_LOSS];
+				dL[3*node+PARAMETER_LOSS] = dLdpe *dp_dp;  // epsi1/a; // (1.0-factory.extinction[node]) 
+//				System.out.println("#**G.gDG   "+node+"\tdpdp "+dp_dp+"\tdLdpe "+dLdpe
+//						+"\tdLdp~ "+dLdp
+//						+"\tdeu "+de[parent]+"\tepsi "+ε
+//						+"\tdLdp "+dL[3*node+PARAMETER_LOSS]
+//					);
+											
 				double dLdq = dL[3*node+PARAMETER_DUPLICATION];
-				double a2 = a*a;
-				dL[3*node+PARAMETER_DUPLICATION] = (dLdq - dLdpe * p_1 * factory.extinction[node]) 
-							* (1.0-factory.extinction[node])/a2;
-				de[node] = (dLdpe * p_1 - dLdq * q) * q_1/a2;
+				//double a2 = a*a;
+				
+				double dq_dq = Math.exp(factory.getLogDuplicationParameter(node)+factory.getLogDuplicationComplement(node)
+						-factory.rates.getLogDuplicationParameter(node)-factory.rates.getLogDuplicationComplement(node));
+
+
+				
+				dL[3*node+PARAMETER_DUPLICATION] = (dLdq - dLdpe * p_1 * factory.getExtinction(node)) 
+							*dq_dq;
+							// * epsi1 //(1.0-factory.extinction[node])
+							// /a2;
+				
+//				System.out.println("#**G.gDG   "+node+"\tdqdq "+dq_dq+"\tdLdq~ "+dLdq+"\tdLdpe "+dLdpe
+//							+"\tp1e "+ (p_1 * factory.getExtinction(node))
+//							+"\tdLdq "+dL[3*node+PARAMETER_DUPLICATION]);
+				
+				double d_de = Math.exp(2.0*factory.getLogDuplicationComplement(node)-factory.rates.getLogDuplicationComplement(node));
+				//System.out.println("#***G.gDG "+node+"\td_de "+d_de+"\t/"+(q_1/a2));
+				de[node] = (dLdpe * p_1 - dLdq * q) * d_de ; // q_1/a2;
+
+//				System.out.println("#**G.gDG   "+node+"\td_de "+d_de+"\tdLdq~ "+dLdq+"\tdLdpe "+dLdpe
+//						+"\tdLde "+de[node]);
 			}
 			assert Double.isFinite(dL[3*node+PARAMETER_DUPLICATION] );
 			assert Double.isFinite(dL[3*node+PARAMETER_LOSS] );
 			assert Double.isFinite(dL[3*node+PARAMETER_GAIN] );
+			
+//			{ // DEBUG
+//				System.out.println("#**G.gDG   "+node
+//						+"\tdLdlp "+dL[3*node+PARAMETER_LOSS]*factory.rates.getLossParameter(node)*factory.rates.getLossParameterComplement(node)
+//						+"\tdLdlq "+dL[3*node+PARAMETER_DUPLICATION]*factory.rates.getDuplicationParameter(node)*factory.rates.getDuplicationParameterComplement(node)
+//						+"\tdLdlg "+dL[3*node+PARAMETER_GAIN]*factory.rates.getGainParameter(node)
+//						+"\tdLdle "+de[node]*factory.getExtinction(node)*factory.getExtinctionComplement(node)
+//					);
+//			}
 		}
 		return dL;
 	}
@@ -732,6 +1277,8 @@ public class Gradient extends Posteriors
 	 */
 	public double inferDuplicationRateGradient(int node, double[] dL)
 	{
+		// TODO use base parameter's values
+		
 		final TreeWithRates rates = factory.rates;
 
 		double μ = rates.getLossRate(node);
@@ -1272,7 +1819,442 @@ public class Gradient extends Posteriors
 //		}
 //	}
 //	
+
+	private class PosteriorStatistics 
+	{
+		PosteriorStatistics()
+		{
+			int num_nodes = factory.tree.getNumNodes();
+			this.node_posteriors = new double[num_nodes][];
+			this.edge_posteriors = new double[num_nodes][];
+			this.birth_tails = new double[num_nodes][];
+			this.death_tails = new double[num_nodes][];
+			this.profile_count = 0.0;
+			this.LL = 0.0;
+		}
+		
+		// TODO: use birth and death tails
+		
+		private final double[][] node_posteriors;
+		private final double[][] edge_posteriors;
+		
+		private final double[][] birth_tails;
+		private final double[][] death_tails;
+		
+		
+		private double profile_count;
+		private double LL;
+		private double LLunobs = Double.NEGATIVE_INFINITY;
+		
+		void add(Profile P, double multiplier)
+		{
+			// TODO: use birth and death tails
+			
+			for (int node=0; node<node_posteriors.length; node++)
+			{
+				double[] pN = P.post.getNodePosteriors(node);
+				double[] pS = P.post.getEdgePosteriors(node);
+				
+				node_posteriors[node] = ArraySum.addCells(node_posteriors[node], pN, multiplier);
+				edge_posteriors[node] = ArraySum.addCells(edge_posteriors[node], pS, multiplier);
+				
+//				{ // DEBUG
+//					double S = P.post.getEdgeMean(node);
+//					double logS = P.post.getLogEdgeMean(node);
+//					double N = P.post.getNodeMean(node);
+//					double logN_S = P.post.getLogNodeIncrease(node);
+//					
+//					StringBuilder sb = new StringBuilder();
+//					if (!factory.tree.isRoot(node))
+//					{
+//						int parent = factory.tree.getParent(node);
+//						double Nu = P.post.getNodeMean(parent);
+//						double logNu_S = P.post.getLogEdgeDecrease(node);
+//						sb.append("\tNu-S "+(Nu-S)+"/ "+Math.exp(logNu_S));
+//					}
+//					
+//					System.out.println("#**G.PS.a "+P.post.inside.family_idx+"\tnode "+node+"\tS "+S+"\t/ "+Math.exp(logS)
+//							+"\tN-S "+(N-S)+"/ "+Math.exp(logN_S)+sb.toString());
+//				}
+				
+				double[] pNv_Sv = P.post.getNodeBirthTails(node);
+				double[] pNu_Sv = P.post.getEdgeDeathTails(node);
+				birth_tails[node] = ArraySum.addCells(birth_tails[node], pNv_Sv, multiplier);
+				death_tails[node] = ArraySum.addCells(death_tails[node], pNu_Sv, multiplier);
+			}
+			profile_count += multiplier;
+			LL = Math.fma(multiplier, P.post.inside.getLogLikelihood(), LL);
+		}
+		
+		void add(PosteriorStatistics that)
+		{
+			// TODO: use birth and death tails
+			for (int node=0; node<node_posteriors.length; node++)
+			{
+				node_posteriors[node] = ArraySum.addCells(this.node_posteriors[node], that.node_posteriors[node]);
+				edge_posteriors[node] = ArraySum.addCells(this.edge_posteriors[node], that.edge_posteriors[node]);
+				birth_tails[node] = ArraySum.addCells(this.birth_tails[node], that.birth_tails[node]);
+				death_tails[node] = ArraySum.addCells(this.death_tails[node], that.death_tails[node]);
+			}
+			this.profile_count += that.profile_count;
+			this.LL += that.LL;
+		}
+		
+		/**
+		 * Gradient of the uncorrected log-likelihood.
+		 * Index is 3*<var>node</var>+<var>i</var> where <var>i</var>={@link GLDParameters#PARAMETER_DUPLICATION},
+		 * {@link GLDParameters#PARAMETER_GAIN}, {@link GLDParameters#PARAMETER_LOSS}.
+		 * 
+		 * Problematic when p/q are too close to 0, because of (a-b)/p style terms 
+		 * where a-b is not calculated precisely.  
+		 * 
+		 * @deprecated
+		 * @return gradient array
+		 */
+		double[] getSurvivalGradient()
+		{
+			// TODO: use birth and death tails
+
+			int num_nodes = factory.tree.getNumNodes();
+
+			// I. compute the posterior tails and means
+			double[][] node_tails = new double[num_nodes][];
+			double[][] edge_tails = new double[num_nodes][];	
+			double[] node_means = new double[num_nodes];
+			double[] edge_means = new double[num_nodes];
+			
+			
+			for (int node=0; node<num_nodes; node++)
+			{
+				node_tails[node] = ArraySum.tail(node_posteriors[node]);
+				node_means[node] = ArraySum.sum(node_tails[node]);
+				edge_tails[node] = ArraySum.tail(edge_posteriors[node]);
+				edge_means[node] = ArraySum.sum(edge_tails[node]);
+			}			
+			
+			// II. compute the gradients 
+			double[] dL = new double[num_nodes*3];// return value
+			
+			for (int node=0; node<num_nodes; node++)
+			{
+				double q = factory.getDuplicationParameter(node);
+				double q1 = factory.getDuplicationParameterComplement(node);
+				double log1_q = factory.getLogDuplicationComplement(node); // Math.log(q1); // Math.log1p(-q); //Math.log(1.0-q); // 
+				double log_q = factory.getLogDuplicationParameter(node);
+				
+				// II.a gain
+				if (log_q==Double.NEGATIVE_INFINITY) 
+				{
+					// Poisson // untested
+					double r = factory.getGainParameter(node);
+					if (r!=0.0)
+					{
+						double Nu_Su = 0.0; // difference of means 
+						double[] tNu = node_tails[node];
+						double[] tSu = edge_tails[node];
+						assert (tSu.length<=tNu.length);
+						int i; 
+						for (i=0; i<tSu.length; i++)
+						{
+							double diff = Double.max(0.0, tNu[i]-tSu[i]);
+							Nu_Su += diff;
+						}
+						for (; i<tNu.length; i++)
+						{
+							Nu_Su += tNu[i];
+						}						
+						dL[3*node+PARAMETER_GAIN] 
+//								= (node_means[node] - edge_means[node])/r - profile_count; // d/dr
+								= Nu_Su/r - profile_count; // d/dr
+					}
+					dL[3*node+PARAMETER_DUPLICATION] = 0.0; // nothing to do 
+				} else
+				{
+					// Pólya
+					double κ = factory.getGainParameter(node);
+					double Nu_Su;
+					double[] tNu = node_tails[node];
+					double[] tSu = edge_tails[node];
+					assert (tSu.length<=tNu.length);
+
+					if (κ!=0.0)
+					{
+						double dLdk = 0.0;
+						Nu_Su = 0.0; // difference of means
+						{
+							int i; 
+							for (i=0; i<tSu.length; i++)
+							{
+								double diff = Double.max(0.0, tNu[i]-tSu[i]);
+								dLdk += diff/(κ + i);
+								Nu_Su += diff;
+							}
+							for (; i<tNu.length; i++)
+							{
+								dLdk += tNu[i]/(κ + i);
+								Nu_Su += tNu[i];
+							}
+						}
+//						double log1_q = factory.getLogDuplicationComplement(node); // Math.log(q1); // Math.log1p(-q); //Math.log(1.0-q); // 
+						dL[3*node+PARAMETER_GAIN] 
+								= dLdk + profile_count*log1_q;// d/dκ
+						
+						assert !Double.isNaN(dL[3*node+PARAMETER_GAIN] );
+					} else // kappa = 0?
+					{
+						Nu_Su = 0.0;
+						{
+							int i; 
+							for (i=0; i<tSu.length; i++)
+							{
+								double diff = Double.max(0.0, tNu[i]-tSu[i]);
+								Nu_Su += diff;
+							}
+							for (; i<tNu.length; i++)
+							{
+								Nu_Su += tNu[i];
+							}
+						}
+					}
+					// if (Nu_Su<TOO_SMALL) Nu_Su = 0.0;
+					// II.b duplication
+
+					dL[3*node+PARAMETER_DUPLICATION]
+							= Math.exp(Math.log(Nu_Su)-log_q)
+								- Math.exp(Math.log(edge_means[node]+ profile_count*κ)-log1_q);
+//							(Nu_Su==0.0?0.0:Nu_Su/q)
+//							- (edge_means[node]+ profile_count*κ)/q1; // d/dq
+				}
+				double logp = factory.getLogLossParameter(node);
+				double log1_p = factory.getLogLossComplement(node);
+				if (logp!=0.0)
+				{
+					if (factory.tree.isRoot(node)) // untested model setting
+					{
+						double p = factory.getLossParameter(node);
+						double p1 = factory.getLossParameterComplement(node);
+						dL[3*node+PARAMETER_LOSS]
+								= (profile_count-edge_means[node])/p - edge_means[node]/p1;
+					} else
+					{
+						int parent = factory.tree.getParent(node);
+						
+						double[] tNu = node_tails[parent];
+						double[] tSv = edge_tails[node];
+						double Nu_Sv = 0.0;
+						double Sv = 0.0;
+						assert (tSv.length<=tNu.length);
+						int i; 
+						for (i=0; i<tSv.length; i++)
+						{
+							double diff = Double.max(0.0, tNu[i]-tSv[i]);
+							Nu_Sv += diff;
+							Sv += tSv[i];
+						}
+						for (; i<tNu.length; i++)
+						{
+							Nu_Sv += tNu[i];
+						}
+						//if (Nu_Sv<TOO_SMALL) Nu_Sv = 0.0;
+						
+
+						double log_szer;
+//						double p = factory.getLossParameter(node);
+//						double p1 = factory.getLossParameterComplement(node);
+//						double szer;
+						if (factory.tree.getNumChildren(parent)==2)
+						{
+							// epsi = pv * pw if 2 children, so pv-epsi = pv*(1-pw)
+//							szer = p * factory.getLossParameterComplement(factory.tree.getSibling(node))/p1;
+							log_szer = logp-log1_p +factory.getLogLossComplement(factory.tree.getSibling(node));
+						} else
+						{
+							double epsi = factory.getExtinction(parent);
+//							szer =   (p - epsi)/p1; // = p*(1-epsi/p)/p1 // 
+							log_szer = logp-log1_p+Math.log1p(-Math.exp(factory.getLogExtinction(parent)-logp));
+						}
+//						double szd = Math.exp(log_szer)-szer;
+						double ldiff = Nu_Sv - Math.exp(log_szer + Math.log(Sv)); // (Sv==0.0?0.0:szer*Sv);
+						
+//						dL[3*node+PARAMETER_LOSS]
+//						= ldiff==0.0?0.0:ldiff/p;	
+
+						if (ldiff<0.0)
+						{
+							dL[3*node+PARAMETER_LOSS] = 
+									-Math.exp(Math.log(-ldiff)-logp);
+						} else if (0.0<ldiff)
+						{
+							dL[3*node+PARAMETER_LOSS] = 
+									Math.exp(Math.log(ldiff)-logp);
+						} else // ldiff==0.0
+						{
+							assert (ldiff==0.0);
+							dL[3*node+PARAMETER_LOSS] = 0.0;
+						}
+						
+						// Nu_Sv/p - szer*Sv/p
+						// = Nu_Sv/p - Sv*(1-epsi/p)/(1-p)
+						
+						double log_szer2; 
+						if (factory.tree.getNumChildren(parent)==2)
+						{
+							// epsi = pv * pw if 2 children, so pv-epsi = pv*(1-pw)
+//							szer = p * factory.getLossParameterComplement(factory.tree.getSibling(node))/p1;
+							log_szer2 = factory.getLogLossComplement(factory.tree.getSibling(node));
+						} else
+						{
+							double epsi = factory.getExtinction(parent);
+//							szer =   (p - epsi)/p1; // = p*(1-epsi/p)/p1 // 
+							log_szer2 = Math.log1p(-Math.exp(factory.getLogExtinction(parent)-logp));
+						}			
+						double dl2
+							=
+								Math.exp(Math.log(Nu_Sv)-logp)
+								-Math.exp(Math.log(Sv)+log_szer2-log1_p);
+//						double logt1=Math.log(Nu_Sv)-logp;
+//						double szd = dl2-dL[3*node+PARAMETER_LOSS];
+//						System.out.println("#**G.gSG "+node+"\tszd "+szd+"\tszer2 "+log_szer2+"\tdl2 "+dl2+"\tdlL "+-dL[3*node+PARAMETER_LOSS]);
+//						if (Math.abs(dl2)>1e10 || (Nu_Sv<1e-12 && Nu_Sv!=0.0) || logp<Math.log(0.001))
+//						{
+//							System.out.println("#**G.PS.gSG "+node+"\tszer2 "+log_szer2+"\tdl2 "+dl2+"\tdlL "+dL[3*node+PARAMETER_LOSS]);
+//							System.out.println("#**G.PS.gSG "+node+"\tldiff "+ldiff+"\tlog_szer "+log_szer+"\tSv "+Sv+"\tNu-Sv "+Nu_Sv+"\tlogp "+logp+"\tlog1p "+log1_p+"\tdl2 "+dl2
+//									+"\tt+ "+Math.exp(Math.log(Nu_Sv)-logp)
+//									+"\tt- "+Math.exp(Math.log(Sv)+log_szer2-log1_p));
+//							
+//							// problem p too small:
+//							// Nu_Sv is very small too; their ratio 
+//							// Nu_Sv/p is hard to estimate
+//						}
+						dL[3*node+PARAMETER_LOSS] = dl2;
+//						if (factory.rates.getLossParameter(node)<1e-4 )
+//						{
+//							System.out.println("#**G.PS.gSG node "+node+"\tSv "+Sv+"\tNu_Sv "+Nu_Sv+"\tszer "+szer+"\tlik "+factory.toString(node)+"\trates "+factory.rates.toString(node));
+//						}
+					}
+				} else // with p==1.0, keep dLdp=0
+				{
+				}
+				
+//				if (p<1e-3 )
+//				{
+//					System.out.println("#**G.PS.gSG node "+node+"\tdL "+dL[3*node+PARAMETER_LOSS]+"\t"+factory.toString(node));
+//				}				
+				assert Double.isFinite(dL[3*node+PARAMETER_DUPLICATION] );
+				assert Double.isFinite(dL[3*node+PARAMETER_LOSS] );
+				assert Double.isFinite(dL[3*node+PARAMETER_GAIN] );
+			}
+			
+//			System.out.println("#**G.P.gSG "+Arrays.toString(dL));
+			
+//			if (FunctionMinimization.euclideanNorm(dL)>1e10)
+//			{ // DEBUG
+//				printGradient(System.out, dL);
+//			}
+			
+			return dL;
+		}
+		
+	}
 	
+	private PosteriorStatistics computePosteriorStatistics()
+	{
+		int nF = factory.table.getFamilyCount();
+		final int unit_task = Count.unitTask(nF);
+		final ForkJoinPool thread_pool = threadPool();
+		
+		class PartialS extends RecursiveTask<PosteriorStatistics>
+		{
+			/**
+			 * First family index.
+			 */
+			private final int minF;
+			/**
+			 * Last family index, exclusive.
+			 */
+			private final int maxF;
+
+			PartialS(int min, int max)
+			{
+				this.minF = min;
+				this.maxF = max;
+			}
+			@Override
+			protected PosteriorStatistics compute() 
+			{
+				try
+				{
+					PosteriorStatistics S;
+					if (maxF-minF > unit_task)
+					{
+						int medF = (minF+maxF)/2;
+						PartialS left = new PartialS(minF, medF);
+						PartialS right = new PartialS(medF, maxF);
+						left.fork();
+						S = right.compute();
+						PosteriorStatistics S2 = left.join();
+						S.add(S2);
+					} else
+					{
+						S = new PosteriorStatistics();
+						for (int f=minF; f<maxF; f++)
+						{
+							Profile G = getGradient(f);
+							S.add(G, getMultiplicity(f));
+						}
+					}
+					return S;
+				} catch (Throwable t)
+				{
+					throw t;
+				}
+			}
+		}
+			
+		PartialS bigjob = new PartialS(0, nF);
+		try
+		{
+			PosteriorStatistics S;
+			if (nF>unit_task)
+			{
+				S = thread_pool.invoke(bigjob);
+			} else
+			{
+				S = bigjob.compute();
+			}
+			return S;
+		} catch (Throwable t)
+		{
+			throw new RuntimeException(t);
+		}
+	}
+	
+	public double[] altCorrectedGradient()
+	{
+		PosteriorStatistics stats = computePosteriorStatistics();
+		double[] dL = stats.getSurvivalGradient();
+		
+		double L0 = getUnobservedLL();
+		double corr0 = -Math.exp(L0)/Math.expm1(L0); // ==0 if L0==Double.NEGATIVE_INFINITY;
+		double[] emptyD = getUnobservedSurvivalGradient();
+		
+//		System.out.println("#**G.gCG dL "+FunctionMinimization.euclideanNorm(dL)
+//			+"\tdL0 "+FunctionMinimization.euclideanNorm(emptyD)
+//			+"\tcorr0 "+corr0);
+//				
+//				nF "+stats.profile_count+"\tcorr0 "+corr0+"\tL0 "+L0);
+
+		
+//		double nF = getTotalFamilyCount();
+		corr0 *= stats.profile_count;
+		
+		for (int pidx=0; pidx<dL.length; pidx++)
+		{
+			dL[pidx]+=corr0*emptyD[pidx];
+		}
+
+		return dL;
+	}
 	
 	/**
 	 * Computes the array of partial derivatives by survival parameters.
@@ -1298,6 +2280,12 @@ public class Gradient extends Posteriors
 		double L0 = getUnobservedLL();
 		double corr0 = -Math.exp(L0)/Math.expm1(L0); // ==0 if L0==Double.NEGATIVE_INFINITY;
 		double[] emptyD = getUnobservedSurvivalGradient();
+//		{ // DEBUG
+//			for (int j=0; j<emptyD.length; j++)
+//			{
+//				System.out.printf("#**G.gCG %d/%d\temptyD %.12f\n", j/3, j%3, emptyD[j]);
+//			}
+//		}
 		
 		class PartialD extends RecursiveTask<double[]>
 		{
@@ -1404,8 +2392,24 @@ public class Gradient extends Posteriors
 		return dL;
 	}
 	
+	protected static void printGradient(java.io.PrintStream out, double[] dL, int num_nodes)
+	{
+		for (int node =0; node<num_nodes; node++)
+		{
+			double dLdg = dL[3*node + PARAMETER_GAIN];
+			double dLdp = dL[3*node + PARAMETER_LOSS];
+			double dLdq = dL[3*node + PARAMETER_DUPLICATION];
+			out.println(node+"\t"+dLdg+"\t"+dLdp+"\t"+dLdq);
+		}
+		for (int j=3*num_nodes; j<dL.length; j++)
+		{
+			int jd = j-3*num_nodes;
+			out.println("p+"+jd+"\t"+dL[j]);
+		}
+		out.println("LENGTH\t"+FunctionMinimization.euclideanNorm(dL));
+	}
 	
-	private void printGradient(java.io.PrintStream out, double[] dL)
+	protected void printGradient(java.io.PrintStream out, double[] dL)
 	{
 		for (int node =0; node<factory.tree.getNumNodes(); node++)
 		{
@@ -1414,6 +2418,7 @@ public class Gradient extends Posteriors
 			double dLdq = dL[3*node + PARAMETER_DUPLICATION];
 			out.println(node+"\t"+dLdg+"\t"+dLdp+"\t"+dLdq);
 		}
+		out.println("LENGTH\t"+FunctionMinimization.euclideanNorm(dL));
 	}
 	
 	private void mainmain()
@@ -1426,31 +2431,70 @@ public class Gradient extends Posteriors
 		double varLL = bootstrapLLVariance();
 		double sdLL = Math.sqrt(varLL);
 		out.println("# Bootstrap variance "+varLL+"\tsd "+sdLL);
-		out.println("# Survival parameter gradient (gain. loss, duplication order)");
+		out.println("# Survival parameter gradient (gain, loss, duplication order)");
 		double[] D = getCorrectedGradient();
 		printGradient(out, D);
+		{ // DEBUG: via PosteriorStatistics
+			out.println("# Alt survival gradient (GLD order)");
+			double[] A = altCorrectedGradient();
+			printGradient(out, A);
+			for (int j=0; j<D.length; j++)
+			{
+				double delta = A[j]-D[j];
+				double rd = delta/Math.abs(D[j]);
+				out.println("#**G.mm par "+(j/3)+"/"+(j%3)+"\tdelta "+delta+"\trd "+rd);
+			}
+		}
+
 		out.println("# Model parameter gradient (GLD order)");
 		D = getDistributionGradient(D);
 		printGradient(out, D);
-		D = getTotalRateGradient(D);
-		out.println("# Rate parameter gradient (GLD order)");
-		printGradient(out, D);
+		
+		out.println("# Logistic parameter gradient (LD order)");
+		for (int node =0; node<factory.tree.getNumNodes(); node++)
+		{
+			double dLdp = D[3*node + PARAMETER_LOSS];
+			double dLdq = D[3*node + PARAMETER_DUPLICATION];
+			double dLdx = dLdp * factory.rates.getLossParameter(node)*factory.rates.getLossParameterComplement(node); //  Math.exp(factory.getLogLossParameter(node)+factory.getLogLossComplement(node));
+			double dLdy = dLdq * factory.rates.getDuplicationParameter(node)*factory.rates.getDuplicationParameterComplement(node); // Math.exp(factory.getLogDuplicationParameter(node)+factory.getLogDuplicationComplement(node));
+			out.println(node+"\t"+dLdx+"\t"+dLdy);
+		}
+		
+//		D = getTotalRateGradient(D);
+//		out.println("# Rate parameter gradient (GLD order)");
+//		printGradient(out, D);
 	}
 	
 	public static void main(String[] args) throws Exception
 	{
-		count.io.CommandLine cli = new count.io.CommandLine(args, Gradient.class);
+		Class<?> us = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		CommandLine cli = new CommandLine(args,  us);
+		
+//		boolean use_logit = cli.getOptionBoolean("logit", false);
+		
+		Gradient G;
+//		if (use_logit)
+//		{
+//    		System.out.println(CommandLine.getStandardHeader("Using logit scale: -logit "+use_logit));
+//			LikelihoodParametrized factory = new LikelihoodParametrized(cli.getRates(),cli.getTable());
+//			G = new Gradient(factory);
+//		} else
+		{
+			G = new Gradient(cli.getRates(), cli.getTable());
+		}
 		
 		
-		Gradient G = new Gradient(cli.getRates(), cli.getTable());
+		int absolute = G.getCalculationWidthAbsolute();
+		double relative = G.getCalculationWidthRelative();
+		
         if (cli.getOptionValue(OPT_TRUNCATE)!=null)
         {
-        	int absolute = cli.getOptionTruncateAbsolute();
-        	double relative = cli.getOptionTruncateRelative();
+        	absolute = cli.getOptionTruncateAbsolute();
+        	relative = cli.getOptionTruncateRelative();
         	G.setCalculationWidthThresholds(absolute, relative);
-    		System.out.println(CommandLine.getStandardHeader("Truncated computation (absolute,relative)="
-    				+absolute+","+relative));
         } 
+		System.out.println(CommandLine.getStandardHeader("Truncated computation (absolute,relative)="
+				+absolute+","+relative));
 		int min_copies = cli.getOptionInt(OPT_MINCOPY, G.min_copies);
 		G.setMinimumObservedCopies(min_copies);
 

@@ -1,3 +1,4 @@
+package count.ds;
 /*
  * Copyright 2021 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
@@ -13,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package count.ds;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 
 import count.io.CommandLine;
 import count.io.TableParser;
+import count.matek.PseudoRandom;
 
 import static count.io.CommandLine.OPT_RND;
 
@@ -606,6 +607,12 @@ public class AnnotatedTable implements ProfileTable
 	   return filteredTable(selected_rows);
    }
    
+   /**
+    * Derived table with selected families (rows).  
+    * 
+    * @param selected_rows family indexes to be included here
+    * @return
+    */
    public AnnotatedTable filteredTable(int[] selected_rows)
    {
    	
@@ -850,6 +857,71 @@ public class AnnotatedTable implements ProfileTable
 	   return filteredTable(bootstrap_rows);
    }
    
+   
+   public AnnotatedTable downsampledTable(double p_select_single, Random RND)
+   {
+	   List<Integer> row_list = new ArrayList<>();
+	   int nfam = this.getFamilyCount();
+	   for (int f = 0 ; f<nfam; f++)
+	   {
+		   int[] profile = getFamilyProfile(f);
+		   int ncopies = 0;
+		   for (int j=0; j<profile.length && ncopies<=1; j++)
+		   {
+			   ncopies += profile[j];
+		   }
+		   if (1<ncopies)
+			   row_list.add(f);
+		   else if (1==ncopies)
+		   {
+			   double p = RND.nextDouble();
+			   if (p<p_select_single)
+				   row_list.add(f);
+		   } else
+		   {
+			   System.out.println("#**AT.downT empty family "+f+"\t("+getFamilyName(f)+") skipped"); 
+		   }
+	   }
+	   int[] selected_rows = new int[row_list.size()];
+	   for (int i=0; i<selected_rows.length; i++)
+		   selected_rows[i] = row_list.get(i);
+	   AnnotatedTable downsampledTable = filteredTable(selected_rows);
+	   return downsampledTable;
+   }
+   
+   
+   public AnnotatedTable[] randomBatches(PseudoRandom RND, int preferred_batch_size)
+   {
+	   int nfam = this.getFamilyCount();
+	   int nbatches = (nfam + preferred_batch_size-1)/preferred_batch_size; // round to ceil
+	   AnnotatedTable[] randomBatches = new AnnotatedTable[nbatches]; // return value
+	   
+	   int[] reordered_profiles = RND.nextPermutation(nfam);
+	   // cut them into equal-size batches
+	   double avg_batch_size = ((double)nfam)/nbatches;
+	   double left_pos = 0.0;
+	   int left_end = 0;
+	   
+	   for (int bi=0; bi<nbatches; bi++)
+	   {
+		   double right_pos = left_pos+avg_batch_size;
+		   int right_end = bi==nbatches-1?nfam:(int)right_pos;
+		   int bfam = right_end-left_end;
+		   assert (0<bfam);
+		   
+		   int[] batch_profiles = new int[bfam];
+		   System.arraycopy(reordered_profiles, left_end, batch_profiles, 0, bfam);
+		   
+		   AnnotatedTable table = this.filteredTable(batch_profiles);
+		   randomBatches[bi] = table;
+		   left_pos = right_pos;
+		   left_end = right_end;
+	   }
+	   return randomBatches;
+   }
+   
+   
+   
 //   public JSONObject toJSON()
 //   {
 //	   
@@ -864,13 +936,35 @@ public class AnnotatedTable implements ProfileTable
 	    AnnotatedTable table = cli.getTable();
 	    Phylogeny phylo = cli.getTree();
 	   
+	    
+	    String opt_downsample = "downsample";
+	    Random RND = null;
 	    if (cli.getOptionValue(OPT_RND)!=null)
 	    {
 //	    	int seed = cli.getOptionInt(OPT_RND, 0);
-	    	Random RND = cli.getOptionRND(out);
+	    	RND = cli.getOptionRND(out);
+	    }
+	    if (cli.getOptionValue(opt_downsample)!=null)
+	    {
+	    	if (RND == null)
+	    		RND = new Random(2024);
+	    	double p_select_single = cli.getOptionDouble(opt_downsample, 1.0);
+	    	
+	    	AnnotatedTable sampled = table.downsampledTable(p_select_single, RND);
+	    	table = sampled;
+	    } else if (RND != null)
+	    {
 //	    			seed==0?new Random():new Random(seed);
 		    table = table.bootstrap(RND);
+		    
+	    	AnnotatedTable[] batches = table.randomBatches(new PseudoRandom(RND), 256);
+	    	for (int bi=0; bi<batches.length; bi++)
+	    	{
+	    		System.out.println("#**AT.main batch "+bi+"\tsize "+batches[bi].getFamilyCount());
+	    	}
+		    
 	    }
+	    
 	    out.println(TableParser.getFormattedTable(table, true));
 	    
 	    int[] profile_distribution = new int[phylo.getNumLeaves()+1];
@@ -900,5 +994,7 @@ public class AnnotatedTable implements ProfileTable
     	{
     		out.println("#FAMILIES\t"+leaf+"\t"+profile_distribution[leaf]+"\t"+phylo.getIdent(leaf));
     	}
+    	
+    	
    }
 }

@@ -16,6 +16,8 @@ package count.gui;
  */
 
 
+import java.awt.Color;
+
 import javax.swing.JTable;
 //import javax.swing.event.TableModelEvent;
 import javax.swing.table.AbstractTableModel;
@@ -223,7 +225,7 @@ public class AnnotatedTableModel extends AbstractTableModel
     {
         //System.out.println("#*FSTD.OTM.gCN col "+column_idx);
         if (column_idx==0)
-            return "";
+            return "Order";
         column_idx--;
 
         int num_props = data_table.getKnownPropertiesCount();
@@ -318,7 +320,7 @@ public class AnnotatedTableModel extends AbstractTableModel
     {
         Object val = getValueAt(row_idx, column_idx);
         if (column_idx==0)
-            return "Family index is "+val;
+            return "Family order is "+val;
         else column_idx--;
         
         int num_props = data_table.getKnownPropertiesCount();
@@ -378,7 +380,21 @@ public class AnnotatedTableModel extends AbstractTableModel
         tbl.setDefaultRenderer(AnnotatedTable.PhyleticProfile.class, new PhyleticProfileRenderer(leaves.length));
         tbl.setDefaultRenderer(RoundedDouble.class, new RoundedDouble.Renderer())  ;      
         tbl.setDefaultRenderer(IntegerOrMissing.class, new IntegerOrMissing.Renderer());
-        
+    }
+    
+    protected void setPhyleticProfileColoring(JTable tbl, Color[] leaf_colors)
+    {
+        if (tbl.getModel() != this)
+            throw new IllegalArgumentException(getClass().getName()+".setPhyleticProfileColoring should be used with a table that has the same model.");
+    	
+        if (tbl.getDefaultRenderer(AnnotatedTable.PhyleticProfile.class) instanceof PhyleticProfileRenderer)
+        {
+	        PhyleticProfileRenderer renderer  = (PhyleticProfileRenderer) tbl.getDefaultRenderer(AnnotatedTable.PhyleticProfile.class);
+	        renderer.setLeafColors(leaf_colors);
+        } else
+        {
+//        	System.out.println("#**ATM.sPPC no PhyleticProfileRenderer: table "+tbl+"\trenderer "+tbl.getDefaultRenderer(AnnotatedTable.PhyleticProfile.class));
+        }
     }
     
 }

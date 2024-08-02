@@ -15,6 +15,7 @@ package count.model;
  * limitations under the License.
  */
 
+import count.ds.IndexedTree;
 import count.model.Likelihood.Profile;
 
 /**
@@ -57,13 +58,14 @@ public class Ancestor extends Likelihood
 	{
 		if (node==ancestor) 
 		{
-			setNodeParameters(node, 0.0); 
+			// TODO this.computeNodeParameters(node, Double.NEGATIVE_INFINITY); // logit(0.0)
+			setNodeParameters(node, 0.0);
 		} else
 			super.computeNodeParameters(node);
 	}
 	
 	@Override
-	Profile getProfileLikelihood(int family_idx)
+	protected Profile getProfileLikelihood(int family_idx)
     {
     	return new Profile(family_idx);
     }	
@@ -83,6 +85,8 @@ public class Ancestor extends Likelihood
 		@Override
 		public void computeLikelihoods()
 		{
+			IndexedTree tree = rates.getTree();
+			
 			int diff_width = ancestor_calculation_width-getCalculationWidth(ancestor);
 			// we need [0], [1], ..., [width-1] on the root to the root
 			if (diff_width>0)
@@ -105,6 +109,7 @@ public class Ancestor extends Likelihood
 		@Override 
 		public void copyLikelihoods(Likelihood.Profile that)
 		{
+			IndexedTree tree = rates.getTree();
 			int diff_width = ancestor_calculation_width-getCalculationWidth(ancestor);
 			if (diff_width!=0)
 			{
@@ -112,7 +117,7 @@ public class Ancestor extends Likelihood
 				int node = tree.getParent(ancestor);
 				while (node>=0)
 				{
-					computeCalculationWidth(node);
+					setCalculationWidth(node);
 					node = tree.getParent(node);
 				}
 			}

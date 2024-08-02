@@ -35,12 +35,14 @@ public interface GLDParameters
 	public static final int PARAMETER_LENGTH=3;
 	public static final int PARAMETER_DUPLICATION_COMPLEMENT = 3;
 	public static final int PARAMETER_LOSS_COMPLEMENT = 4;
+	public static final int PARAMETER_RELATIVE_DUPLICATION = PARAMETER_LENGTH;
 	
 	
 	public enum Type 
 	{
 		GAIN, LOSS, DUPLICATION, LENGTH
 	};
+	
 	
 	/**
 	 * Gain parameter for transition probabilities. 
@@ -131,6 +133,15 @@ public interface GLDParameters
 	{
 		double log_complement = (param<param_complement?Math.log1p(-param):Math.log(param_complement));
 		return log_complement;
-		
+	}
+	
+	
+	public static String paramName(int type)
+	{
+		if (type == PARAMETER_LENGTH) return "length";
+		else if (type == PARAMETER_GAIN) return "gain";
+		else if (type == PARAMETER_LOSS) return "loss";
+		else if (type == PARAMETER_DUPLICATION) return "duplication";
+		else return null;
 	}
 }

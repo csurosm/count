@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -44,6 +47,8 @@ import count.io.RateVariationParser;
 import count.io.SavableData;
 import count.matek.DiscreteGamma;
 import count.model.GammaInvariant;
+import count.model.MixedRateModel;
+import count.model.RateVariationModel;
 import count.model.TreeWithRates;
 
 import static count.gui.AnnotatedTablePanel.TABLE_FONT_SIZE;
@@ -58,16 +63,29 @@ import static count.gui.RatesTreePanel.RATES_DUPLICATION_COLOR;;
 * @author Mikl&oacute;s Cs&#369;r&ouml;s 
 */
 public class RateVariationPanel extends JPanel // Browser.PrimaryItem
-	implements SavableData<GammaInvariant>
+	implements SavableData<MixedRateModel>
 {
-	public RateVariationPanel(DataFile<GammaInvariant> model_data)
+	public RateVariationPanel(DataFile<? extends MixedRateModel> data_file)
 	{
 		super(); // vanilla instantiation
-		this.model_data = model_data;
+		MixedRateModel model = data_file.getContent();
+		
+		assert (GammaInvariant.class.isInstance(model) || RateVariationModel.class.isInstance(model));
+		
+		this.model_data = new DataFile<MixedRateModel>(data_file.getContent(),data_file.getFile());
+		model_data.setDirty(data_file.isDirty());
 		initComponents();
 	}
 	
-	private final DataFile<GammaInvariant> model_data;
+//	public RateVariationPanel(DataFile<RateVariationModel> data_file)
+//	{
+//		super(); // vanilla instantiation
+//		this.model_data = new DataFile<MixedRateModel>(data_file.getContent(),data_file.getFile());
+//		model_data.setDirty(data_file.isDirty());
+//	}
+	
+	
+	private final DataFile<MixedRateModel> model_data;
 
     public static final int RATE_VARIATION_PLOT_WIDTH = 320;
     public static final int RATE_VARIATION_PLOT_HEIGHT = 60;
@@ -77,9 +95,14 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
     private RatesTable rates_table;
     
     @Override // Savable interface
-    public DataFile<GammaInvariant> getDataFile(){ return model_data;} 
+    public DataFile<MixedRateModel> getDataFile(){ return model_data;} 
+    
+    
     protected Zoom<RatesTreePanel> getRatesPanel(){ return tree_control;}
     protected RatesTable getRatesTable() { return rates_table;}
+    
+    private GammaInvariant getGammaModel() { return (GammaInvariant) model_data.getContent();}
+    private RateVariationModel getVariationModel() { return (RateVariationModel) model_data.getContent();}
     
 	private void initComponents()
 	{
@@ -128,7 +151,7 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
 //        table_scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 //        table_scroll.getViewport().setBackground(getBackground());
         
-        JPanel rate_multiplier_panel = new RateMultiplierPanel();
+        JComponent rate_multiplier_panel = createVariationPanel();
         rate_multiplier_panel.setBackground(getBackground());
         JScrollPane rate_variation_scroll = new JScrollPane(rate_multiplier_panel);
         rate_variation_scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -139,8 +162,10 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         top_pane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
         top_pane.setLeftComponent(rates_table);
         top_pane.setRightComponent(rate_variation_scroll);
-        top_pane.setResizeWeight(0.1);
+//        top_pane.setRightComponent(rate_multiplier_panel);
+        top_pane.setResizeWeight(0.5);
         top_pane.setOneTouchExpandable(true);
+//        top_pane.setDividerLocation(800+getInsets().left);
         
         main_pane.setTopComponent(top_pane);
 
@@ -152,6 +177,101 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         
         this.add(main_pane, BorderLayout.CENTER);
     }	
+
+	protected JComponent createScoringBox()
+	{
+		JButton score_button = new JButton("Score");
+		return score_button;
+	}
+	
+	
+	protected JComponent createVariationPanel()
+	{
+		JComponent createVariationPanel;
+		MixedRateModel model = getDataFile().getContent();
+		
+		if (model instanceof GammaInvariant)
+		{
+			createVariationPanel = new RateMultiplierPanel();		
+		} else
+		{
+			assert (model instanceof RateVariationModel);
+			createVariationPanel = new RateModifierPanel();
+		}
+		return createVariationPanel;
+	}
+	
+	private class RateModifierPanel extends JPanel
+	{
+        private final Font normal_font = new Font("Serif",Font.PLAIN,TABLE_FONT_SIZE);
+        private final Font title_font  = new Font("Serif", Font.BOLD, TABLE_FONT_SIZE*6/5);
+        private final Font subtitle_font = normal_font.deriveFont(Font.BOLD);
+        private final Font it_font = normal_font.deriveFont(Font.ITALIC);
+        private final Font plot_font = new Font("Serif", Font.PLAIN, TABLE_FONT_SIZE*4/5);
+        
+        private final RateVariationModel rates;
+        
+        private RateModifierPanel()
+        {
+        	super();
+        	this.rates = getVariationModel();
+        	initComponents();
+        }
+        private void initComponents()
+        {
+            setBackground(Color.WHITE);
+            
+            StringBuilder sb  = new StringBuilder();
+            
+            int ncat = rates.getNumClasses();
+            if (ncat == 1)
+            {
+            	sb.append("<p><em>No rate variation across families.</em></p>");
+            } else
+            {
+	            sb.append("<h4>")
+	            .append(rates.getClass().getSimpleName())
+	            .append(" with ").append(ncat).append(" categories</h4>");
+	            sb.append("<ol start=\"0\">");
+	            for (int k=0; k<ncat; k++)
+	            {
+	            	RateVariationModel.Category C = rates.getCategory(k);
+	            	double modlen = C.getModLength();
+	            	double moddup = C.getModDuplication();
+	            	sb.append("<li>(p=").append(Math.exp(C.getLogCatProbability())).append(")")
+	            	.append("; modlen ").append(modlen)
+	            	.append(modlen<0.0?"(/":"(*").append(Math.exp(Math.abs(modlen))).append(")")
+	            	.append("; moddup ").append(moddup)
+	            	.append(moddup<0.0?"(/":"(*").append(Math.exp(Math.abs(moddup))).append(")")
+	            	.append("</li>");
+	            }
+	            sb.append("</ol>");
+            }
+            JEditorPane text = new JEditorPane("text/html", sb.toString());
+            text.setEditable(false);
+            this.add(text, BorderLayout.CENTER);
+//            text.setMaximumSize(new Dimension(400,600));
+//            text.setMinimumSize(this.getMaximumSize());
+//            text.setPreferredSize(this.getMaximumSize());
+        }
+
+//        @Override 
+//        public Dimension getPreferredSize()
+//        {
+//            int w = RATE_VARIATION_PLOT_WIDTH*3/2 + 2*RATE_VARIATION_PADDING;
+//            int h = TABLE_FONT_SIZE*6/5+2*RATE_VARIATION_PADDING+4*(RATE_VARIATION_PADDING+RATE_VARIATION_PLOT_HEIGHT);
+//            return new Dimension(w,h);
+//        }
+//        
+//        @Override 
+//        public Dimension getMinimumSize()
+//        {
+//            return getPreferredSize();
+//        }
+        
+        
+	}
+	
 	
     private class RateMultiplierPanel extends JPanel
     {
@@ -161,9 +281,12 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         private final Font it_font = normal_font.deriveFont(Font.ITALIC);
         private final Font plot_font = new Font("Serif", Font.PLAIN, TABLE_FONT_SIZE*4/5);
         
+        private final GammaInvariant rates;
+        
         RateMultiplierPanel()
         {
         	super();
+        	this.rates = getGammaModel();
         }
         
         private void initComponents()
@@ -188,7 +311,6 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         @Override
         protected void paintComponent(Graphics g)
         {
-            GammaInvariant rates = model_data.getContent();
 
             Graphics2D g2 = (Graphics2D) g.create();
             
@@ -263,7 +385,7 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         PrintStream PS = new PrintStream(f);
         PS.println(CommandLine.getStandardHeader(getClass()));
         PS.println(CommandLine.getStandardRuntimeInfo());
-        GammaInvariant rate_model = model_data.getContent();
+        MixedRateModel rate_model = model_data.getContent();
         String model_description = RateVariationParser.printRates(rate_model);
         IndexedTree tree = rate_model.getBaseModel().getTree();
         if (tree instanceof Phylogeny)
@@ -292,8 +414,8 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
     public int getModelParameterCount()
     {
     	int parameter_count = 0;
-    	GammaInvariant rates_model = getDataFile().getContent();
-    	TreeWithRates base_model = rates_model.getBaseModel();
+    	MixedRateModel model = getDataFile().getContent();
+    	TreeWithRates base_model = model.getBaseModel();
     	IndexedTree phylo = base_model.getTree() ;
     	boolean has_gain = false;
     	boolean has_duplication = false;
@@ -316,20 +438,38 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
     			has_gain = has_gain || !phylo.isRoot(node);
     		}
     	}
-    	int cat_length = rates_model.getNumLengthGammaCategories();
-    	int cat_duplication = has_duplication
-			    			?rates_model.getNumDuplicationGammaCategories()
-							:1;
-    	int cat_gain = has_gain
-					?rates_model.getNumDuplicationGammaCategories()
-					:1;
+    	if (model instanceof GammaInvariant)
+    	{
+    		GammaInvariant rates_model = getGammaModel();
+        	int cat_length = rates_model.getNumLengthGammaCategories();
+        	int cat_duplication = has_duplication
+    			    			?rates_model.getNumDuplicationGammaCategories()
+    							:1;
+        	int cat_gain = has_gain
+    					?rates_model.getNumDuplicationGammaCategories()
+    					:1;
+        	
+        	if (cat_duplication>1) 
+        		++parameter_count; // alpha
+        	if (cat_gain>1)
+        		++parameter_count; // alpha
+        	if (cat_length>1)
+        		++parameter_count; // alpha
+    	} else if (model instanceof RateVariationModel)
+    	{
+    		RateVariationModel modifier_model = getVariationModel();
+    		int ncat = modifier_model.getNumClasses();
+    		parameter_count += (ncat-1); // class probabilities
+    		for (int k=0; k<ncat; k++)
+    		{
+    			RateVariationModel.Category C = modifier_model.getCategory(k);
+    			if (C.getModLength()!=0.0)
+    				++parameter_count;
+    			if (C.getModDuplication()!=0.0)
+    				++parameter_count;
+    		}
+    	} 
     	
-    	if (cat_duplication>1) 
-    		++parameter_count; // alpha
-    	if (cat_gain>1)
-    		++parameter_count; // alpha
-    	if (cat_length>1)
-    		++parameter_count; // alpha
     	return parameter_count;
     }
     

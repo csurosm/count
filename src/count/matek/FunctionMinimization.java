@@ -32,6 +32,10 @@ import java.util.function.Function;
 */
 public class FunctionMinimization 
 {
+	/**
+	 * Messages on standard output / console.
+	 */
+	private static final boolean REPORT_UNUSUAL = false; 
 
     private FunctionMinimization(){}
     
@@ -606,7 +610,8 @@ public class FunctionMinimization
 
         if(slope>=0.0)
         {
-        	System.out.println("#**FM.lnsrch slope "+slope+"\tg "+Arrays.toString(g)+"\tp "+Arrays.toString(p));
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.lnsrch slope "+slope+"\tg "+Arrays.toString(g)+"\tp "+Arrays.toString(p));
         	
         	System.arraycopy(xold, 0, x, 0, xold.length);
         	f[0] = fold;
@@ -627,8 +632,8 @@ public class FunctionMinimization
         double alam2=Double.NaN;
         double f2=Double.NaN;
         
-//        System.out.println("#**FM.lnsrch sum "+sum+"\tscale "+(stpmax/sum)+"\ttest "+test+"\talamin "+alamin);        
-        // avoid boundary with functioj value infinity
+//        System.out.println("#**FM.lnsrch sum "+sum+"\tscale (if <1 rescaled direction) "+(stpmax/sum)+"\ttest "+test+"\talamin "+alamin+"\tstpmax "+stpmax);        
+        // avoid boundary with function value infinity
         	
         
         
@@ -645,7 +650,16 @@ public class FunctionMinimization
 //            	f[0]=1e99;
             
 	            f[0]=func.apply(x); 
-	            
+//	            System.out.println("#**FM.lnsrch iter "+iter+"\tf "+f[0]+"\talam "+alam+"\t|p| "+euclideanNorm(p));
+//	            if (iter % 5==0)
+//	            {
+//	            	for (int i=0; i<n; i++)
+//	            	{
+//	            		System.out.println("#**FM.lnsrch iter "+iter+"\talam "+alam+"\ti "+i+"\tx "+x[i]+"\tp "+p[i]+"\txo "+xold[i]);
+//	            	}
+////	            	System.out.println("#**FM.lnsrch iter "+iter+"\talam "+alam+"\tp "+Arrays.toString(p)+"\t; x "+Arrays.toString(x));
+//	            }
+//	            
 ////	            if (!Double.isFinite(f[0]) && iter==0)
 ////	            {
 ////	            	alam *= 0.5; // too big
@@ -665,7 +679,8 @@ public class FunctionMinimization
             { // Convergence on Delta x. For zero finding, the calling program should verify the convergence. 
                 if (myminf<f[0])
                 {
-                	System.out.println("#**FM.lnsrch skip/+\t"+f[0]+"->"+myminf);
+                	if (REPORT_UNUSUAL)
+                		System.out.println("#**FM.lnsrch skip/+\t"+f[0]+"->"+myminf);
                     for(int i=0;i<n;i++)
                     {
                         x[i]=myminx[i]; 
@@ -685,7 +700,8 @@ public class FunctionMinimization
                 {
                     if (myminf<f[0])
                     {
-                    	System.out.println("#**FM.lnsrch skip/-\t"+f[0]+"->"+myminf);
+                    	if (REPORT_UNUSUAL)
+                    		System.out.println("#**FM.lnsrch skip/-\t"+f[0]+"->"+myminf);
                         for(int i=0;i<n;i++)
                         {
                             x[i]=myminx[i]; 
@@ -762,6 +778,7 @@ public class FunctionMinimization
     public static boolean DFP_BFGS_UPDATE = true; // if false, original Davidon-Fletcher-Powell update
     private static final boolean CG_POLAK_RIBIERE = true; // if false, 
     
+    private static final boolean CHATTY_DFP = false;
     
     /**
      * Given a starting point, the Broyden-Fletcher-Goldfarb-Shanno
@@ -793,21 +810,22 @@ public class FunctionMinimization
         double[][] hessin=new double[n][n];
         double[] xi=new double[n]; 
         double sum=0.0;
-//        double max_p = 0.0; // to avoid extreme steps with skewed gradients
+        double max_p = 0.0; // to avoid extreme steps with skewed gradients
         for(int i=0;i<n;i++)
         { // and initialize the inverse Hessian to the unit matrix.
             for(int j=0;j<n;j++)
                 hessin[i][j]=0.0; 
             hessin[i][i]=1.0; 
             xi[i]=-g[i]; // Initial line direction. 
-//            {
-//            	double c = p[i]*p[i];
-//            	System.out.println("#**FM.dfpmin i "+i+"\tpi "+p[i]+"\tq "+c);
-//            }
+            {
+            	double c = p[i]*p[i];
+//            	System.out.println("#**FM.dfpmin i "+i+"\tpi "+p[i]+"\tp^2i "+c+"\tgi "+g[i]);
+            }
             sum+=p[i]*p[i]; 
-//            max_p = Double.max(max_p, Math.abs(p[i]));
+            max_p = Double.max(max_p, Math.abs(p[i]));
         }
-        double stpmax=  DFP_STPMX*Math.max(Math.sqrt(sum), 1.0);  // Numerical Recipes: DFP_STPMX*Math.max(Math.sqrt(sum),(double)n);   
+        double stpmax= DFP_STPMX*Math.max(Math.sqrt(sum),(double)n); // versions 23.xx < 23.0820 DFP_STPMX*Math.max(Math.sqrt(sum), 1.0);  // Numerical Recipes: DFP_STPMX*Math.max(Math.sqrt(sum),(double)n);   
+//        // DEBUG
 //        double stpmaxmax =  DFP_STPMX*Math.max(max_p, 1.0); 
 //        System.out.println("#*FM.dfpmin stpmax "+stpmax+"\t(maxmax "+stpmaxmax+")\tsum "+sum+"\tn "+n+"\titmax "+dfp_itmax+"\tNRstpmax "+DFP_STPMX*Math.max(Math.sqrt(sum),(double)n)
 //        		+"\tsqrsum "+Math.sqrt(sum)+"\tmaxp "+max_p);
@@ -817,7 +835,8 @@ public class FunctionMinimization
         double[] pnew=new double[n]; 
         double[] dg=new double[n];
         double[] hdg=new double[n]; 
-        for(int its=1;its<=dfp_itmax;its++)
+        int its;
+        for(its=1;its<=dfp_itmax;its++)
         { // Main loop over the iterations. 
         	
 //        	try
@@ -848,9 +867,12 @@ public class FunctionMinimization
             } 
             if(test<DFP_TOLX)
             { 
-//            	System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test);
+            	if (CHATTY_DFP)
+            		System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test+"\tdone/delta"+"\t// "+DFP_TOLX); // DEBUG
                 return fret[0]; 
             } 
+            double test_deltax = test;
+            
             for(int i=0;i<n;i++)
                 dg[i]=g[i]; // Save the old gradient, 
             g=gradient.apply(p); // and get the new gradient. 
@@ -864,10 +886,13 @@ public class FunctionMinimization
             } 
             if(test<gtol)
             { 
+            	if (CHATTY_DFP)
+            		System.out.println("#**FM.dfp "+its+"\tgrad "+test+"\tdone/gradient"); // DEBUG
                 return fret[0]; 
             } 
             else {
-//            	System.out.println("#**FM.dfp "+its+"\tgrad "+test);
+            	
+//            	System.out.println("#**FM.dfp "+its+"\tgrad "+test+"\tdeltax "+test_deltax+"\tgtol,tolx "+gtol+","+DFP_TOLX); 
             }
             
             for(int i=0;i<n;i++)
@@ -945,7 +970,12 @@ public class FunctionMinimization
             
         } // and go back for another iteration. 
         if (iterations == null) 
-        	System.out.println("#**FM.dfpmin: Too many iterations in dfpmin"); 
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.dfpmin: Too many iterations in dfpmin"); 
+        
+    	if (CHATTY_DFP)
+    		System.out.println("#**FM.dfp "+its+"\tdone/iter"); // DEBUG
+
         
         return fret[0];
     }    
@@ -1042,7 +1072,12 @@ public class FunctionMinimization
                     del=fptt-(fret);
                     ibig=i;
                 }
+                // DEBUG
+                System.out.println("#**FM.powell iter:dir "+iter+":"+i+"\tf "+fret+"\tdel "+(fptt-fret));
             }
+            
+            // DEBUG
+            System.out.println("#**FM.powell iter "+iter+"/"+powell_itmax+"\tf "+fret+"\tdel "+del+"\t@ibig "+ibig+"/"+n);
             
             if (iterations!=null) iterations.add(fret); // record this step
             
@@ -1075,7 +1110,8 @@ public class FunctionMinimization
 //            System.out.println("#*FM.powell iter "+iter+"\tfp "+fp+"\tfret "+fret);
         } // Back for another iteration.
         if (iterations == null)
-        	System.out.println("#**FM.powell Too many iterations in powell");
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.powell Too many iterations in powell");
 
     	return fret;
     }
@@ -1156,7 +1192,8 @@ public class FunctionMinimization
 			}
 		} // iterations
         if (iterations == null)
-        	System.out.println("#**FM.powell Too many iterations in frprmn");
+        	if (REPORT_UNUSUAL)
+        		System.out.println("#**FM.frprmn Too many iterations in frprmn");
         return fret;
     }
     
@@ -1252,7 +1289,7 @@ public class FunctionMinimization
                 for (int i=0; i<n; i++)
                 {
                     xt[i]=p[i]+x*xi[i];
-                    //System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
+//                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
                 }
                 return func.apply(xt);
             }
@@ -1271,7 +1308,7 @@ public class FunctionMinimization
                 for (int i=0; i<n; i++)
                 {
                     xt[i]=p[i]+x*xi[i];
-                    //System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
+//                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
                 }
                 double[] df = dfunc.apply(xt);
                 double dfdx = 0.0;
@@ -1402,9 +1439,13 @@ public class FunctionMinimization
     	return f0; 
     }
     
-    private static double GRADIENT_DIFF_EPS = 1.0/(1<<20); // around cubic root of machine precision  
+    
+    
+    
+    
+    public static double GRADIENT_DIFF_EPS = 1.0/(1<<17); // around cubic root of machine precision  
     /**
-     * Straightforward two-point estimation of partial derivatives; no guarantees 
+     * Straightforward one-point estimation of partial derivatives; no guarantees 
      * for accuracy. (Don't do numerical derivation ...) 
      * 
      * @param func function for which gradient is calculated
@@ -1438,6 +1479,45 @@ public class FunctionMinimization
 		}
 		return D;
     }
+
+    /**
+     * Straightforward two-point estimation of partial derivatives; no guarantees 
+     * for accuracy. (Don't do numerical derivation ...) 
+     * 
+     * @param func function for which gradient is calculated
+     * @param x at this point 
+     * @return vector of partial derivatives; same length as x 
+     */
+    public static double[] numericalGradientTwoPoint(Function<double[],Double> func, double[] x)
+    {
+		double[] D = new double[x.length]; // return value
+		
+		for (int p=0; p<x.length; p++)
+		{
+			double θ = x[p];
+			double h = Math.abs(θ*GRADIENT_DIFF_EPS);
+			x[p] = θ+h;
+			double fd = func.apply(x);
+			D[p]=fd;
+			
+			x[p] = θ;
+		}
+		for (int p=0; p<x.length; p++)
+		{
+			double θ = x[p];
+			double h = Math.abs(θ*GRADIENT_DIFF_EPS);
+			x[p] = θ-h;
+			double fx = func.apply(x);
+			double fd = D[p];
+			double delta = fd-fx;
+			double dfdθ = delta/(2.0*h);
+			D[p] = dfdθ;
+			
+			x[p] = θ;
+		}
+		func.apply(x);
+		return D;
+    }    
     
 //    
     /**

@@ -21,6 +21,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
@@ -39,7 +40,9 @@ import count.gui.kit.CounterBox;
 import count.gui.kit.Grapher;
 import count.io.DataFile;
 import count.model.GammaInvariant;
-import count.model.MLGamma;
+import count.model.MixedRateModel;
+import count.model.RateVariationModel;
+import count.model.old.MLGamma;
 import count.model.ML;
 
 /**
@@ -52,9 +55,9 @@ public class RateOptimizationPanel extends RateVariationPanel
 {
     private static final int HISTORY_LENGTH = 50;
     private static final int GRAPH_WIDTH = 200;
-    private static final int GRAPH_HEIGHT = 48;
+    private static final int GRAPH_HEIGHT = 72;
     private static final int STAGE_WIDTH = 300;
-    private static final int COUNTER_WIDTH = 80;
+    private static final int COUNTER_WIDTH = 120;
     private static final int COUNTER_HEIGHT = 48;
 	
 	public static final String PROPERTY_OPTIMIZATION_VALUE = "lnL"; 
@@ -69,7 +72,7 @@ public class RateOptimizationPanel extends RateVariationPanel
     private static final Color GLOW_FROZEN_COLOR = new Color(0.09f, 0.03f, 0.5f, GLOW_COLOR.getAlpha()/256f);
     
 
-    public RateOptimizationPanel(DataFile<GammaInvariant> model_data, ML optimization)
+    public RateOptimizationPanel(DataFile<? extends MixedRateModel> model_data, ML optimization)
 	{
 		super(model_data);
 		this.factory = optimization;
@@ -193,6 +196,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 	        optimization_timer = new Timer(100, this); // start after 0.1 seconds
 	        optimization_timer.setDelay(100); // update every 0.1 seconds
 	        optimization_timer.setActionCommand(ACTION_LIVE_UPDATE);
+	        
 		}
 		
 		Box createTrackerBox()
@@ -215,6 +219,20 @@ public class RateOptimizationPanel extends RateVariationPanel
 	        track_stage.setToolTipText("Current optimization status");
 	        
 	        tracker_box.add(track_stage);
+	        
+	        // track the optimization stage - not useful
+	        factory.addPropertyChangeListener(ML.PROPERTY_OPTIMIZATION_PHASE, 
+	        		e->{
+	        			String phase;
+	        			if (e.getNewValue()==null)
+	        			{
+	        				phase = "";
+	        			} else
+	        			{
+	        				phase = e.getNewValue().toString();
+	        			}
+	        			track_stage.setText(phase);
+	        		});
 	        
 	        track_rounds = new CounterBox("Round ", Integer.toString(max_iter));
 	        track_rounds.setFont(tp_font_rm);
@@ -250,6 +268,8 @@ public class RateOptimizationPanel extends RateVariationPanel
 			tracker_box.add(track_drop);
 			optimization_property_support.addPropertyChangeListener(PROPERTY_OPTIMIZATION_DROP, track_drop);
 			
+			
+			
 			return tracker_box;
 		}
 	    
@@ -282,7 +302,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 				
 				if (!Double.isNaN(delta) && delta<0.)
 				{
-					System.out.println("#*GOP.OT.process delta "+delta+"\tval "+value);
+//					System.out.println("#*ROP.OT.process delta "+delta+"\tval "+value);
 				} else
 				{
 					optimization_property_support.firePropertyChange(PROPERTY_OPTIMIZATION_ROUND, round-1, round);
@@ -313,10 +333,17 @@ public class RateOptimizationPanel extends RateVariationPanel
 			updateDisplay(true); // recompute layout
 			RateOptimizationPanel.this.firePropertyChange(PROPERTY_OPTIMIZATION_DONE, false, true);
 		}
+
 		
 	}		
 
-	
+	/**
+	 * Main entrance point 
+	 * 
+	 * @param app
+	 * @param delta
+	 * @param max_iter
+	 */
 	public void launchOptimization(AppFrame app, double delta, int max_iter)
 	{
 		
@@ -360,12 +387,20 @@ public class RateOptimizationPanel extends RateVariationPanel
     void snapshot()
     {
 	    int round = factory.getOptimizationHistory().size();
-	    DataFile<GammaInvariant> current_file = this.getDataFile();
-	    GammaInvariant current_rates =  current_file.getContent(); 
-	    GammaInvariant copy_rates= current_rates.copy();
+	    DataFile<MixedRateModel> current_file = this.getDataFile();
+	    MixedRateModel current_rates =  current_file.getContent(); 
+	    MixedRateModel copy_rates;
+	    if (current_rates instanceof GammaInvariant)
+	    {
+	    	copy_rates=((GammaInvariant)current_rates).copy();
+	    } else
+	    {
+	    	assert (current_rates instanceof RateVariationModel);
+	    	copy_rates = ((RateVariationModel)current_rates).copy();
+	    }
 	
 	    File snapshot_file = new File((File)null,DataFile.chopFileExtension(current_file.getFile().getName())+"#"+Integer.toString(round));
-	    DataFile<GammaInvariant> copy_file = new DataFile<>(copy_rates, snapshot_file);
+	    DataFile<MixedRateModel> copy_file = new DataFile<>(copy_rates, snapshot_file);
 	    Session our_sesh = Session.getSession(this);
 	    our_sesh.addRates(copy_file, false);
 	    

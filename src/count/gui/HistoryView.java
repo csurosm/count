@@ -37,6 +37,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -267,7 +268,8 @@ public class HistoryView
 		{
             private FamilyScroll()
             {
-                super(table_model,2);
+//                super(table_model,2);
+                super(table_model,table_model.firstHistoryColumn());
             }
             
             @Override
@@ -308,6 +310,18 @@ public class HistoryView
                 return tt +
                         "; click to sort rows, drag to rearrange columns";//, or double-click to split the table";
             }
+            
+            @Override
+            protected String getCellToolTip(int row, int col)
+            {
+            	String tooltip;
+            	if (col<model.firstHistoryColumn())
+            		tooltip = model.getCellToolTip(row, col);
+            	else
+            		tooltip = super.getCellToolTip(row, col);
+            	return tooltip;
+            }
+            
 		} // class FamilyScroll
 //		this.setDividerLocation(240);
 		this.setResizeWeight(0.25);
@@ -403,13 +417,54 @@ public class HistoryView
 		lineage_control = new Box(BoxLayout.LINE_AXIS);
 		lineage_control.add(table_scroll.createRowSelectionInfo());
 		bottom_table.add(lineage_control, BorderLayout.SOUTH);
+		
+//		String table_legend = "<p>The inferred counts are posterior expectations across all families."
+//				+ "Copy statistics (copies, births and deaths) "
+//				+ "count "
+//				+ "	<b>ancestral</b> copies at each node <var>u</var>, or "
+//				+ "the ancestral copy change "
+//				+ "in the lineage leading to <var>u</var>, summing across selected families. "
+//				+ "Ancestral copies have at least one "
+//				+ "descendant ortholog copy at the leaves in the subtree of <var>u</var>."
+//				+ "Copy statistics thus track the provenance of the observed copies at "
+//				+ "the terminal nodes. Deaths are copies at the parent which <var>u</var> "
+//				+ "does not inherit; births are anscestral copies originating at <var>u</var> "
+//				+ "by duplication or gain."
+//				+ "</p>"
+//				+ "<p>Family statistics track the history of family repertoires, and  "
+//				+ " count the families that have at least one copy "
+//				+ "at the ancestor, with or without descendant orthologs. "
+//				+ "(Thus, more families may be inferred than ancestral copies.) "
+//				+ "Families with multiple copies are also inferred, and changes "
+//				+ "to and from 0 (gain and loss), or between single- and multiple-members "
+//				+ "(contraction and expansion)."
+//				+"</p>"
+////				+ "<p>In the family table, "
+////				+ "rarity is the negative log-likelihood of the family profile, "
+////				+ "as -10 log<sub>10</sub> <var>L</var>(profile). Family statistics "
+////				+ "(gains, losses, expansions, contractions) "
+////				+ "are summed across all nodes</p>."
+//				;
+//		JEditorPane table_explain = new JEditorPane("text/html", table_legend);
+//        table_explain.setEditable(false);		
+//		selected_rows_display.addTab("Legend", table_explain);
+
+        
+		
 		selected_rows_display.addTab("Table", bottom_table);
+		
+		
         this.setTopComponent(table_scroll);
         this.setBottomComponent(selected_rows_display);
         
         table.setRowSelectionInterval(0,0);
         
         
+	}
+	
+	protected JTabbedPane getSelectedRowsDisplay()
+	{
+		return this.selected_rows_display;
 	}
 	
 	private HistoryTreePanel createLineageModel()
@@ -662,6 +717,18 @@ public class HistoryView
 		}
 	}
 	
+
+	
+	
+    public void setPhyleticProfileColoring(Color[] leaf_colors)
+    {
+    	table_scroll.getModel().setPhyleticProfileColoring(table_scroll.getHeaderTable(), leaf_colors);
+    	table_scroll.getModel().setPhyleticProfileColoring(table_scroll.getDataTable(), leaf_colors);
+    }
+	
+	
+	
+	
 	protected SwingWorker<Void,Integer> history_task=null;
 		
 	protected void computeHistoriesPrepare()
@@ -913,10 +980,17 @@ public class HistoryView
 	@Override
 	public void saveData(File f) throws IOException 
 	{
+		// TODO: progress monitor?
+		
+		
         PrintStream PS = new PrintStream(f);
         PS.println(CommandLine.getStandardHeader(getClass()));
         PS.println(CommandLine.getStandardRuntimeInfo());
-        PS.println(table_model.getTextTable());
+        
+//        System.out.println("#**HV.sD "+f+"\tstart");
+        
+        table_model.printTable(PS);
+//        PS.println(table_model.getTextTable());
         
         if (PS.checkError()) // also flushes
         {
@@ -924,6 +998,7 @@ public class HistoryView
             throw new IOException("Cannot write the table.");
         }
         PS.close();
+//        System.out.println("#**HV.sD "+f+"\tdone");
 	}
 	
 	

@@ -49,6 +49,8 @@ import count.ds.IndexedTree;
 import count.ds.TreeComparator;
 import count.gui.PosteriorsView;
 import count.model.GammaInvariant;
+//import count.model.GammaInvariant;
+import count.model.MixedRateModel;
 
 /**
  * Hierarchy data structure for storing a session's members: phylogenies, 
@@ -76,7 +78,7 @@ public class ModelBundle implements CountXML
 	
 	public Entry getRoot() { return root;}
 	
-	public Entry add(DataFile<Phylogeny> tree_data, DataFile<GammaInvariant> rates_data)
+	public Entry add(DataFile<Phylogeny> tree_data, DataFile<MixedRateModel> rates_data)
 	{
 		Entry T = getRoot().addTree(tree_data);
 		Entry R = T.addRates(rates_data);
@@ -103,13 +105,13 @@ public class ModelBundle implements CountXML
 	}
 	
 	
-	public GammaInvariant[] allModels()
+	public MixedRateModel[] allModels()
 	{
-		List<GammaInvariant> allModels = collectAllModels(getRoot(), null);
-		return allModels.toArray(new GammaInvariant[0]);
+		List<MixedRateModel> allModels = collectAllModels(getRoot(), null);
+		return allModels.toArray(new MixedRateModel[0]);
 	}
 	
-	private List<GammaInvariant> collectAllModels(Entry E, List<GammaInvariant> model_list)
+	private List<MixedRateModel> collectAllModels(Entry E, List<MixedRateModel> model_list)
 	{
 		if (model_list==null) model_list = new ArrayList<>();
 		if (E.isRatesEntry())
@@ -183,7 +185,7 @@ public class ModelBundle implements CountXML
 		 * At most one of {@link #tree_data} and {@link #rates_data} is null.
 		 */
 		private DataFile<Phylogeny> tree_data;
-		private DataFile<GammaInvariant> rates_data;
+		private DataFile<MixedRateModel> rates_data;
 		private DataFile<AnnotatedTable> table_data = null;
 		private final String entry_id;
 		
@@ -192,7 +194,7 @@ public class ModelBundle implements CountXML
 		
 		private Properties extra_attributes;
 		
-		public GammaInvariant getModel()
+		public MixedRateModel getModel()
 		{
 			return rates_data==null?null:rates_data.getContent();
 		}
@@ -221,7 +223,7 @@ public class ModelBundle implements CountXML
 		}
 		
 		
-		private Entry(DataFile<Phylogeny> tree_data, DataFile<GammaInvariant> rates_data, Entry parent, String id)
+		private Entry(DataFile<Phylogeny> tree_data, DataFile<MixedRateModel> rates_data, Entry parent, String id)
 		{
 			if (rates_data==null)
 			{
@@ -319,7 +321,7 @@ public class ModelBundle implements CountXML
 			return this.tree_data;
 		}
 		
-		public DataFile<GammaInvariant> getRatesData()
+		public DataFile<MixedRateModel> getRatesData()
 		{
 			return this.rates_data;
 		}
@@ -362,12 +364,12 @@ public class ModelBundle implements CountXML
 			return addTree;
 		}
 		
-		public Entry addRates(DataFile<GammaInvariant> rates_data)
+		public Entry addRates(DataFile<MixedRateModel> rates_data)
 		{
 			return addRates(rates_data, null);
 		}
 		
-		private Entry addRates(DataFile<GammaInvariant> data, String id)
+		private Entry addRates(DataFile<MixedRateModel> data, String id)
 		{			
 			Entry T = this;
 			while (T!= null && !T.isTreeEntry()) T = T.getParent();
@@ -753,10 +755,9 @@ public class ModelBundle implements CountXML
 	{
 		out.println(XML_DECLARATION);
 		java.util.Date now = java.util.Calendar.getInstance().getTime();
-		out.printf("<%s %s=\"%.4f\" %s=\"%d\" %s=\"%s\">\n"
+		out.printf("<%s %s=\"%.4f\" %s=\"%s\">\n"
 				, EMT_ROOT
 				, ATT_VERSION, Count.getAppVersionNumber()
-				, ATT_THREADS, Count.THREAD_PARALLELISM
 				, ATT_DATE, now.toString()
 				);
 		for (ModelBundle bundle: bundle_list)
@@ -893,7 +894,7 @@ public class ModelBundle implements CountXML
             	String parent_id = attributes.getValue(ATT_PARENT);
             	Entry P = entries.get(parent_id);
             	String filename = attributes.getValue(ATT_NAME);
-            	DataFile<GammaInvariant> rates_data = new DataFile<>(null, new File(filename));
+            	DataFile<MixedRateModel> rates_data = new DataFile<>(null, new File(filename));
 //            	String dirty = attributes.getValue("dirty");
 //            	rates_data.setDirty("true".equals(dirty));
             	Entry R = P.addRates(rates_data, id);
@@ -1007,7 +1008,8 @@ public class ModelBundle implements CountXML
             	if (backtrack !=current.getParent() || DEBUG_PARSING) // parent references should reflect XML structure 
             	{
             		System.out.println("#**MB.H.end "+elementName+"\t"+current
-            				+"\tenclosing "+backtrack+"\tparent "+current.getParent());
+            				+"\tenclosing "+backtrack+"\tparent "+current.getParent()
+            				+"\t(parsing output from old Count?)");
             	}
 
             	current = backtrack;
@@ -1091,8 +1093,9 @@ public class ModelBundle implements CountXML
         		Entry T = E.getParent();
         		while (T!=null && !T.isTreeEntry()) T=T.getParent();
         		Phylogeny P = T.tree_data.getContent();
-        		GammaInvariant model = RateVariationParser.readRates(new BufferedReader(R), P);
+        		MixedRateModel model = RateVariationParser.readModel(new BufferedReader(R), P);
         		E.rates_data.setData(model);
+//        		E.rates_data.setData(model);
         	} else if (E.isTableEntry())
         	{
         		String table_type = E.getAttributeValue(ATT_TYPE);
@@ -1178,7 +1181,7 @@ public class ModelBundle implements CountXML
 		    	}
 		    	GammaInvariant model = GammaInvariant.nullModel(mtree, RND);
 		    	DataFile<Phylogeny> mdata = new DataFile<>(mtree, new File(tree_data.getFile().getParent(), session_name+"."+Integer.toString(mi)+".tre"));
-		    	DataFile<GammaInvariant> rates_data = new DataFile<>(model, new File(tree_data.getFile().getParent(), session_name+"."+Integer.toString(mi)+".rates.txt"));
+		    	DataFile<MixedRateModel> rates_data = new DataFile<>(model, new File(tree_data.getFile().getParent(), session_name+"."+Integer.toString(mi)+".rates.txt"));
 		    	bundle.add(mdata, rates_data);
 		    }
 		    String bundle_str = bundle.toXMLString();

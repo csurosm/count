@@ -33,6 +33,7 @@ import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowSorter;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -43,11 +44,15 @@ import javax.swing.event.RowSorterListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+
+import count.ds.AnnotatedTable;
 
 
 /**
@@ -57,6 +62,9 @@ import javax.swing.table.TableColumnModel;
  * The two JTables have the same data model (TableModel), selection model
  * (ListeSelectionModel), and sorter (RowSorter). Scrolling, selection, and sorting  
  * is synchronized between the two tables. 
+ * 
+ * TODO: refine the tool tip texts {@link #getCellToolTip(int, int)}; for table panels 
+ * it is redefined to use the model's getCellToolTip.  
  * 
  * @param <TMODEL> underlying table model
  *
@@ -80,8 +88,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         initComponents();
     }
     
-    public static final int PREFERRED_COLUMN_WIDTH = 50;
-    public static final int MINIMUM_COLUMN_WIDTH = 40;
+    public static final int PREFERRED_COLUMN_WIDTH = 64;
+    public static final int MINIMUM_COLUMN_WIDTH = 48;
     
     protected JTable data_table;
     protected JTable header_table;
@@ -210,6 +218,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         data_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         data_table.createDefaultColumnsFromModel();
         
+        
         // row header data_table
         header_table = createTable(table_header_columns);
         header_table.createDefaultColumnsFromModel();
@@ -219,7 +228,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         header_table.setRowSelectionAllowed(true);
         header_table.setSelectionModel(data_table.getSelectionModel());
         
-        // add to JSpitPane
+        // add to JSplitPane
         // set up the data_table scrolling 
         setViewportView(data_table);
         
@@ -254,15 +263,6 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     {
         JTable table = new JTable(model, column_model)
         {
-//        	@Override 
-//        	public void tableChanged(TableModelEvent e)
-//        	{
-//        		System.out.println("#**TS.cT/tC "
-//        				+e+"\ttyp "+e.getType()
-//        				+"\t"+e.getFirstRow()+".."+e.getLastRow()
-//        				+"\tcol "+e.getColumn());
-//        		super.tableChanged(e);
-//        	}
         	
             @Override
             protected JTableHeader createDefaultTableHeader() 
@@ -280,7 +280,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                         //int realIndex = column_model.getColumn(index).getModelIndex();
                         //System.out.println("#*FCT.cT#gTT idx "+index+"\treal "+realIndex+"\tcol "+;//+"\tevn "+e);
                         int col_idx = convertColumnIndexToModel(columnAtPoint(p));
-                        return getHeaderToolTip(col_idx);
+                        if (col_idx<0) return super.getToolTipText(e);
+                        else return getHeaderToolTip(col_idx);
                     }
                 };
             }
@@ -295,16 +296,22 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                 
                 String origi = super.getToolTipText(event);
                 String valinfo;
+                String cellinfo = TableScroll.this.getCellToolTip(row, col);
                 if (origi==null)
                 {
                 	Object v = getModel().getValueAt(row, col);
-                	valinfo = " is "+v.toString();
-//                	Class<?> vclass = v==null?null:v.getClass();
-//                	valinfo = "// no tooltip for "+v+"\tclass "+vclass;
+            		valinfo = "(="+v.toString()+")";
                 } else
-                	valinfo = " = "+origi;
+                {
+                	if (AnnotatedTable.PhyleticProfile.class.isInstance(getModel().getValueAt(row, col)))
+        			{
+                		valinfo = ""; // already in tooltip	
+        			} else
+        				valinfo = "(="+origi+")";
+                	//valinfo = "/"+ getModel().getValueAt(row, col).getClass().getName();
+                }
                 	
-                return getCellToolTip(row, col)+valinfo;
+                return cellinfo+valinfo;
             }
             @Override
             public TableCellRenderer getCellRenderer(int row, int column)
@@ -313,14 +320,26 @@ public class TableScroll<TMODEL extends AbstractTableModel>
             	int model_col = convertColumnIndexToModel(column);
             	TableCellRenderer renderer = TableScroll.this.getCellRenderer(model_row, model_col);
             	if (renderer==null)
+            	{
             		renderer = super.getCellRenderer(row, column);
+            		if (DefaultTableCellRenderer.class.isInstance(renderer)
+            				&& RoundedDouble.class.equals(model.getColumnClass(model_col)))
+            		{
+            			DefaultTableCellRenderer drenderer = (DefaultTableCellRenderer) renderer;
+            			drenderer.setHorizontalAlignment(JLabel.RIGHT);
+            			drenderer.setHorizontalTextPosition(JLabel.RIGHT);
+            		}
+            	}
             	return renderer;
             }
             
         };
         
-        
-       
+        // right-aligned RoundedDouble
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+        renderer.setHorizontalTextPosition(SwingConstants.RIGHT);
+        renderer.setHorizontalAlignment(SwingConstants.RIGHT);
+        table.setDefaultRenderer(RoundedDouble.class, renderer);
         
         return table;
     }
@@ -404,7 +423,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
      * 
      * @param sorter
      */
-    public void setRowSorter(RowSorter<? extends TMODEL> sorter)
+    public void setRowSorter(TableRowSorter<? extends TMODEL> sorter)
     {
         SortSelectionSynchronizer sync = new SortSelectionSynchronizer();
         sorter.addRowSorterListener(sync); // synchronizer is to be notified after the JTables
@@ -412,6 +431,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         
         data_table.setRowSorter(sorter);
         header_table.setRowSorter(sorter);
+        
+        
     }
     
     public ListSelectionModel getSelectionModel()
@@ -581,8 +602,9 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         if (column_class == String.class)
         {
             choices = new String[2];
-            choices[0] = "equals `"+cell_value+"'";
-            choices[1] = "contains `"+cell_value+"'";
+            choices[0] = "equals '"+cell_value+"'";
+            choices[1] = "contains '"+cell_value+"'";
+            choices[2] = "starts with '"+cell_value+"'";
             default_choice_idx = 0;
         } else 
         {
@@ -604,6 +626,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                 chosen_option = "eq";
             else if (choices[1].equals(chosen_option))
                 chosen_option = "contains";
+            else if (choices[2].equals(chosen_option))
+            	chosen_option = "starts";
             else
                 chosen_option = null;
         } else
@@ -650,10 +674,30 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         
         for (int j=0; j<data_table.getRowCount(); j++)
         {
-            int comp = ref.compareTo(model.getValueAt(j, col)); // this triggers a warning, but we are sure that values in the same column are comparable to each other
-            boolean want_to_select = (comp == 0);
-            want_to_select = want_to_select || (command.equals("le") && comp >0);
-            want_to_select = want_to_select || (command.equals("ge") && comp <0);
+        	boolean want_to_select;
+        	if ("contains".equals(command))
+        	{
+        		assert (ref instanceof String);
+        		
+        		String sref = (String) ref;
+        		String val = (String) model.getValueAt(j, col);
+        		want_to_select = (val.indexOf(sref)!=-1);
+        		
+        	} else if ("starts".equals(command))
+        	{
+        		assert (ref instanceof String);
+        		
+        		String sref = (String) ref;
+        		String val = (String) model.getValueAt(j, col);
+        		want_to_select = val.startsWith(sref);
+        	} else
+        	{
+        		assert ("eq".equals(command) || "le".equals(command) || "ge".equals(command));
+        		int comp = ref.compareTo(model.getValueAt(j, col)); // this triggers a warning, but we are sure that values in the same column are comparable to each other
+        		want_to_select = (comp == 0);
+	            want_to_select = want_to_select || (command.equals("le") && comp >0);
+	            want_to_select = want_to_select || (command.equals("ge") && comp <0);
+        	}
             if (want_to_select)
             {
                 int display_row = data_table.convertRowIndexToView(j);
@@ -847,6 +891,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                 being_sorted = false;
                 setSelectedModelRows(last_row_selection);
             }
+            
         }
 
         @Override
@@ -857,64 +902,6 @@ public class TableScroll<TMODEL extends AbstractTableModel>
                 last_row_selection = getSelectedModelRows();
         }
 
-    }    
-    
-
-//    /**
-//     * Random icon with row selection.
-//     * 
-//     * @author csuros
-//     *
-//     */
-//    private class RowSelectionIcon implements javax.swing.Icon
-//    {
-//        @Override
-//        public int getIconHeight()
-//        {
-//            return 128;
-//        }
-//
-//        @Override
-//        public int getIconWidth()
-//        {
-//            return 128;
-//        }
-//        
-//        @Override
-//        public void paintIcon(Component C, Graphics g, int x, int y)
-//        {
-//            int w = 128;
-//            int h = 128;
-//            int dw = 16;
-//            int dh = 8;
-//            Graphics gg = g.create();
-//            gg.setFont(new Font("Serif",Font.PLAIN,6));
-//            Random RND = new Random();
-//            gg.translate(x,y);
-//            gg.setColor(Color.WHITE);
-//            gg.fillRect(0,0,w,h);
-//            gg.setColor(Color.GRAY);
-//            gg.drawRect(0,0,w,h);
-//            int num_selected = 0;
-//            for (int i=0; (i+1)*dh<=h; i++)
-//            {
-//                int row_y = dh*i;
-//                boolean is_selected = (num_selected<i-1) && ((num_selected< i/6) || (RND.nextDouble()<0.333));
-//                if (is_selected)
-//                {
-//                    num_selected++;
-//                    gg.setColor(Color.BLUE);
-//                    gg.fillRect(0, row_y, w, dh);
-//                    
-//                }
-//                gg.setColor(Color.GRAY);
-//                if (i!=0) 
-//                    gg.drawLine(0, row_y, w, row_y);
-//                for (int j=1; j*dw<w; j++)
-//                    gg.drawLine(j*dw, row_y, j*dw, row_y+dh);
-//            }
-//            
-//        }
-//    }
+    }
 
 }

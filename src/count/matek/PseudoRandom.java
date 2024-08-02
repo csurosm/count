@@ -54,7 +54,13 @@ public class PseudoRandom
         this(new Random());
     }
     
+    public PseudoRandom(long seed)
+    {
+    	this(new Random(seed));
+    }
+    
     private Random RND;
+    
 
     /**
      * A random value by Exponential(lambda). Uses the classic transformation method. 
@@ -139,6 +145,39 @@ public class PseudoRandom
     public final int nextUniform(int range)
     {
         return RND.nextInt(range);
+    }
+    
+    
+    public final long nextLong()
+    {
+    	return RND.nextLong();
+    }
+    
+    /**
+     * A random permutation of the first <var>n</var> natural numbers
+     * @param n
+     * @return
+     */
+    public int[] nextPermutation(int n)
+    {
+    	int[] nextPermutation = new int[n];
+    	for (int i=0; i<n; i++) nextPermutation[i]=i;
+    	
+    	// as if selection sort
+    	int tail = n;
+    	int i=0; 
+    	while (1<tail)
+    	{
+    		int j = i+RND.nextInt(tail);
+    		// exchange
+    		int xi = nextPermutation[i];
+    		nextPermutation[i] = nextPermutation[j];
+    		nextPermutation[j] = xi;
+    		++i;
+    		--tail;
+    	}
+    	return nextPermutation;
+    	
     }
     
 }

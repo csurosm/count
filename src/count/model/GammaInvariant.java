@@ -439,48 +439,71 @@ public class GammaInvariant implements MixedRateModel.RateMultipliers
     	
 		TreeWithRates R = new TreeWithRates(base_rates);
 		int num_nodes = main_tree.getNumNodes();
-		if (xl!= 1.0)
+		
+		for (int node=0; node<num_nodes-1; node++) // not for root==num_nodes-1
 		{
-			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
-			{
-				double yl = xl*R.getLossRate(node_idx);
-				R.setLossRate(node_idx, yl);
-			}
-		}
-		if (xd != 1.0)
-		{
-			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
-			{
-				double yd = xd*R.getDuplicationRate(node_idx);
-				R.setDuplicationRate(node_idx, yd);
-			}
-		}
-		for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
-		{
-			double yg = xg*R.getGainRate(node_idx);
-			
-			// legacy logic for multi-rate variations 
-			double yd = R.getDuplicationRate(node_idx);
+			double yl = xl*R.getLossRate(node);
+			double yd = xd*R.getDuplicationRate(node);
+			double yg = xg*R.getGainRate(node);
+			double ye = xe*R.getEdgeLength(node);
+
+			// legacy logic for gain-rate variations 
 			if (yd==0.0)
 			{
-				double yl = R.getLossRate(node_idx);
-				if (yl==0.0)	
-					R.setGainRate(node_idx, yg);
-				else 
-					R.setGainRate(node_idx, yg*base_rates.getLossRate(node_idx)/yl);
+				if (yl!=0.0)	
+				{
+					yg = yg*base_rates.getLossRate(node)/yl;
+				}
 			} else
 			{
-				R.setGainRate(node_idx,  yg*base_rates.getDuplicationRate(node_idx)/yd);
+				yg = yg*base_rates.getDuplicationRate(node)/yd;
 			}
+			R.setRates(node, ye, yg, yl, yd);
 		}
-		if (xe != 1.0)
-		{
-			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
-			{
-				double ye = xe*R.getEdgeLength(node_idx);
-				R.setEdgeLength(node_idx, ye);
-			}
-		}
+		
+//		
+//		if (xl!= 1.0)
+//		{
+//			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
+//			{
+//				double yl = xl*R.getLossRate(node_idx);
+//				R.setLossRate(node_idx, yl);
+//			}
+//		}
+//		if (xd != 1.0)
+//		{
+//			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
+//			{
+//				double yd = xd*R.getDuplicationRate(node_idx);
+//				R.setDuplicationRate(node_idx, yd);
+//			}
+//		}
+//		for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
+//		{
+//			double yg = xg*R.getGainRate(node_idx);
+//			
+//			// legacy logic for multi-rate variations 
+//			double yd = R.getDuplicationRate(node_idx);
+//			if (yd==0.0)
+//			{
+//				double yl = R.getLossRate(node_idx);
+//				if (yl==0.0)	
+//					R.setGainRate(node_idx, yg);
+//				else 
+//					R.setGainRate(node_idx, yg*base_rates.getLossRate(node_idx)/yl);
+//			} else
+//			{
+//				R.setGainRate(node_idx,  yg*base_rates.getDuplicationRate(node_idx)/yd);
+//			}
+//		}
+//		if (xe != 1.0)
+//		{
+//			for (int node_idx=0; node_idx<num_nodes-1; node_idx++) // root keeps the base rates 
+//			{
+//				double ye = xe*R.getEdgeLength(node_idx);
+//				R.setEdgeLength(node_idx, ye);
+//			}
+//		}
 		return R;
     }
 

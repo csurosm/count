@@ -43,6 +43,8 @@ public interface MixedRateModel
 	 */
 	public abstract TreeWithRates getClassModel(int class_idx);
 	
+	public abstract TreeWithRates getBaseModel();
+	
 	
 	public static interface RateMultipliers extends MixedRateModel
 	{
@@ -54,7 +56,6 @@ public interface MixedRateModel
 	    
 	    public abstract double getEdgeLengthMultiplier(int class_idx);
 	    
-	    public abstract TreeWithRates getBaseModel();
 	    	    
 	}
 

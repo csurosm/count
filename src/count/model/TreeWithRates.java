@@ -1,3 +1,4 @@
+package count.model;
 /*
  * Copyright 2021 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
@@ -14,18 +15,13 @@
  * limitations under the License.
  */
 
-
-package count.model;
-
 import java.util.Arrays;
 import java.util.Random;
-import java.util.function.DoubleFunction;
 
 import count.ds.IndexedTree;
 import count.ds.Phylogeny;
-import count.gui.HistoryView;
+import count.io.CommandLine;
 import count.matek.DiscreteDistribution;
-import count.matek.FunctionMinimization;
 import count.matek.NegativeBinomial;
 import count.matek.PointDistribution;
 import count.matek.Poisson;
@@ -38,7 +34,6 @@ import count.matek.ShiftedGeometric;
  * @author Mikl&oacute;s Cs&#369;r&ouml;s 
  *
  */
-
 public class TreeWithRates implements GLDParameters
 {
 	/** 
@@ -71,9 +66,10 @@ public class TreeWithRates implements GLDParameters
 			if (! has_init_length)
 				Arrays.fill(edge_lengths,DEFAULT_EDGE_LENGTH);
 			edge_lengths[tree.getRoot()] = Double.POSITIVE_INFINITY;
+			RND = null;
 		} else
 		{
-			PseudoRandom RND = new PseudoRandom(random_init);
+			RND = new PseudoRandom(random_init);
 			for (int node=0; node<num_nodes; node++)
 			{
 				loss_rates[node]= DEFAULT_LOSS_RATE;
@@ -83,10 +79,15 @@ public class TreeWithRates implements GLDParameters
 				if (tree.isRoot(node))
 				{
 					setEdgeLength(node, Double.POSITIVE_INFINITY);
+//					// DEBUG
+//					System.out.println("#**TWR.init rnd root "+toString(node));
+					
 				} else if (!has_init_length)
 				{
 					setEdgeLength(node, RND.nextExponential(1.0/DEFAULT_EDGE_LENGTH));
 				}
+				// DEBUG
+//				System.out.println("#**TWR.init rnd node "+toString(node));
 			}
 		}
 	}
@@ -121,7 +122,12 @@ public class TreeWithRates implements GLDParameters
 		this(same_rates, true);
 	}
 	
-	private TreeWithRates(TreeWithRates same_phylogeny, boolean copy)
+	/**
+	 * 
+	 * @param same_phylogeny
+	 * @param copy if true, a copy is created for the rate parameters
+	 */
+	protected TreeWithRates(TreeWithRates same_phylogeny, boolean copy)
 	{
 		this.tree = same_phylogeny.getTree(); 
 		if (copy)
@@ -148,10 +154,13 @@ public class TreeWithRates implements GLDParameters
 			this.edge_lengths = same_phylogeny.edge_lengths;
 			this.rate_gap = same_phylogeny.rate_gap;
 		}
+		this.RND = same_phylogeny.RND; // share random generator 
 	}
+	
+
 
 	
-	private IndexedTree tree;
+	private final IndexedTree tree;
 	private final double[] gain_rates;
 	private final double[] loss_rates;
 	private final double[] duplication_rates;
@@ -163,6 +172,17 @@ public class TreeWithRates implements GLDParameters
     public static final double DEFAULT_DUPLICATION_RATE = 0.5;
     public static final double DEFAULT_EDGE_LENGTH = 1.0;
     
+    
+    private PseudoRandom RND;
+    public void setRandom(Random RND) 
+    {
+    	this.RND = RND==null?null:new PseudoRandom(RND);
+    }
+    
+    public PseudoRandom getRandom()
+    {
+    	return this.RND;
+    }
     
     /**
      * Powers of ten.
@@ -223,7 +243,8 @@ public class TreeWithRates implements GLDParameters
 	}
 
 	/**
-	 * Gain rate (<var>κ</var>) on the edge leading to a node, or for root prior. 
+	 * Relative gain-duplication rate (<var>κ</var>) on the edge leading to a node, (or for root prior),
+	 * or relative loss-duplication rate (<var>γ</var>) if no-duplication.
 	 * 
 	 * @param node_idx any node 
 	 * @return non-negative gain rate 
@@ -231,6 +252,18 @@ public class TreeWithRates implements GLDParameters
 	public double getGainRate(int node_idx)
 	{
 		return gain_rates[node_idx];
+	}
+	
+	/**
+	 * Logarithm of relative gain-duplication rate (<var>κ</var>) on the edge leading to a node, (or for root prior),
+	 * or  of relative loss-duplication rate (<var>γ</var>) if no-duplication.
+	 * 
+	 * @param node_idx any node 
+	 * @return non-negative logarithm of gain rate 
+	 */
+	public double getLogGainRate(int node_idx)
+	{
+		return Math.log(getGainRate(node_idx));
 	}
 
 	public void setGainRate(int node_idx, double gain_rate)
@@ -290,6 +323,23 @@ public class TreeWithRates implements GLDParameters
 		rate_gap[node_idx] = loss_minus_dup;
 	}
 	
+    /**
+     * Sets the rate parameters. 
+     * 
+     * @param node
+     * @param length
+     * @param dup_rate
+     * @param loss_rate
+     * @param gain_rate gain/loss if no-duplication (gamma), or gain/duplication (kappa) 
+     */
+    public void setRates(int node, double length, double gain_rate, double loss_rate, double dup_rate) 
+    {
+    	this.setEdgeLength(node, length);
+    	this.setLossRate(node, loss_rate);
+    	this.setDuplicationRate(node, dup_rate);
+    	this.setGainRate(node, gain_rate);
+    }
+	
 	
 //	public void setRateGap(int node_idx, double delta)
 //	{
@@ -323,6 +373,62 @@ public class TreeWithRates implements GLDParameters
 		edge_lengths[node_idx]=length;
 	}
 	
+	/**
+	 * (Random) reinitialization of node rate parameters. 
+	 * Duplication rate will be surely inferior to loss rate. 
+	 * 
+	 * @param node
+	 */
+	public void initNodeParameters(int node)
+	{
+		final boolean has_init_length = tree instanceof Phylogeny;
+		double mlen = medianLength();
+		if (RND == null)
+		{
+			if (getGainRate(node)!=0.0)
+				setGainRate(node, DEFAULT_GAIN_RATE);
+			setLossRate(node, DEFAULT_LOSS_RATE);
+			if (getDuplicationRate(node)!=0.0)
+				setDuplicationRate(node,DEFAULT_DUPLICATION_RATE);
+			if (node == tree.getRoot())
+				setEdgeLength(node, Double.POSITIVE_INFINITY);
+			else if (has_init_length)
+				setEdgeLength(node, mlen);
+			else
+				setEdgeLength(node, DEFAULT_EDGE_LENGTH);
+		} else
+		{
+			setLossRate(node, DEFAULT_LOSS_RATE);
+			if (getGainRate(node)!=0.0)
+				setGainRate(node, RND.nextExponential(1.0/DEFAULT_GAIN_RATE));
+			
+			if (getDuplicationRate(node)!=0.0)
+				setDuplicationRate(node, 
+						//tree.isRoot(node)?0.0: // Poisson root prior by default
+						RND.nextUniform()*DEFAULT_DUPLICATION_RATE); //  RND.nextUniform(); // less than 1.0
+				
+			if (tree.isRoot(node) || Double.isInfinite(getEdgeLength(node)))
+			{
+				setEdgeLength(node, Double.POSITIVE_INFINITY);
+//					// DEBUG
+//					System.out.println("#**TWR.init rnd root "+toString(node));
+			} else if (has_init_length)
+			{
+				setEdgeLength(node, RND.nextExponential(1.0/mlen));
+			} else 
+			{
+				setEdgeLength(node, RND.nextExponential(1.0/DEFAULT_EDGE_LENGTH));
+			}
+		}		
+	}
+	
+	private double medianLength()
+	{
+		double[] l = edge_lengths.clone();
+		Arrays.sort(l);
+		return l[l.length/2];
+	}
+	
 	
 	public boolean hasGain()
 	{
@@ -350,6 +456,34 @@ public class TreeWithRates implements GLDParameters
 		return root_distribution;
 	}
 	
+	public double getRootMean()
+	{
+		DiscreteDistribution D = getRootDistribution();
+		int root  = tree.getRoot();
+		double mean;
+		if (D instanceof NegativeBinomial)
+		{
+			double r = getGainParameter(root);
+			double q = getDuplicationParameter(root);
+			double q1 = getDuplicationParameterComplement(root);
+			mean = r*q/q1;
+		} else if (D instanceof Poisson)
+		{
+			mean = getGainParameter(root);
+		} else if (D instanceof ShiftedGeometric)
+		{
+			double p1 = getLossParameterComplement(root);
+			double q1 = getDuplicationParameterComplement(root);
+			mean = p1/q1;
+		} else
+		{
+			// point distribution
+			mean = getLossParameterComplement(root);
+		}
+		return mean;
+		
+	}
+	
 	public void setRootDistribution(DiscreteDistribution root_prior)
 	{
         int root_idx = tree.getRoot();
@@ -370,6 +504,22 @@ public class TreeWithRates implements GLDParameters
         }
 		
 	}
+	
+	public double getUniversalGainParameter(int node)
+	{
+		double r; // return value
+		double gain_rate = getGainRate(node);
+		double log1_q = getLogDuplicationComplement(node);
+		if (log1_q == 0.0)
+		{
+			// q==0.0; Poisson
+			r = gain_rate*getLossParameter(node);
+		} else
+		{
+			r = -gain_rate*log1_q;
+		}
+		return r;
+	}
 
 	@Override
 	public double getGainParameter(int node_idx)
@@ -380,8 +530,49 @@ public class TreeWithRates implements GLDParameters
 			gainParameter = gain_rate;
 		else
 			gainParameter = gain_rate * getLossParameter(node_idx); // gain-loss-noduplication = Poisson
+		
+//		if (!Double.isFinite(gainParameter)) // DEBUG
+//		{
+//			String node_name = (tree.isLeaf(node_idx)?IndexedTree.LEAF_IDENT_PREFIX:IndexedTree.NODE_IDENT_PREFIX)+node_idx;
+//
+//			StringBuilder sb = new StringBuilder(node_name);
+//			double p = getLossParameter(node_idx);
+//			double q = getDuplicationParameter(node_idx);
+//			sb.append("[p ").append(p)
+//			.append("/1-").append(getLossParameterComplement(node_idx))
+//			.append(", q ").append(q)
+//			.append("/1-").append(getDuplicationParameterComplement(node_idx))
+//			.append(", r ").append(gainParameter);
+//			if (q<p)
+//			{
+//				double n = q*gainParameter/(p-q);
+//				sb.append("; n ").append(n);
+//			} else
+//			{
+//				sb.append("; n ").append(Double.POSITIVE_INFINITY);
+//			}
+//			sb.append("; gr ").append(getGainRate(node_idx))
+//			.append(", lr ").append(getLossRate(node_idx))
+//			.append(", dr ").append(getDuplicationRate(node_idx))
+//			.append(", len ").append(getEdgeLength(node_idx))
+//			.append("]");		
+//			System.out.println("#***TWR.gGP badgain "+sb.toString());
+//		}
 		return gainParameter;
 	}
+	/**
+	 * Logarithm of the gain distribution parameter: 
+	 * gain intensity <var>r</var> if no-duplication, or gain-duplication rate <var>kappa</var>.
+	 * 
+	 * 
+	 * @param node
+	 * @return
+	 */
+	public double getLogGainParameter(int node)
+	{
+		return Math.log(getGainParameter(node));
+	}
+	
 	
 	@Override
 	public double getLossParameter(int node_idx)
@@ -529,28 +720,28 @@ public class TreeWithRates implements GLDParameters
 		return lossParameterC;
 	}
 	
-	public double getLossDuplicationParameterDifference(int node)
-	{
-		double gap = getRateGap(node);
-		double p = getLossParameter(node);
-		double p_minus_q;
-		if (p==0.0)
-		{
-			double q = getDuplicationParameter(node);
-			if (q==0.0)
-				p_minus_q = 0.0;
-			else 
-			{
-				double delta = gap/q;
-				p_minus_q = q*delta;
-			}
-		} else
-		{
-			double delta = gap/p;
-			p_minus_q = p*delta;
-		}
-		return p_minus_q;
-	}
+//	public double getLossDuplicationParameterDifference(int node)
+//	{
+//		double gap = getRateGap(node);
+//		double p = getLossParameter(node);
+//		double p_minus_q;
+//		if (p==0.0)
+//		{
+//			double q = getDuplicationParameter(node);
+//			if (q==0.0)
+//				p_minus_q = 0.0;
+//			else 
+//			{
+//				double delta = gap/q;
+//				p_minus_q = q*delta;
+//			}
+//		} else
+//		{
+//			double delta = gap/p;
+//			p_minus_q = p*delta;
+//		}
+//		return p_minus_q;
+//	}
 	
 	@Override
 	public double getDuplicationParameter(int node_idx)
@@ -641,6 +832,7 @@ public class TreeWithRates implements GLDParameters
 		return duplicationParameter;
 	}
 	
+	
 
 	@Override
 	public double getDuplicationParameterComplement(int node)
@@ -698,40 +890,57 @@ public class TreeWithRates implements GLDParameters
 		return duplicationParameterC;
 	}
 	
+	public double getLogLossParameter(int node){ return Math.log(getLossParameter(node));}
+	public double getLogLossComplement(int node) {return Math.log(getLossParameterComplement(node));}
 	
-	private void invertParameters(int node, double p, double q)
+	public double getLogDuplicationParameter(int node){ return Math.log(getDuplicationParameter(node));}
+	public double getLogDuplicationComplement(int node) {return Math.log(getDuplicationParameterComplement(node));}
+	
+	/**
+	 * Calculates log(<var>q</var>/<var>p</var>) if (<var>p</var>&ge;<var>q</var>) or 
+	 * log(<var>p</var>/<var>q</var>). 
+	 * 
+	 * @param node
+	 * @return always negative
+	 */
+	public double getLogRelativeRate(int node)
 	{
-		assert (p<1.0);
-		
-		double tolerance = 1e-8;
-		
-		double λ = getDuplicationRate(node);
-		double μ = getLossRate(node);
-		
-		double dl_ratio = q/p;
-		
-		setDuplicationRate(node, dl_ratio*μ);
-		// construct a function for edge length
-		DoubleFunction<Double> pForLength
-		 	= t->{setEdgeLength(node, t); return getLossParameter(node)-p;};
-		
-		double max_t = getEdgeLength(node);
-		while (pForLength.apply(max_t)<0.0 && max_t<1e99)
-			max_t *= 2.0;
-		
-		if (pForLength.apply(max_t)<0.0)
-		{
-			System.out.println("#**TWR.iP "+node+" failed for p="+p+" q="+q+"\t// "+toString(node));
-			throw new RuntimeException("Cannot find edge length for parameters");
-		}
-		
-//		System.out.println("#**TWR.iP start "+node+"\t"+p+","+q+"\tmax_t "+max_t+"\t// "+tree.getIdent(node));
-		double t = FunctionMinimization.zbrent(pForLength, 0.0, max_t, tolerance);
-		setEdgeLength(node, t);
-//		double diff = getLossParameter(node)-p;
-//		System.out.println("#**TWR.iP got "+node+"\t"+p+","+q+"\tt "+t+"\t"+toString(node)+"\t// diff "+diff);
-		
+		return -Math.abs(getLogDuplicationParameter(node)-getLogLossParameter(node));
 	}
+
+//	private void invertParameters(int node, double p, double q)
+//	{
+//		assert (p<1.0);
+//		
+//		double tolerance = 1e-8;
+//		
+//		double λ = getDuplicationRate(node);
+//		double μ = getLossRate(node);
+//		
+//		double dl_ratio = q/p;
+//		
+//		setDuplicationRate(node, dl_ratio*μ);
+//		// construct a function for edge length
+//		DoubleFunction<Double> pForLength
+//		 	= t->{setEdgeLength(node, t); return getLossParameter(node)-p;};
+//		
+//		double max_t = getEdgeLength(node);
+//		while (pForLength.apply(max_t)<0.0 && max_t<1e99)
+//			max_t *= 2.0;
+//		
+//		if (pForLength.apply(max_t)<0.0)
+//		{
+//			System.out.println("#**TWR.iP "+node+" failed for p="+p+" q="+q+"\t// "+toString(node));
+//			throw new RuntimeException("Cannot find edge length for parameters");
+//		}
+//		
+////		System.out.println("#**TWR.iP start "+node+"\t"+p+","+q+"\tmax_t "+max_t+"\t// "+tree.getIdent(node));
+//		double t = FunctionMinimization.zbrent(pForLength, 0.0, max_t, tolerance);
+//		setEdgeLength(node, t);
+////		double diff = getLossParameter(node)-p;
+////		System.out.println("#**TWR.iP got "+node+"\t"+p+","+q+"\tt "+t+"\t"+toString(node)+"\t// diff "+diff);
+//		
+//	}
 	
 	/**
 	 * Sets the gain, loss and duplication rates for an edge.
@@ -892,7 +1101,7 @@ public class TreeWithRates implements GLDParameters
 	}
 	
 	/**
-	 * Scles edge length, loss and duplication rates together. 
+	 * Scales edge length, loss and duplication rates together. 
 	 * 
 	 * @param node
 	 * @param loss_rate
@@ -1093,11 +1302,13 @@ public class TreeWithRates implements GLDParameters
 		double p = getLossParameter(node);
 		double q = getDuplicationParameter(node);
 		double r = getGainParameter(node);
+		double ru = getUniversalGainParameter(node);
 		sb.append("[p ").append(p)
 		.append("/1-").append(getLossParameterComplement(node))
 		.append(", q ").append(q)
 		.append("/1-").append(getDuplicationParameterComplement(node))
-		.append(", r ").append(r);
+		.append(", r ").append(r)
+		.append("/ru ").append(ru);
 		if (q<p)
 		{
 			double n = q*r/(p-q);
@@ -1113,122 +1324,144 @@ public class TreeWithRates implements GLDParameters
 		return sb.append("]").toString();
 	}
 	
-	public ParameterCache parameterCache()
+//	public ParameterCache parameterCache()
+//	{
+//		return new ParameterCache();
+//	}
+//	
+//	/**
+//	 * A mirror of the embedding class that uses its own 
+//	 * cache for getXXXParameter(int node). 
+//	 * 
+//	 * @author csuros
+//	 *
+//	 */
+//	public final class ParameterCache extends TreeWithRates
+//	{
+//		private ParameterCache()
+//		{
+//			super(TreeWithRates.this, false);
+//			this.node_parameters = new double[3*tree.getNumNodes()];
+//			setCacheFromRates();
+//			
+//		}
+//		private final double[] node_parameters;
+//		
+//		
+//		public void setCacheFromRates()
+//		{
+//			int num_nodes = tree.getNumNodes();
+//			for (int node=0; node<num_nodes; node++)
+//			{
+//				setCacheFromRates(node);
+//			}
+//		}
+//		
+//		public void setCacheFromRates(int node)
+//		{
+//			node_parameters[3*node+PARAMETER_GAIN]=super.getGainParameter(node);
+//			node_parameters[3*node+PARAMETER_LOSS] = super.getLossParameter(node);
+//			node_parameters[3*node+PARAMETER_DUPLICATION] = super.getDuplicationParameter(node);
+//		}
+//		
+//		public void setRates()
+//		{
+//			int num_nodes = tree.getNumNodes();
+//			for (int node=0; node<num_nodes; node++)
+//			{
+//				setRates(node);
+//			}
+//		}
+//		
+//		/**
+//		 * Sets the rates based on the cached parameter values; updates 
+//		 * the parameter values in the cache. Because of numerical precision, 
+//		 * the parameter values may change, and getXXXParameter 
+//		 * returns a different value matching the stored rates.  
+//		 * 
+//		 * @param node
+//		 */
+//		public void setRates(int node)
+//		{
+//			double p = node_parameters[3*node+PARAMETER_LOSS];
+//			double q = node_parameters[3*node+PARAMETER_DUPLICATION];
+//			double r = node_parameters[3*node+PARAMETER_GAIN];
+//			super.setParameters(node, r, p, q);
+//			setCacheFromRates(node);
+//		}
+//		
+//		/**
+//		 * Sets cached values.
+//		 */
+//		@Override
+//		public void setParameters(int node, double r, double p, double q)
+//		{
+//			System.out.println("#**TWR.PC.sP "+node+"\tr "+r+"\tp "+p+"\tq "+q+"\t// "+tree.getIdent(node));
+//			
+//			node_parameters[3*node+PARAMETER_GAIN]=r;
+//			node_parameters[3*node+PARAMETER_LOSS] = p;
+//			node_parameters[3*node+PARAMETER_DUPLICATION] = q;
+//		}
+//		
+//		/**
+//		 * Cached value
+//		 */
+//		@Override
+//		public double getGainParameter(int node)
+//		{
+//			return node_parameters[3*node+PARAMETER_GAIN];
+//		}
+//		/**
+//		 * Cached value
+//		 */
+//		@Override
+//		public double getLossParameter(int node)
+//		{
+//			return node_parameters[3*node+PARAMETER_LOSS];
+//		}
+//		/**
+//		 * Cached value
+//		 */
+//		@Override
+//		public double getDuplicationParameter(int node)
+//		{
+//			return node_parameters[3*node+PARAMETER_DUPLICATION];
+//		}
+//		
+//		@Override 
+//		public double getLossParameterComplement(int node)
+//		{
+//			return 1.0-getLossParameter(node);
+//		}
+//		
+//		@Override 
+//		public double getDuplicationParameterComplement(int node)
+//		{
+//			return 1.0-getDuplicationParameter(node);
+//		}
+//		
+//	}
+	
+	
+	private void reportParameters(java.io.PrintStream out)
 	{
-		return new ParameterCache();
+		int num_nodes = tree.getNumNodes();
+		for (int node=0; node<num_nodes; node++)
+		{
+			out.println("NODE\t"+node+"\t"+toString(node));
+		}
 	}
 	
-	/**
-	 * A mirror of the embedding class that uses its own 
-	 * cache for getXXXParameter(int node). 
-	 * 
-	 * @author csuros
-	 *
-	 */
-	public final class ParameterCache extends TreeWithRates
-	{
-		private ParameterCache()
-		{
-			super(TreeWithRates.this, false);
-			this.node_parameters = new double[3*tree.getNumNodes()];
-			setCacheFromRates();
-			
-		}
-		private final double[] node_parameters;
-		
-		
-		public void setCacheFromRates()
-		{
-			int num_nodes = tree.getNumNodes();
-			for (int node=0; node<num_nodes; node++)
-			{
-				setCacheFromRates(node);
-			}
-		}
-		
-		public void setCacheFromRates(int node)
-		{
-			node_parameters[3*node+PARAMETER_GAIN]=super.getGainParameter(node);
-			node_parameters[3*node+PARAMETER_LOSS] = super.getLossParameter(node);
-			node_parameters[3*node+PARAMETER_DUPLICATION] = super.getDuplicationParameter(node);
-		}
-		
-		public void setRates()
-		{
-			int num_nodes = tree.getNumNodes();
-			for (int node=0; node<num_nodes; node++)
-			{
-				setRates(node);
-			}
-		}
-		
-		/**
-		 * Sets the rates based on the cached parameter values; updates 
-		 * the parameter values in the cache. Because of numerical precision, 
-		 * the parameter values may change, and getXXXParameter 
-		 * returns a different value matching the stored rates.  
-		 * 
-		 * @param node
-		 */
-		public void setRates(int node)
-		{
-			double p = node_parameters[3*node+PARAMETER_LOSS];
-			double q = node_parameters[3*node+PARAMETER_DUPLICATION];
-			double r = node_parameters[3*node+PARAMETER_GAIN];
-			super.setParameters(node, r, p, q);
-			setCacheFromRates(node);
-		}
-		
-		/**
-		 * Sets cached values.
-		 */
-		@Override
-		public void setParameters(int node, double r, double p, double q)
-		{
-			System.out.println("#**TWR.PC.sP "+node+"\tr "+r+"\tp "+p+"\tq "+q+"\t// "+tree.getIdent(node));
-			
-			node_parameters[3*node+PARAMETER_GAIN]=r;
-			node_parameters[3*node+PARAMETER_LOSS] = p;
-			node_parameters[3*node+PARAMETER_DUPLICATION] = q;
-		}
-		
-		/**
-		 * Cached value
-		 */
-		@Override
-		public double getGainParameter(int node)
-		{
-			return node_parameters[3*node+PARAMETER_GAIN];
-		}
-		/**
-		 * Cached value
-		 */
-		@Override
-		public double getLossParameter(int node)
-		{
-			return node_parameters[3*node+PARAMETER_LOSS];
-		}
-		/**
-		 * Cached value
-		 */
-		@Override
-		public double getDuplicationParameter(int node)
-		{
-			return node_parameters[3*node+PARAMETER_DUPLICATION];
-		}
-		
-		@Override 
-		public double getLossParameterComplement(int node)
-		{
-			return 1.0-getLossParameter(node);
-		}
-		
-		@Override 
-		public double getDuplicationParameterComplement(int node)
-		{
-			return 1.0-getDuplicationParameter(node);
-		}
-		
-	}
 	
+	public static void main(String[] args) throws Exception
+	{
+		Class<?> us = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		CommandLine cli = new CommandLine(args,  us);
+		
+		
+        TreeWithRates rates = cli.getRates();
+		
+        rates.reportParameters(System.out);
+        
+	}
 }

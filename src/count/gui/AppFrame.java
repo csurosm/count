@@ -34,6 +34,7 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -60,7 +61,7 @@ import count.Count;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
 import count.gui.kit.CountActions;
-import count.gui.kit.FancyFileDialog;
+import count.gui.kit.ShmancyFileDialog; 
 import count.gui.kit.StringIcon;
 import count.io.DataFile;
 import count.io.GeneralizedFileReader;
@@ -68,11 +69,14 @@ import count.io.ModelBundle;
 import count.io.NewickParser;
 import count.io.RateVariationParser;
 import count.io.TableParser;
-import count.model.GammaInvariant;
+// import count.model.GammaInvariant; // deprecated
+import count.model.MixedRateModel;
 
+import static count.Count.APP_TITLE;
+import static count.Count.APP_VERSION;
 
 /**
- * Application frame; the main coomponent of the GUI.  
+ * Application frame; the main component of the GUI.  
  * 
  * 
  * @author Mikl&oacute;s Cs&#369;r&ouml;s 
@@ -83,6 +87,8 @@ public class AppFrame extends JFrame
     public static final Color WARNING_COLOR = new Color(255, 255, 192); // Banana
     public static final Color SMOKY_BACKGROUND = new Color(120,120,200,50);
 
+    
+    
     public AppFrame(Count app)
 	{
 		super();
@@ -107,12 +113,10 @@ public class AppFrame extends JFrame
         this.setContentPane(panel_with_toolbar);
 // TOOLBAR	
         
+        setDesktop();
         
         menu_bar = new MenuBar();
         this.setJMenuBar(menu_bar);
-        
-        setDesktop();
-        
         setIconImage(getCountIcon().getImage());        
 
         setBounds(25,25,
@@ -121,7 +125,13 @@ public class AppFrame extends JFrame
         
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
+        addRootPanel();
+        
+        
+        
     }
+    
+    private static final String ROOT_KEY = "\n__root__\n"; // unlikely file name to be different from session keys
 	
 	private final Count app;
 
@@ -148,16 +158,40 @@ public class AppFrame extends JFrame
     private final List<Session> session_list;
     private int active_session;
     
+    private boolean is_desktop_set = false;
+    
     public UncaughtExceptionHandler getExceptionHandler()
     {
     	return exception_handler;
     }
     
+    /**
+     * Sets the Quit and About handlers.
+     */
     private void setDesktop()
     {
-    	Desktop desktop = Desktop.getDesktop();
-    	desktop.setQuitHandler((event,response)->doQuit());
-    	desktop.setAboutHandler(event->doAbout(false));
+    	try
+    	{
+	    	if (Desktop.isDesktopSupported())
+	    	{
+		    	Desktop desktop = Desktop.getDesktop();
+		    	this.is_desktop_set = true;
+		    	if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER))
+		    	{
+		    		desktop.setQuitHandler((event,response)->doQuit());
+		    	} else
+		    		this.is_desktop_set = false;
+		    	if (desktop.isSupported(Desktop.Action.APP_ABOUT))
+		    	{
+		    		desktop.setAboutHandler(event->doAbout(false));
+		    	} else
+		    		this.is_desktop_set = false;
+	    	}
+    	} catch (Exception E)
+    	{
+    		// some other stupid os
+    		this.is_desktop_set = false;
+    	}
     }
     
     public Count getApp()
@@ -187,7 +221,10 @@ public class AppFrame extends JFrame
     public void showSession (int session_idx)
     {
         if (session_idx == -1)
-                setTitle(app.getAppTitle()); // +" v"+VERSION_NUMBER);
+        {
+                setTitle(APP_TITLE); // +" v"+VERSION_NUMBER);
+                layout.show(main_panel, ROOT_KEY);
+        }
         else
         {
             Session sesh = session_list.get(session_idx);
@@ -213,6 +250,131 @@ public class AppFrame extends JFrame
 	    	main_panel.remove(session);
 	    	showSession(session_list.size()-1);
     	}
+    }
+    
+    private static final String USAGE_INSTRUCTIONS
+    		= "<h2><span style=\"color:rgb(128,0,0)\">Steps for using Count</span></h2><ol>"
+//			+"<h4>Sessions</h4>"
+			+"<li> In Count, you work with <span style=\"color:rgb(128,0,0)\"><b>session</b>s</span>, "
+			+ "defined by a set of terminal taxon names "
+			+ "and one more phylogenies over the same leaf set. "
+			+ "As a first step, "
+			+ "you can either"
+			+ "<ul>"
+			+ "<li>start a <b>new session</b> by loading a phylogeny in Newick format, which will be the main "
+			+ "tree associated with the session; or</li>"
+			+ "<li>load a table in a <b>no-tree session</b> or <b>import a table</b> of family-sizes (copy-numbers), and "
+			+ "assume a simple initial tree (star tree, random tree, or UPGMA calculated from copy number "
+			+ "profiles); or</li>"
+			+ "<li><b>load a session<</b> previously saved by Count (XML format)</li>."
+			+ "</ul>"
+			+ "</li>"
+//			+ "<h4>Data tables</h4>"
+			+ "<li>Count works with a family size <span style=\"color:rgb(128,0,0)\"><b>table</b></span>: "
+			+ "a set of genomes described "
+			+ "as a multiset of families their genes belong to. "
+			+ "Such a table is tab-delimited text file that "
+			+ "starts with a header line that "
+			+ "lists the taxon names as column headers. "
+			+ "The first column has the family names. "
+			+ "Additional columns can be loaded as family annotation columns. "
+			+ "You can either <b>load a table</b> in that format, or "
+			+ "<b>import a table</b>. from COG-style csv files or MCL clustering output. "
+			+ "You can derive further tables by <b>filtering the rows</b> of "
+			+ "an existing table (double-click on a cell for condition on values in that column), "
+			+ "or by converting it to a <b>binary</b> presence-absence table."
+			+ "</li>"
+			+ ""
+//			+ "<h4>Phylogenies</h4>"
+			+ "<li>Every session has a main phylogeny, and can include other rooted "
+			+ "trees over the same leaf set. You can either <b>load a tree</b> "
+			+ "in Newick format, or <b>build a tree</b>, or modify one by hand, using the <b>edit tree</b> "
+			+ "function. (Tres can be built with a simple UPGMA procedure from "
+			+ "profiles, or set to random or star topology. "
+			+ "Edit operations include rerooting, edge-contraction, and "
+			+ "subtree-prune-and-regraft.) </li>"
+			+ ""
+//			+ "<h4>Rate models</h4>"
+			+ "<li>Rate <span style=\"color:rgb(128,0,0)\"><b>models</b></span> equip the selected phylogeny's edges with "
+			+ "a linear birth-and-death process defined by "
+			+ "rates and length: loss, duplication and gain rates. (For convenience, "
+			+ "edge lengths and rates are scaled so that loss rate=1.0. "
+			+ "Phylogenies with multifurcations are OK, but a "
+			+ "completely resolved model uses a binary tree.) "
+			+ "You can <b>load a rate model</b> (previously saved from Count), "
+			+ "or make one by <b>model optimization</b>. "
+			+ "(Models are optimized by maximizing their likelihood). "
+			+ "You should set the observation (aka <em>ascertainment</em>) bias for your input table, depending "
+			+ "on how the homolog families were constructed: "
+			+ "whether they have a minimum of 0 (if even the families without any members are known), "
+			+ "1 (if the table covers all genes from all genomes), "
+			+ "or 2 members (if families correspond to alignments)."
+			+ "<br />"
+			+ "Make sure you filter your table for observation bias on the membership count (<tt>#mem</tt>): "
+			+ "families with at least 1 member, or families with at least 2 members "
+			+ "if you work with rate models."			
+			+ "</li>"
+			+ ""
+//			+ "<h4>Ancestral reconstructions</h4>"
+			+ "<li>Given a table, you can do <span style=\"color:rgb(128,0,0)\"><b>ancestral reconstructions</b></span>. "
+			+ "by either <b>numerical parsimony</b> (a generalized Wagner penalization), "
+			+ "or by <b>Dollo parsimony</b> if the data is binary. "
+			+ "If you have a rate model, then you can also reconstruct the "
+			+ "ancestral genomes by <b>posteriors</b>, giving probabilities and "
+			+ "expectations for family memberships; the reconstruction includes correction "
+			+ "for the observation bias of minimum copies.</li>"
+			+ ""
+//			+ "<h4>Saving your data</h4>"
+			+ "<li>You can <b>save</b> phylogenies, rate models, and tables, or "
+			+ "<b>export</b> ancestral reconstructions. "
+			+ "With the exception of phylogenies, "
+			+ "all other data is in tab-delimited files. "
+			+ "You can also <b>save all</b>  all your sessions "
+			+ "if you want to come back to them later."
+			+ "(The sessions are saved in an XML-format file.)"
+			+ "</li>"
+			+ "<li><b>Tooltips</b> give further instructions and informations "
+			+ "on the displayed elements in the GUI. "
+			+ "<li><b>Limitations in this beta version</b>:"
+			+ "<ul>"
+			+ "<li>optimization with rate variation across families (rate categories) is not supported</li>"
+			+ "<li>optimization with homogeneous rates (same duplication or gain across lineages) is not supoprted</li>"
+			+ "<li>help menu is not available</li>"
+			+"</ul>"
+			+ "</li>"
+			+ "</ol>";
+    
+    /**
+     * The root panel is displayed when no 
+     * sessions are available: gives some basic instructions.
+     * 
+     */
+    private void addRootPanel()
+    {
+    	Dimension D = this.getSize();
+    	JEditorPane instruction_pane = new JEditorPane("text/html", USAGE_INSTRUCTIONS);
+    	//instruction_pane.setMaximumSize(D);
+    	JPanel instruction_container = new JPanel(null);
+    	instruction_pane.setBorder(BorderFactory.createLoweredSoftBevelBorder());
+    	
+    	instruction_container.add(instruction_pane);
+    	
+//    	D.width/=2;
+//    	D.height/=2;
+//    	instruction_pane.setSize(D);
+//    	instruction_pane.setMinimumSize(D);
+//    	instruction_pane.setMaximumSize(D);
+    	instruction_pane.setBounds(D.width/8,D.height/8,D.width*3/4,D.height*3/4);
+    	
+    	
+//    	Dimension D = this.getSize();
+//    	D.width = D.width/2;
+//    	D.height = D.height/2;
+
+//    	instruction_container.setSize(D);
+//    	instruction_container.setMinimumSize(D);
+//    	instruction_container.setMaximumSize(D);
+    	main_panel.add(instruction_container,ROOT_KEY);
     }
     
     public Session addSession(Session session)
@@ -268,35 +430,41 @@ public class AppFrame extends JFrame
     }
     
     
+    
+    
     private JComponent getAboutComponent()
     {
     	String ABOUT_TEXT 
-        = "<h1>The "+app.getAppTitle()+" (v"+app.getAppVersion()+")</h1>" +
+        = "<h1>The "+APP_TITLE+" (v"+APP_VERSION+")</h1>" +
         "<p>The Count is a software package " +
         "for the evolutionary analysis of phylogenetic profiles, and numerical characters in general, " +
-        "written entirely in Java. " +
+        "written entirely in Java. The main page for the software is <a href=\"https://github.com/csurosm/count\">https://github.com/csurosm/count</a> " +
         "</p>" +
-        "<p>Author: Mikl&oacute;s Cs&#369;r&ouml;s http://www.iro.umontreal.ca/~csuros/</p> " +
-        "<p>Some numerical optimization routines were adapted from " +
+        "<p>Author: Mikl&oacute;s Cs&#369;r&ouml;s <a href=\"http://www.iro.umontreal.ca/~csuros/\">http://www.iro.umontreal.ca/~csuros/</a></p> " +
+        "<h2>Copyright and licenses</h2>"+
+        "<ul><li>Licensed under the Apache License, Version 2.0 <a href=\"http://www.apache.org/licenses/LICENSE-2.0\">http://www.apache.org/licenses/LICENSE-2.0</a>."+
+        "</li>"+
+        "<li> \u261c The background image (Moon and Mars) of the Count logo (batty batty bat batty bat batty bat batty bat...) " +
+        "is used with permission from the copyright owner, John Harms." +
+        "</li>"+
+        "<li>Some numerical optimization routines were adapted from " +
         "<em>Numerical Recipes in C: The Art of Scientific Computing</em> " +
         "[W. H. Press, S. A. Teukolsky, W. V. Vetterling and B. P. Flannery; " +
-        "Second edition, Cambridge University Press, 1997].</p>" +
-        "<p>The background image (Moon and Mars) of the Count logo (batty batty bat batty bat batty bat batty bat...) " +
-        "is used with permission from the copyright owner, John Harms." +
-        "</p>"+
-        "<p>Some icons are from the Java Look and Feel Graphics Repository, licensed under the Oracle Binary Code License Agreement for Java SE.</p>"+
+        "Second edition, Cambridge University Press, 1997].</li>" +
+        "<li>Some icons are from the Java Look and Feel Graphics Repository, licensed under the Oracle Binary Code License Agreement for Java SE.</li></ul>"+
+        "<h2>References</h2>"+
         "<p>Please <b>cite</b> Count as "+UsersGuide.COUNT_REFERENCE+"</p>" +
         "<p>Algorithmic ideas uderlying the Count package were described in the following publications.</p>" +
         "<ul>" +
         UsersGuide.METHOD_REFERENCES+
         "</ul>" +
 //        "<p>Montr&eacute;al/Budapest/Ann Arbor/Hong Kong/Nha Trang/Bengaluru/Amsterdam/Szentendre/Szeged, 2010-2023</p>";
-        "<p>Montr&eacute;al, 2010–2023</p>";
+        "<p>Montr&eacute;al, 2010–2024</p>";
 
     	JEditorPane EP = new JEditorPane("text/html",ABOUT_TEXT);
         EP.setEditable(false);
         EP.setBackground(this.getBackground());
-        EP.setPreferredSize(new Dimension(600,600));
+        EP.setPreferredSize(new Dimension(800,600));
         JScrollPane ep_scroll = new JScrollPane(EP);
         EP.setCaretPosition(0);
 //        ep_scroll.getVerticalScrollBar().setValue(0);
@@ -309,7 +477,7 @@ public class AppFrame extends JFrame
     	Session sesh = getActiveSession();
     	if (sesh == null)
     	{
-            setTitle(app.getAppTitle()); // +" v"+VERSION_NUMBER);
+            setTitle(app.APP_TITLE); // +" v"+VERSION_NUMBER);
     	} else
     	{
     		setTitle(sesh.getSessionTitle());    	
@@ -354,12 +522,12 @@ public class AppFrame extends JFrame
     	bouton.setToolTipText("Convert to presence-absence table");
     	createToolBar.addSeparator(gap);
     	
-    	bouton=createToolBar.addLoadRates("Load model", e->doLoadRates(null));
+    	bouton=createToolBar.addLoadRates("Load model", e->doLoadRates());
     	bouton.setToolTipText("Load a rate model");
     	bouton = createToolBar.addOptimizeRates("Optimize model", e->getActiveSession().doOptimize());
     	bouton.setToolTipText("Set model parameters by numerical optimization");
 
-    	createToolBar.addSeparator(gap);
+    	createToolBar.addSeparator();
     	bouton = createToolBar.addDollo("Dollo", e->getActiveSession().doDollo());
     	bouton.setToolTipText("Ancestral reconstruction by Dollo parsimony (from binary profiles)");
     	bouton = createToolBar.addParsimony("Parsimony", e->getActiveSession().doParsimony());
@@ -371,6 +539,9 @@ public class AppFrame extends JFrame
     	bouton.setToolTipText("Save the currently displayed item");
     	bouton = createToolBar.addRemove("Remove", e->getActiveSession().doRemoveItem());
     	bouton.setToolTipText("Delete the currently displayed item without saving");
+    	createToolBar.addSeparator();
+    	bouton = createToolBar.addQuit("Quit", click->doQuit());
+    	bouton.setToolTipText("Quit the application without saving anything");
     	return createToolBar; 
     }
     
@@ -498,6 +669,18 @@ public class AppFrame extends JFrame
             session_menu.add(close_session);
             session_menu.add(save_session);
             
+            
+            if (!is_desktop_set)
+            {
+            	session_menu.addSeparator();
+            	JMenuItem quit = new JMenuItem(CountActions.createQuit("Quit "+Count.APP_TITLE, click->doQuit()));
+            	quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, 
+                        Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));             	
+            	JMenuItem about = new JMenuItem(CountActions.createAbout("About "+Count.APP_TITLE, click->doAbout(false)));
+            	session_menu.add(about);
+            	session_menu.add(quit);
+            }
+            
             Session active = getActiveSession();
             load_session.setEnabled(session_list.isEmpty());
 //            load_session_url.setEnabled(load_session.isEnabled() && false); // not implemented
@@ -523,7 +706,7 @@ public class AppFrame extends JFrame
             				Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
             data_menu.add(data_load_table);       
 
-            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nomatching columns as annotations)", e->doLoadTable(true)));
+            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nonmatching columns as annotations)", e->doLoadTable(true)));
 //            JMenuItem data_load_annotated = new JMenuItem("Open annotated table... (keep other columns as annotations)");
 //            data_load_annotated.addActionListener(e->doLoadTable(true));
             data_menu.add(data_load_annotated);
@@ -596,7 +779,7 @@ public class AppFrame extends JFrame
     	{
     		rate_menu.removeAll();
     		
-    		JMenuItem rates_load = new JMenuItem(CountActions.createLoadRates("Load rates...", e->doLoadRates(null)));
+    		JMenuItem rates_load = new JMenuItem(CountActions.createLoadRates("Load rates...", e->doLoadRates()));
 //            JMenuItem rates_load = new JMenuItem("Load rates...");
 //            rates_load.addActionListener(e->doLoadRates(null)); // null argument triggers FileDialog
             rates_load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R,
@@ -675,8 +858,7 @@ public class AppFrame extends JFrame
      */
     private DataFile<Phylogeny> loadPhylo()
     {
-        FancyFileDialog dialog = null;
-        dialog = new FancyFileDialog(this,"Open Newick-format phylogeny file",FileDialog.LOAD);
+        ShmancyFileDialog dialog = new ShmancyFileDialog(this,"Open Newick-format phylogeny file",FileDialog.LOAD,CountActions.createLoadTreeIcon(CountActions.SIZE_XL));
         dialog.setVisible(true);
        
         String file_name = dialog.getFile();
@@ -684,7 +866,7 @@ public class AppFrame extends JFrame
 
         Phylogeny main_phylo=null;
         
-        if (file_name != null)
+        if (dialog.hasFile())
         {
         	String new_session_key = Session.getSessionKey(file_name);
         	for (Session session: session_list)
@@ -698,7 +880,7 @@ public class AppFrame extends JFrame
         
         DataFile<Phylogeny> data_read = null;
         
-        if (file_name != null)
+        if (dialog.hasFile())
         {
             try 
             {
@@ -761,7 +943,7 @@ public class AppFrame extends JFrame
      */
     public void doAbout(boolean splash)
     {
-        String title = (splash?"Welcome to ":"About ")+app.getAppTitle();
+        String title = (splash?"Welcome to ":"About ")+APP_TITLE;
         if (splash) //splash)
         {
             String[] first_step = {"Just close the splash screen", 
@@ -790,8 +972,7 @@ public class AppFrame extends JFrame
     
     private void doLoadSessions()
     {
-        FancyFileDialog dialog = null;
-        dialog = new FancyFileDialog(this,"Load sessions",FileDialog.LOAD);
+        ShmancyFileDialog dialog = new ShmancyFileDialog(this,"Load session(s)",FileDialog.LOAD,CountActions.createLoadSessionIcon(CountActions.SIZE_XL));
         dialog.setVisible(true);
        
         final String file_name = dialog.getFile();
@@ -823,13 +1004,16 @@ public class AppFrame extends JFrame
                     {
                         File selected_file = new File(directory,file_name);
                         BufferedReader BR = GeneralizedFileReader.guessBufferedReaderForInput(selected_file.getPath());
-                        List<ModelBundle> bundle_list = ModelBundle.readBundle(BR);
-                        BR.close();
-                        for (ModelBundle bundle: bundle_list)
+                        if (BR != null)
                         {
-                        	Session sesh = new Session(AppFrame.this, bundle);
-                        	addSession(sesh);
-                        	main_panel.repaint();
+	                        List<ModelBundle> bundle_list = ModelBundle.readBundle(BR);
+	                        BR.close();
+	                        for (ModelBundle bundle: bundle_list)
+	                        {
+	                        	Session sesh = new Session(AppFrame.this, bundle);
+	                        	addSession(sesh);
+	                        	main_panel.repaint();
+	                        }
                         }
                     } catch (java.io.IOException E)
                     {
@@ -918,6 +1102,7 @@ public class AppFrame extends JFrame
                 public void done()
                 {
                     wait_until_saved.setVisible(false);
+                    
                 }    
             }; 
             save_worker.execute();
@@ -940,23 +1125,20 @@ public class AppFrame extends JFrame
     private void doInitSession()
     {
         String dialog_title = ("Open family size table");
-        FileDialog dialog  = new FancyFileDialog(this,dialog_title,FileDialog.LOAD);
+        ShmancyFileDialog dialog  = new ShmancyFileDialog(this,dialog_title,FileDialog.LOAD,CountActions.createLoadTableIcon(CountActions.SIZE_XL));
         dialog.setVisible(true);
         
-        String file_name = dialog.getFile();
-        if (file_name != null)
+        DataFile<AnnotatedTable> table_data = null;
+        if (dialog.hasFile())
         {
-            DataFile<AnnotatedTable> table_data = null;
-            String directory = dialog.getDirectory();
-            try
-            {
-	        	AnnotatedTable table 
-	        	= TableParser
-	        	.readTable(null, 
-	        			GeneralizedFileReader.guessReaderForInput(directory+file_name), 
-	        			false);
-	        		        	
+	        try
+	        {
+	            Reader R =  dialog.getReader();
+	        	AnnotatedTable table = TableParser.readTable(null, R, false);
+        		        	
 	            checkTableEmpty(table);
+	            String file_name = dialog.getFile();
+	            String directory = dialog.getDirectory();
 	            table_data = new DataFile<>(table, new File(directory, file_name));
 	        } catch (java.io.InterruptedIOException E)
 	        {
@@ -971,55 +1153,104 @@ public class AppFrame extends JFrame
 	        {
 	        	exception_handler.handle(E, "A bug!", "Error while reading occurrence table from a file.");
 	        }   
-            if (table_data != null)
-            	initSession(table_data);
         }
+        if (table_data != null)
+        	initSession(table_data);
     }
-    
     
     private void doImportTableData()
     {
 		Session sesh = getActiveSession();
     	ImportTable importer = new ImportTable(this);
-    	DataFile<AnnotatedTable> table_data = null;
-        try
-        { 
-        	int wantsto = JOptionPane.showConfirmDialog(this, importer, "Import family profile data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_L));
-        	if (wantsto == JOptionPane.OK_OPTION)
-        	{
-        		String[] taxon_names;
-        		if (sesh==null)
-        		{
-        			taxon_names =null;
-        		} else
-        		{
-        			taxon_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
-        		}
-        		table_data = importer.readTable(taxon_names);
-        	}
-        } catch (IOException E)
-        {
-            exception_handler.handle(E, "I/O error", "File error while importing table data.");
-        } catch (Exception E)
-        {
-            exception_handler.handle(E, "A bug maybe?", "Error while importing table data.");
-        }
-        if (table_data != null)
-        {
-            checkTableEmpty(table_data.getContent());
-        	if (sesh==null)
-        		initSession(table_data);
-        	else
-        	{
-        		// no need for mapping bc readTable used the taxon name order from the main phylo
-        		sesh.addDataSet(table_data);
-        	}
-        }
+    	
+    	int wantsto = JOptionPane.showConfirmDialog(this, importer, "Import family profile data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_L));
+    	if (wantsto == JOptionPane.OK_OPTION)
+    	{
+    		String[] taxon_names;
+    		if (sesh==null)
+    		{
+    			taxon_names =null;
+    		} else
+    		{
+    			taxon_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
+    		}
+    		final SwingWorker<DataFile<AnnotatedTable>,Void> read_task = importer.readTableTask(taxon_names);
+    		read_task.addPropertyChangeListener(event->
+    		{
+    			if (! read_task.isCancelled()
+    					&&
+    					"state".equals(event.getPropertyName())
+    	                 && SwingWorker.StateValue.DONE == event.getNewValue())
+    			{
+    				DataFile<AnnotatedTable> table_data=null;
+//    				System.out.println("#**AF.bIT task done");
+    				try {table_data = read_task.get();} 
+    				catch (InterruptedException ignored) {}
+					catch (ExecutionException what_a_pity) 
+    				{
+						exception_handler.handle(what_a_pity, "Importing failed");						
+    				}
+    		        if (table_data != null)
+    		        {
+    		            checkTableEmpty(table_data.getContent());
+    		        	if (sesh==null)
+    		        		initSession(table_data);
+    		        	else
+    		        	{
+    		        		// no need for mapping bc readTable used the taxon name order from the main phylo
+    		        		sesh.addDataSet(table_data);
+    		        	}
+    		        }
+    			}
+    		});
+    		read_task.execute();
+    	}
+    	
     }
+    
+//    private void foregroundImportTableData()
+//    {
+//		Session sesh = getActiveSession();
+//    	ImportTable importer = new ImportTable(this);
+//    	DataFile<AnnotatedTable> table_data = null;
+//        try
+//        { 
+//        	int wantsto = JOptionPane.showConfirmDialog(this, importer, "Import family profile data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_L));
+//        	if (wantsto == JOptionPane.OK_OPTION)
+//        	{
+//        		String[] taxon_names;
+//        		if (sesh==null)
+//        		{
+//        			taxon_names =null;
+//        		} else
+//        		{
+//        			taxon_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
+//        		}
+//        		table_data = importer.readTable(taxon_names);
+//        	}
+//        } catch (IOException E)
+//        {
+//            exception_handler.handle(E, "I/O error", "File error while importing table data.");
+//        } catch (Exception E)
+//        {
+//            exception_handler.handle(E, "A bug maybe?", "Error while importing table data.");
+//        }
+//        if (table_data != null)
+//        {
+//            checkTableEmpty(table_data.getContent());
+//        	if (sesh==null)
+//        		initSession(table_data);
+//        	else
+//        	{
+//        		// no need for mapping bc readTable used the taxon name order from the main phylo
+//        		sesh.addDataSet(table_data);
+//        	}
+//        }
+//    }
     
     private void initSession(DataFile<AnnotatedTable> table_data)
     {
-        InitialTreeDialog init_dialog = new InitialTreeDialog(this, "Build initial phylogeny", table_data);
+        InitialTreeDialog init_dialog = new InitialTreeDialog(this, "Build initial phylogeny for "+table_data.getFile(), table_data);
         init_dialog.setVisible(true);
         // wait for answer
         DataFile<Phylogeny> tree_data = init_dialog.getTreeData();
@@ -1287,109 +1518,217 @@ public class AppFrame extends JFrame
     	return renamedTreeData;
     }
     
-    private void doLoadTable(boolean with_annotation_columns)
+     private void doLoadTable(boolean with_annotation_columns)
     {
         String dialog_title = (with_annotation_columns?"Open annotated family size table":"Open family size table");
-        FancyFileDialog dialog  = new FancyFileDialog(this,dialog_title,FileDialog.LOAD);
+        ShmancyFileDialog dialog  = new ShmancyFileDialog(this,dialog_title,FileDialog.LOAD,
+        		with_annotation_columns
+        				?CountActions.createLoadAnnotationsIcon(CountActions.SIZE_XL)
+        				:CountActions.createLoadTableIcon(CountActions.SIZE_XL)
+        		);
         dialog.setVisible(true);
-        
         String file_name = dialog.getFile();
         
-        if (file_name != null)
+//        // DEBUG
+//        System.out.println("#**AF.dLT "+with_annotation_columns+"\t"+file_name);
+        if (dialog.hasFile())
         {
+        	
         	Session sesh = getActiveSession();
-// BUNDLE        	
-//        	String[] terminal_names = sesh.getTreesBrowser().getLeafNames();
         	String[] terminal_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
-// BUNDLE        	
+        	String directory = dialog.getDirectory();
+        	File table_file = new File(directory, file_name);
+        	SwingWorker<DataFile<AnnotatedTable>, Void> load_task =
+        			dialog.createTask(stream->
+        			{
+        				Reader tableR = new InputStreamReader(stream);
+        				AnnotatedTable table 
+        	        	= TableParser.readTable(terminal_names,tableR, with_annotation_columns);
+//        		        // DEBUG
+//        				System.out.println("#**AF.dLT "+table.getFamilyCount()+"\tprops "+table.getKnownPropertiesCount());
+        	            checkTableEmpty(table);
+        				DataFile<AnnotatedTable> table_data = new DataFile<>(table, table_file);
+        				
+        				
+        				
+        				
+        				return table_data;
+        				
+        				
+        			});
+        	load_task.addPropertyChangeListener(event->
+    		{
+    			if (! load_task.isCancelled()
+    					&&
+    					"state".equals(event.getPropertyName())
+    	                 && SwingWorker.StateValue.DONE == event.getNewValue())   
+    			{
+    				DataFile<AnnotatedTable> table_data=null;
+//    		        // DEBUG
+//    				System.out.println("#**AF.dLT task done");
+    				try {table_data = load_task.get();} 
+    				catch (InterruptedException swallowed) {}
+    				catch (ExecutionException something_happened_that_was_not_supposed_to) 
+    				{
+    					exception_handler.handle(something_happened_that_was_not_supposed_to, "Load failed");
+    				}
+    				if (table_data!=null)
+    		            sesh.addDataSet(table_data);
+    			}
+    		});
+			load_task.execute();
+        }
+    }
+
+    
+//    private void foregroundLoadTable(boolean with_annotation_columns)
+//    {
+//        String dialog_title = (with_annotation_columns?"Open annotated family size table":"Open family size table");
+//        FancyFileDialog dialog  = new FancyFileDialog(this,dialog_title,FileDialog.LOAD);
+//        dialog.setVisible(true);
+//        
+//        String file_name = dialog.getFile();
+//        
+//        if (file_name != null)
+//        {
+//        	Session sesh = getActiveSession();
+//// BUNDLE        	
+////        	String[] terminal_names = sesh.getTreesBrowser().getLeafNames();
+//        	String[] terminal_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
+//// BUNDLE        	
+//            String directory = dialog.getDirectory();
+//            try
+//            {
+//	        	AnnotatedTable table 
+//	        	= TableParser.readTable(terminal_names, dialog.getReader(),
+////	        			GeneralizedFileReader.guessReaderForInput(directory+file_name), 
+//	        			with_annotation_columns);
+//	            checkTableEmpty(table);
+//	            DataFile<AnnotatedTable> table_data = new DataFile<>(table, new File(directory, file_name));
+//	            
+//	            sesh.addDataSet(table_data);
+//	        } catch (java.io.InterruptedIOException E)
+//	        {
+//	            // Canceled: nothing to do
+//	        } catch (java.io.IOException E)
+//	        {
+//	        	exception_handler.handle(E, "I/O error", "File error while reading occurrence table from a file.");
+//	        } catch (IllegalArgumentException E)
+//	        {
+//	        	exception_handler.handle(E, "Parsing error", "Cannot parse occurrence table in file.");
+//	        } catch (Exception E)
+//	        {
+//	        	exception_handler.handle(E, "A bug!", "Error while reading occurrence table from a file.");
+//	        }
+//        }
+//    }
+    
+    private void doLoadRates()
+    {
+    	Session sesh = getActiveSession();
+		Phylogeny main_tree = sesh.getModelBrowser().getSelectedTreeEntry().getTreeData().getContent();        				
+
+		ShmancyFileDialog dialog = new ShmancyFileDialog(this,"Load rates",FileDialog.LOAD,CountActions.createLoadRatesIcon(CountActions.SIZE_XL));
+        dialog.setVisible(true);
+
+        String file_name = dialog.getFile();
+        if (dialog.hasFile())
+        {
             String directory = dialog.getDirectory();
-            try
-            {
-	        	AnnotatedTable table 
-	        	= TableParser.readTable(terminal_names, dialog.getReader(),
-//	        			GeneralizedFileReader.guessReaderForInput(directory+file_name), 
-	        			with_annotation_columns);
-	            checkTableEmpty(table);
-	            DataFile<AnnotatedTable> table_data = new DataFile<>(table, new File(directory, file_name));
-	            
-	            sesh.addDataSet(table_data);
-	        } catch (java.io.InterruptedIOException E)
-	        {
-	            // Canceled: nothing to do
-	        } catch (java.io.IOException E)
-	        {
-	        	exception_handler.handle(E, "I/O error", "File error while reading occurrence table from a file.");
-	        } catch (IllegalArgumentException E)
-	        {
-	        	exception_handler.handle(E, "Parsing error", "Cannot parse occurrence table in file.");
-	        } catch (Exception E)
-	        {
-	        	exception_handler.handle(E, "A bug!", "Error while reading occurrence table from a file.");
-	        }
+            File rates_file = new File(directory,file_name);
+            SwingWorker<DataFile<MixedRateModel>, Void> load_task = dialog.createTask(stream->
+    			{                
+    				BufferedReader ratesR = new BufferedReader(new InputStreamReader(stream));
+    				MixedRateModel rate_model = RateVariationParser.readModel(ratesR, main_tree);
+    				DataFile<MixedRateModel> rates_data = new DataFile<>(rate_model, rates_file);
+    				return rates_data;
+    			});
+            load_task.addPropertyChangeListener(event->
+    		{
+    			if (! load_task.isCancelled()
+    					&&
+    					"state".equals(event.getPropertyName())
+    	                 && SwingWorker.StateValue.DONE == event.getNewValue())   
+    			{
+    				DataFile<MixedRateModel> rates_data=null;
+//    				System.out.println("#**AF.bIT task done");
+    				try {rates_data = load_task.get();} 
+    				catch (InterruptedException ignored) {}
+    				catch (ExecutionException bummer) 
+    				{
+    					exception_handler.handle(bummer, "Loading failed");    					
+    				}
+    				if (rates_data!=null)
+    				{
+    					sesh.addRates(rates_data, true);    					
+    				}
+    			}
+    		});
+            load_task.execute();
         }
     }
     
-	private void doLoadRates(Reader R)
-    {
-        File rates_file = null;
-        if (R==null)
-        {
-            FancyFileDialog dialog = null;
-            dialog = new FancyFileDialog(this,"Load rates",FileDialog.LOAD);
-            dialog.setVisible(true);
-
-            String file_name = dialog.getFile();
-            String directory = dialog.getDirectory();
-            if (file_name != null)
-            {
-                try 
-                {
-                    rates_file = new File(directory,file_name);
-//                    FileInputStream file_input = new FileInputStream(rates_file);
-                    R = dialog.getReader(); //  new InputStreamReader(file_input);
-                } catch (java.io.IOException E)
-                {
-                    exception_handler.handle(E, "I/O error", "Cannot open rates file.");
-                }
-            }
-        }
-        if (R != null)
-        {
-            GammaInvariant rate_model=null;
-        	Session sesh = getActiveSession();
-            try 
-            {
-// BUNDLE            	
-//            	IndexedTree main_tree = sesh.getTreesBrowser().getSelectedTree().getTreeData().getContent();
-            	Phylogeny main_tree = sesh.getModelBrowser().getSelectedTreeEntry().getTreeData().getContent();
-// BUNDLE            	
-                rate_model = RateVariationParser.readRates(new BufferedReader(R), main_tree);
-                R.close();
-            } catch (java.io.InterruptedIOException E)
-            {
-                // canceled
-                rate_model = null;
-            } catch (RateVariationParser.FileFormatException E)
-            {
-                rate_model = null;
-                exception_handler.handle(E, "I/O error", "Badly formatted rates file.");
-            }
-            catch (java.io.IOException E)
-            {
-                rate_model = null;
-                exception_handler.handle(E, "I/O error", "File error while reading rates from a file.");
-            } catch (Exception E)
-            {
-                rate_model = null;
-                exception_handler.handle(E, "A bug maybe?", "Error while reading rates from a file.");
-            }
-            if (rate_model != null)
-            {
-                DataFile<GammaInvariant> rates_data = new DataFile<>(rate_model, rates_file);
-                sesh.addRates(rates_data, true);
-            } 
-        } // file_name 		
-    }
+//	private void foregroundLoadRates(BufferedReader R)
+//    {
+//        File rates_file = null;
+//        if (R==null)
+//        {
+//            FancyFileDialog dialog = null;
+//            dialog = new FancyFileDialog(this,"Load rates",FileDialog.LOAD);
+//            dialog.setVisible(true);
+//
+//            String file_name = dialog.getFile();
+//            String directory = dialog.getDirectory();
+//            if (file_name != null)
+//            {
+//                try 
+//                {
+//                    rates_file = new File(directory,file_name);
+////                    FileInputStream file_input = new FileInputStream(rates_file);
+//                    R = dialog.getBufferedReader(); //  new InputStreamReader(file_input);
+//                } catch (java.io.IOException E)
+//                {
+//                    exception_handler.handle(E, "I/O error", "Cannot open rates file.");
+//                }
+//            }
+//        }
+//        if (R != null)
+//        {
+//            GammaInvariant rate_model=null;
+//        	Session sesh = getActiveSession();
+//            try 
+//            {
+//// BUNDLE            	
+////            	IndexedTree main_tree = sesh.getTreesBrowser().getSelectedTree().getTreeData().getContent();
+//            	Phylogeny main_tree = sesh.getModelBrowser().getSelectedTreeEntry().getTreeData().getContent();
+//// BUNDLE            	
+//                rate_model = RateVariationParser.readRates(R, main_tree);
+//                R.close();
+//            } catch (java.io.InterruptedIOException E)
+//            {
+//                // canceled
+//                rate_model = null;
+//            } catch (RateVariationParser.FileFormatException E)
+//            {
+//                rate_model = null;
+//                exception_handler.handle(E, "I/O error", "Badly formatted rates file.");
+//            }
+//            catch (java.io.IOException E)
+//            {
+//                rate_model = null;
+//                exception_handler.handle(E, "I/O error", "File error while reading rates from a file.");
+//            } catch (Exception E)
+//            {
+//                rate_model = null;
+//                exception_handler.handle(E, "A bug maybe?", "Error while reading rates from a file.");
+//            }
+//            if (rate_model != null)
+//            {
+//                DataFile<GammaInvariant> rates_data = new DataFile<>(rate_model, rates_file);
+//                sesh.addRates(rates_data, true);
+//            } 
+//        } // file_name 		
+//    }
     
     private void checkTableEmpty(AnnotatedTable table)
     {

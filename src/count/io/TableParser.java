@@ -15,6 +15,8 @@ package count.io;
  * limitations under the License.
  */
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -81,7 +83,9 @@ public class TableParser
         List<String> parsed_family_names = new ArrayList<>();
         List<List<String>> parsed_family_properties = new ArrayList<>();
 
-        BufferedReader R=new BufferedReader(reader);
+        BufferedReader R	= (reader instanceof BufferedReader)
+        					?(BufferedReader)reader
+        					:new BufferedReader(reader);
         String line;
         int[] taxon_order = null; // how to permute the columns to match terminal_taxa: -1 denotes unknown
         do 
@@ -125,7 +129,10 @@ public class TableParser
 	                    {
 	                        taxon_order[j-1]=-1;
 	                        if (includes_properties)
-	                            property_names_in_input.add(fields[j]);
+	                        {	
+	                        	String prop_name = "".equals(fields[j])?"column"+Integer.toString(j):fields[j];
+	                            property_names_in_input.add(prop_name);
+	                        }
 	                    }
 	                }
                 }
@@ -164,6 +171,10 @@ public class TableParser
         
         R.close();
         table.setTable(parsed_sizes.toArray(new int[0][]),parsed_family_names.toArray(new String[0]));
+        
+//        // DEBUG
+//        System.out.println("#**TP.rT nF "+parsed_sizes.size()+"\tnames "+parsed_family_names.size()
+//        		+"\tprops "+property_names_in_input.size());
         
         if (includes_properties)
         {
@@ -233,7 +244,7 @@ public class TableParser
 	public static AnnotatedTable readMembershipData(BufferedReader table_reader
 			, Map<String,String> genome_id, boolean unique) throws IOException
 	{
-		return readMembershipData(table_reader, 0, 1, 6, genome_id, null, unique);
+		return readMembershipData(table_reader, 0, 1, 6, 7, 3, genome_id, null, unique);
 	}
 	
 	
@@ -242,21 +253,26 @@ public class TableParser
 	 * Generic parsing for COG-style data table: 1 gene-family membership per line.  
 	 * 
 	 * @param table_reader
-	 * @param column_separator
 	 * @param gene_column
 	 * @param genome_column
 	 * @param family_column
-	 * @param genome_id
-	 * @param unique
+	 * @param membership_column column for membership type (0-3), set to -1 if unused
+	 * @param max_membership maximum membership type for inclusion
+	 * @param genome_id mapping for genome ids to taxon ids (shared between table and phylogeny); null if identity mapping
+	 * @param unique whether only first gene annotation is kept
 	 * @return
 	 * @throws IOException
 	 */
 	public static AnnotatedTable readMembershipData(BufferedReader table_reader
 			, int gene_column, int genome_column, int family_column
+			, int membership_column
+			, int max_membership
 			, Map<String,String> genome_id
 			, String[] selected_taxa
 			, boolean unique) throws IOException
 	{
+		// TODO add membership column 
+		
 		
 		boolean ident_genome_id = genome_id == null;
 		final Map<String,Integer> terminal_taxa = new HashMap<>();
@@ -316,14 +332,23 @@ public class TableParser
             {
             	fields = line.split(separator);
             }
-            String family = fields[family_column];
             String gene_id = fields[gene_column];
             String genome = fields[genome_column];
+            String family = null;
+            if (family_column<fields.length)
+            	family=fields[family_column];
+            int member = 0;
+            if (0<= membership_column && membership_column<fields.length)
+            {
+            	member = Integer.parseInt(fields[membership_column]);
+            }
             
             if (unique && gene_family_memberships.containsKey(gene_id))
             	continue;
+            if (max_membership < member)
+            	continue;
 
-            if (family == null)
+            if (family == null || "".equals(family))
             {
             	num_orphan_genes++;
             	bstream.reset();
@@ -404,6 +429,132 @@ public class TableParser
 		
 		return readMembershipData;
 	}
+	
+
+	
+	/**
+	 * 
+	 * 
+	 * Match class 0: footprint covers most of the protein and most of domain
+	 * Match class 1: footprint covers most of the domain and part of the protein
+	 * Match class 2: footprint covers most of the protein and part of the domain
+	 * Match class 3: partial match on both protein and domain
+	 * 
+	 * Match class 0 and 1 are immediate evidence of domain occurrence, each increment the copy number 
+	 * Match class 2 is an evidence of copy number 1 
+	 * Match class 3 is partial: multiple hits are combined into a single occurrence but only if  
+	 * 
+	 * @param table_reader
+	 * @param gene_column
+	 * @param genome_column
+	 * @param family_column
+	 * @param match_class_column
+	 * @param genome_id
+	 * @param selected_taxa
+	 * @param unique
+	 * @return
+	 * @throws IOException
+	 */
+	
+//	public static AnnotatedTable readCOGData(BufferedReader table_reader
+//			, int gene_column, int genome_column, int family_column, int match_class_column
+//			, Map<String,String> genome_id
+//			, String[] selected_taxa
+//			, boolean unique) throws IOException
+//	{
+//		boolean ident_genome_id = genome_id == null;
+//		final Map<String,Integer> terminal_taxa = new HashMap<>();
+//		int num_genomes = 0;
+//		if (ident_genome_id)
+//		{
+//			genome_id = new HashMap<>(); // we'll fill it up
+//		} else if (selected_taxa==null)
+//		{
+//			for (String txid: genome_id.values())
+//			{
+//				terminal_taxa.put(txid, num_genomes++);
+//			}
+//		}
+//		if (selected_taxa != null)
+//		{
+//			num_genomes = selected_taxa.length;
+//			for (int t=0; t<num_genomes; t++)
+//			{
+//				terminal_taxa.put(selected_taxa[t], t);
+//			}
+//		}
+//		
+//		// family copy numbers
+//		Map<String, int[]> family_profiles = new HashMap<>();
+//		Map<String,String> gene_family_memberships = new HashMap<>(); // tracking multiple annotations for same gene
+//		
+//		// naming orphan genes
+//		int num_orphan_genes = 0;
+//    	ByteArrayOutputStream bstream = new ByteArrayOutputStream(256);
+//    	PrintStream orphan_name_formatter = new PrintStream(bstream);
+//
+//		String separator = null;
+//		String line;
+//		do
+//		{
+//			line = table_reader.readLine();
+//            if (line == null || line.trim().length()==0 || line.startsWith("#"))
+//                continue;
+//            String[] fields;
+//            if (separator == null)
+//            {
+//            	String[] tfields = line.split("\t");
+//            	String[] cfields = line.split(",");
+//            	if (tfields.length<cfields.length)
+//            	{
+//            		separator = ",";
+//            		fields = cfields;
+//            	} else if (1<tfields.length)
+//            	{
+//            		separator = "\t";
+//            		fields = tfields;
+//            	} else
+//            	{
+//            		throw new IOException("Cannot determine table format: neither tab-, nor comma-separated.");
+//            	}
+//            } else
+//            {
+//            	fields = line.split(separator);
+//            }
+//            String gene_id = fields[gene_column];
+//            String genome = fields[genome_column];
+//        	int match_class = 0;
+//        	if (0<=match_class_column && match_class_column<fields.length)
+//        	{
+//        		match_class = Integer.parseInt(fields[match_class_column]);
+//        	}
+//            String family = null;
+//            if (family_column<fields.length)
+//            	family=fields[family_column];
+//            if (family == null || "".equals(family))
+//            {
+//            	num_orphan_genes++;
+//            	bstream.reset();
+//            	orphan_name_formatter.printf("orphan%05d", num_orphan_genes);
+//            	family = bstream.toString();
+//            }
+//            int[] copies;
+//        	if (family_profiles.containsKey(family))
+//        	{
+//        		copies = family_profiles.get(family);
+//        	} else
+//        	{
+//        		copies = new int[num_genomes];
+//        	}
+//        	gene_family_memberships.put(gene_id, family);
+//        	family_profiles.put(family, copies);
+//        	
+//            
+//            
+//		} while (line != null); 	
+//    	
+//	
+//	}
 	
 	/**
 	 * Parses MCL-style data of clustering results: enumerated members in each line 
@@ -812,37 +963,44 @@ public class TableParser
     	return table;
     }
     
-	
+	public static void printFormattedTable(PrintStream out, AnnotatedTable table, boolean include_properties)
+	{
+		StringBuilder sb = appendFormattedTableRow(null, -1, table, include_properties); // header
+		out.println(sb.toString());
+    	for (int i=0; i<table.getFamilyCount(); i++)
+    	{
+    		sb.setLength(0); // clear
+    		sb = appendFormattedTableRow(sb, i, table, include_properties);
+    		out.println(sb.toString());
+    	}
+	}
 
-    /**
-     * Calculates a string representation of the table data.
-     * 
-     * @param include_properties
-     * @return 
-     */
-    public static String getFormattedTable(AnnotatedTable table, boolean include_properties)
+    private static StringBuilder appendFormattedTableRow(StringBuilder sb, int row, AnnotatedTable table, boolean include_properties)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(AnnotatedTable.FAMILY_NAME_PROPERTY);
-        if (include_properties)
-        {
-            for (int prop_idx=1; prop_idx<table.getKnownPropertiesCount(); prop_idx++)
+    	if (sb==null) sb = new StringBuilder();
+    	if (row==-1)
+    	{
+            sb.append(AnnotatedTable.FAMILY_NAME_PROPERTY);
+            if (include_properties)
             {
-                sb.append('\t');
-                sb.append(table.getPropertyName(prop_idx));
+                for (int prop_idx=1; prop_idx<table.getKnownPropertiesCount(); prop_idx++)
+                {
+                    sb.append('\t');
+                    sb.append(table.getPropertyName(prop_idx));
+                }
             }
-        }
-        String[] taxon_names = table.getTaxonNames();
-        
-        for (int j=0; j<taxon_names.length; j++)
-        {
-            sb.append("\t");
-            sb.append(taxon_names[j]);
-        }
-        sb.append("\n");
-        int num_properties = table.getKnownPropertiesCount();
-        for (int i=0; i<table.getFamilyCount(); i++)
-        {
+            String[] taxon_names = table.getTaxonNames();
+            
+            for (int j=0; j<taxon_names.length; j++)
+            {
+                sb.append("\t");
+                sb.append(taxon_names[j]);
+            }
+    	} else
+    	{
+    		assert (0 <= row);
+    		int i = row;
+            int num_properties = table.getKnownPropertiesCount();
             sb.append(table.getFamilyName(i));
             if (include_properties)
             {
@@ -854,7 +1012,7 @@ public class TableParser
             }
             final int[] profile = table.getFamilyProfile(i);
             
-            for (int j=0; j<taxon_names.length; j++)
+            for (int j=0; j<profile.length; j++)
             {
                 sb.append("\t");
                 if (profile[j]<0)
@@ -862,8 +1020,69 @@ public class TableParser
                 else
                     sb.append(Integer.toString(profile[j]));
             }
-            sb.append("\n");
-        }
+    	}
+    	return sb;
+    }
+	
+    /**
+     * Calculates a string representation of the table data.
+     * 
+     * @param include_properties
+     * @return 
+     */
+    public static String getFormattedTable(AnnotatedTable table, boolean include_properties)
+    {
+
+//        StringBuilder sb = new StringBuilder();
+//        sb.append(AnnotatedTable.FAMILY_NAME_PROPERTY);
+//        if (include_properties)
+//        {
+//            for (int prop_idx=1; prop_idx<table.getKnownPropertiesCount(); prop_idx++)
+//            {
+//                sb.append('\t');
+//                sb.append(table.getPropertyName(prop_idx));
+//            }
+//        }
+//        String[] taxon_names = table.getTaxonNames();
+//        for (int j=0; j<taxon_names.length; j++)
+//        {
+//            sb.append("\t");
+//            sb.append(taxon_names[j]);
+//        }
+//        sb.append("\n");
+//        int num_properties = table.getKnownPropertiesCount();
+    	
+    	StringBuilder sb = appendFormattedTableRow(null, -1, table, include_properties); // header
+    	for (int i=0; i<table.getFamilyCount(); i++)
+    	{
+    		
+    		sb = appendFormattedTableRow(sb.append("\n"), i, table, include_properties);
+    	}
+    	sb.append("\n");
+//    	
+//        for (int i=0; i<table.getFamilyCount(); i++)
+//        {
+//            sb.append(table.getFamilyName(i));
+//            if (include_properties)
+//            {
+//                for (int prop_idx=1; prop_idx<num_properties; prop_idx++)
+//                {
+//                    sb.append('\t');
+//                    sb.append(table.getFamilyProperty(i,prop_idx));
+//                }
+//            }
+//            final int[] profile = table.getFamilyProfile(i);
+//            
+//            for (int j=0; j<taxon_names.length; j++)
+//            {
+//                sb.append("\t");
+//                if (profile[j]<0)
+//                    sb.append(MISSING_ENTRY);
+//                else
+//                    sb.append(Integer.toString(profile[j]));
+//            }
+//            sb.append("\n");
+//        }
         return sb.toString();
     }
     
@@ -975,15 +1194,41 @@ public class TableParser
         out.println(getFormattedTable(table, true));
      }
 
-    /**
-     * Test code --- reads a phylogeny and a table, and then writes them to stdout.
-     * @param args command line arguments
-     */
-    public static void main(String[] args) throws Exception
-    {
-    	TableParser T = new TableParser();
-//        T.testTableAndTree(args);
-        T.testEggNOGMembers(args);
-    }
+//    /**
+//     * Test code --- reads a phylogeny and a table, and then writes them to stdout.
+//     * @param args command line arguments
+//     */
+//    public static void main(String[] args) throws Exception
+//    {
+//    	TableParser T = new TableParser();
+////        T.testTableAndTree(args);
+//        T.testEggNOGMembers(args);
+//    }
 
+	public static void main(String[] args) throws Exception
+	{
+		Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		count.io.CommandLine cli = new count.io.CommandLine(args, our_class, 1);
+		
+		PrintStream out = System.out;
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	    out.println(CommandLine.getStandardHeader(our_class));
+    	    out.println(CommandLine.getStandardRuntimeInfo(our_class, args));
+    	}
+
+        Phylogeny tree = cli.getTree();
+    	
+		if (out != System.out)
+		{
+			if (out.checkError())
+				throw new java.io.IOException("Write failed.");
+			out.close();
+		}
+		
+	}
+    
+    
 }

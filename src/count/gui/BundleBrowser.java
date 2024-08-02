@@ -43,8 +43,7 @@ import count.io.CountXML;
 import count.io.DataFile;
 import count.io.ModelBundle;
 import count.io.ModelBundle.Entry;
-import count.io.Removable;
-import count.model.GammaInvariant;
+import count.model.MixedRateModel;
 
 /**
  * GUI component (JPanel with JSplitPane) for displaying a 
@@ -453,10 +452,12 @@ public class BundleBrowser extends JPanel
 		Node addTree = parent.addTree(tree_data);
 		item_browser.setSelectedNode(addTree);
 		item_browser.requestFocus();
+		
+		
 		return addTree.getComponent();
 	}
 	
-	public JComponent addRates(DataFile<GammaInvariant> rates_data, boolean at_root)
+	public JComponent addRates(DataFile<MixedRateModel> rates_data, boolean at_root)
 	{
 		return addRates(rates_data, null, at_root);
 //		Node parent = at_root?getSelectedNode(TREES):getSelectedNode(RATES);
@@ -479,7 +480,7 @@ public class BundleBrowser extends JPanel
 //		return addRates.getComponent();
 	}
 	
-	private JComponent addRates(DataFile<GammaInvariant> rates_data, RateVariationPanel rates_panel, boolean at_root)
+	private JComponent addRates(DataFile<MixedRateModel> rates_data, RateVariationPanel rates_panel, boolean at_root)
 	{
 		if (rates_data==null)
 			rates_data = rates_panel.getDataFile();
@@ -508,10 +509,10 @@ public class BundleBrowser extends JPanel
 		return addHistoryItem.getComponent();
 	}
 	
-	public void decorateByMainTree(TreePanel panel)
-	{
-		item_browser.decorateByMainTree(panel);
-	}
+//	public void decorateByMainTree(TreePanel panel)
+//	{
+//		item_browser.decorateByMainTree(panel);
+//	}
 //    
     
     

@@ -148,7 +148,7 @@ public class TreeEditDialog extends JDialog
         TreeManipulator edit_this = new TreeManipulator(copy, tree_layout);
         
 // BUNDLE        
-        main_application.getActiveSession().getModelBrowser().decorateByMainTree(edit_this);
+        main_application.getActiveSession().getModelBrowser().getBrowserComponent().decorateByMainTree(edit_this);
         
         Zoom<TreeManipulator> zumm = new Zoom<>(edit_this);
         edit_this.setupControlBar(zumm.getControlBar());

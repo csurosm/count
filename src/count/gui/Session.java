@@ -20,24 +20,29 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.FileDialog;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
-
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.SwingWorker;
 import javax.swing.event.ChangeListener;
+import javax.swing.plaf.metal.MetalProgressBarUI;
 
 import count.io.CountXML;
 import count.io.DataFile;
@@ -46,8 +51,10 @@ import count.io.SavableData;
 import count.io.ExportableData;
 import count.io.Removable;
 import count.model.GammaInvariant;
+import count.model.MixedRateModel;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
+import count.gui.kit.ShmancyFileDialog;
 
 
 /**
@@ -64,7 +71,7 @@ public class Session extends JSplitPane
     public static final Color WORKTAB_RATES_COLOR = new Color(250,78,25);
 
     
-    public static final Color WORKTAB_TREES_BACKGROUND = new Color(240,240,240); //   Color(240,255,240);
+    public static final Color WORKTAB_TREES_BACKGROUND = new Color(204,204,204); //  new Color(240,240,240); //   Color(240,255,240);
     public static final Color WORKTAB_DATA_BACKGROUND = WORKTAB_TREES_BACKGROUND;  //new Color(255,240,255);
     public static final Color WORKTAB_RATES_BACKGROUND = WORKTAB_TREES_BACKGROUND;//   new Color(255,240,240);
     
@@ -351,14 +358,38 @@ public class Session extends JSplitPane
 // BUNDLE
 //    	AnnotatedTablePanel TP = new AnnotatedTablePanel(table_data);
 //      data_browser.addTopItem(TP);
-    	data_browser.addTable(table_data, true);
+    	
+//		// color for the profiles
+//		JComponent selected_tree_embedding_panel =  getModelBrowser().getBrowserComponent().getSelectedNode(BundleTree.TREES).getComponent();
+//    	if (selected_tree_embedding_panel instanceof Zoom<?>)
+//    	{
+//    		Zoom<? extends TreePanel> zum = (Zoom<? extends TreePanel>) selected_tree_embedding_panel;
+//    		TreePanel tree_panel = zum.getTreePanel();
+//    		int num_leaves = model_browser.getMainPhylogeny().getNumLeaves();
+//    		for (int leaf=0; leaf<num_leaves; leaf++)
+//    		{
+//    			
+//    		}
+//    	}
+		
+		
+		
+    	JComponent table_component = data_browser.addTable(table_data, true);
+    	if (table_component instanceof AnnotatedTablePanel)
+    	{
+    		AnnotatedTablePanel table_panel = (AnnotatedTablePanel) table_component;
+    		table_panel.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());
+    	} else
+    	{
+    		throw new UnsupportedOperationException("Expecting "+AnnotatedTablePanel.class+"; got "+table_component.getClass());
+    	}
         work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     }
     
     /**
      * Adds a new GammaInvariant model to the rates browser.
      */
-    public void addRates(DataFile<GammaInvariant> rates_data, boolean add_at_top)
+    public void addRates(DataFile<MixedRateModel> rates_data, boolean add_at_top)
     {
 // BUNDLE
 //        RateVariationPanel RP = new RateVariationPanel(rates_data);
@@ -747,16 +778,20 @@ public class Session extends JSplitPane
         }
     }		
     
+    /**
+     * Called when selection changes between model and data. 
+     */
     private void colorBrowserBackgrounds()
     {
 		int tab_idx= work_area.getSelectedIndex();
 		for (int ci=0; ci<browser_area.getComponentCount(); ci++)
 		{
-			JComponent browser = (JComponent)((JScrollPane ) browser_area.getComponent(ci)).getViewport().getView();		        		
+			BundleTree browser = (BundleTree)((JScrollPane ) browser_area.getComponent(ci)).getViewport().getView();		        		
 			if (ci==tab_idx)
 				browser.setBackground(Color.WHITE);
 			else
 				browser.setBackground(WORKTAB_TREES_BACKGROUND);
+			browser.repaint();
 		}
     }
     
@@ -890,6 +925,8 @@ public class Session extends JSplitPane
     	data_browser.addHistoryItem(D, phylo_entry, null);
 //    	D.computeAll();
     	// BUNDLE
+    	D.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());    	
+
     	work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     }
     
@@ -911,6 +948,7 @@ public class Session extends JSplitPane
     	data_browser.addHistoryItem(P, phylo_entry, null);
 //    	P.computeAll();
 // BUNDLE
+    	P.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());    	
     	work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     }
     
@@ -929,6 +967,7 @@ public class Session extends JSplitPane
 //    		P.computeAll();
     		
 // BUNDLE
+    		P.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());
 	    	work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     	}
     	
@@ -958,7 +997,8 @@ public class Session extends JSplitPane
     		data_browser.addHistoryItem(S, null, rate_entry);
 //    		S.computeAll();
 // BUNDLE
-//    		work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
+        	S.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());    	
+    		work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     	}
     }
     
@@ -966,27 +1006,42 @@ public class Session extends JSplitPane
     public void doSaveData()
     {
     	Object selected = getSelectedComponent();
-    	String action_name=null;
+    	final String action_name;
     	String file_name = null;
     	String directory = null;
-    	SavableData<?> selected_savable=null;
-    	ExportableData selected_exportable=null;
+    	final SavableData<?> selected_savable;
+    	final ExportableData selected_exportable;
+    	
     	if (selected instanceof SavableData)
     	{
+    		selected_exportable = null;
     		selected_savable = (SavableData)selected;
     		File data_file = selected_savable.getDataFile().getFile();
     		action_name = "Save";
+    		
     		
     		file_name = data_file.getName();
     		directory = data_file.getParent();
     	} else if (selected instanceof ExportableData)
     	{
     		selected_exportable = (ExportableData) selected;
+    		selected_savable = null;
     		action_name = "Export";
+    	} else
+    	{
+    		assert(false); // should never get here, but final variables need this branch 
+    		action_name = null;
+    		selected_exportable = null;
+    		selected_savable = null;
     	}
+//		System.out.println("#**S.dSV start "+action_name+"\tsav "+selected_savable+"\texp "+selected_exportable);
+    	
+    	
     	if (action_name != null)
     	{
-    		FileDialog dialog = new FileDialog((java.awt.Frame)getTopLevelAncestor(), action_name+" \""+selected.toString()+"\"" , FileDialog.SAVE);
+    		
+    		// TODO : use progress monitor on save
+    		FileDialog dialog = new FileDialog(app, action_name+" \""+selected.toString()+"\"" , FileDialog.SAVE);
 			if (file_name!=null)
 				dialog.setName(file_name);
     		if (directory !=null)
@@ -996,26 +1051,103 @@ public class Session extends JSplitPane
             directory = dialog.getDirectory();                
     		if (file_name != null)
     		{
-                try 
+                final File save_file = new File(directory, file_name); 
+    			
+    			
+                final JDialog wait_until_saved = new JDialog(app,dialog.getTitle(),true);
+                BoxLayout saving_layout = new BoxLayout(wait_until_saved.getContentPane(),BoxLayout.PAGE_AXIS);
+                wait_until_saved.getContentPane().setLayout(saving_layout);
+                wait_until_saved.add(Box.createVerticalGlue());
+                wait_until_saved.add(new JLabel("Writing data to disk: please wait ..."));
+                JProgressBar progress = new JProgressBar(0,100);
+                
+                
+                progress.setUI(new javax.swing.plaf.metal.MetalProgressBarUI());
+                progress.setIndeterminate(true); // does not animate
+            	progress.setVisible(true);
+            	progress.setStringPainted(true);
+
+                Box progress_box = new Box(BoxLayout.LINE_AXIS);
+                progress_box.add(Box.createHorizontalStrut(12));
+                progress_box.add(progress);
+                progress_box.add(Box.createHorizontalStrut(12));
+                wait_until_saved.add(progress_box);
+                wait_until_saved.add(Box.createVerticalGlue());
+
+                SwingWorker<Void,Void> save_worker = new SwingWorker<Void,Void>()
                 {
-	    			if (selected instanceof SavableData)
-	    			{
-	                    File save_file = new File(directory, file_name); 
-	                    selected_savable.saveData(save_file);
-	    			} else if (selected instanceof ExportableData)
-	    			{
-	    				File save_file = new File(directory, file_name);
-	    				selected_exportable.saveData(save_file);
-                    } 
-                } catch (IOException trouble)
-                {
-                    app.getExceptionHandler().handle(trouble, "I/O error", "Error while writing data.");
-                }
+                    @Override
+                    public Void doInBackground()
+                    {
+                        try 
+                        {
+                        	progress.setValue(0);                        	
+    		    			if (selected instanceof SavableData)
+    		    			{
+    		                    selected_savable.saveData(save_file);
+    		    			} else if (selected instanceof ExportableData)
+    		    			{
+    		    				selected_exportable.saveData(save_file);
+    	                    } 
+                        }
+                        catch (java.io.IOException E)
+                        {
+                        	app.getExceptionHandler().handle(E, "I/O error", "File error while "+action_name+"ing data.");
+                        } catch (Exception E)
+                        {
+                        	app.getExceptionHandler().handle(E, "A bug maybe?", "Error while "+action_name+"ing data.");
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    public void done()
+                    {
+                        wait_until_saved.setVisible(false);
+                        app.setTitle(getSessionTitle());   
+                    }    
+                }; 
+                wait_until_saved.pack();
+                java.awt.Dimension frameD = app.getSize();
+                wait_until_saved.setBounds(frameD.width/3, frameD.height/3, frameD.width/3, frameD.height/6);
+                save_worker.execute();
+                wait_until_saved.setVisible(true);             			
+
+//                try 
+//                {
+//	    			if (selected instanceof SavableData)
+//	    			{
+//	                    File save_file = new File(directory, file_name); 
+//	                    selected_savable.saveData(save_file);
+//	    			} else if (selected instanceof ExportableData)
+//	    			{
+//	    				File save_file = new File(directory, file_name);
+//	    				selected_exportable.saveData(save_file);
+//                    } 
+//	    			
+////	    			System.out.println("#**S.dSV action "+action_name+"\tfile "+file_name);
+//                } catch (IOException trouble)
+//                {
+//                    app.getExceptionHandler().handle(trouble, "I/O error", "Error while writing data.");
+//                }
     		}
+//			System.out.println("#**S.dSV done "+action_name+"\tfile "+file_name);
     	}
     }
     
-    public void doRemoveItem()
+    public boolean isSelectedRemovable()
+    {
+    	BundleBrowser selected_browser = getSelectedBrowser();
+    	boolean isSelectedRemovable = false;
+    	if (selected_browser != null)
+    	{
+    		isSelectedRemovable = selected_browser.getSelectedItem()!=null
+    				 && !selected_browser.isMainTreeSelected();
+    	}
+    	return isSelectedRemovable;
+    }
+    
+    public BundleBrowser getSelectedBrowser()
     {
     	BundleBrowser selected_browser = null;
     	if (work_area.getSelectedIndex() == work_area.indexOfTab(DATA_PANEL))
@@ -1025,10 +1157,22 @@ public class Session extends JSplitPane
     	{
     		selected_browser = model_browser;
     	}
+    	return selected_browser;
+
+    	
+    }
+    
+    public void doRemoveItem()
+    {
+    	BundleBrowser selected_browser = getSelectedBrowser();
     	
     	if (selected_browser != null)
     	{
         	Object selected = getSelectedComponent();
+        	if (selected != selected_browser.getSelectedItem())
+        	{ // DEBUG
+        		System.out.println("#**S.dRI selected "+selected+"\titem "+selected_browser.getSelectedItem());
+        	}
         	assert (selected == selected_browser.getSelectedItem());
         	if (selected_browser.isMainTreeSelected())
         	{

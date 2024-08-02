@@ -101,7 +101,7 @@ public class CountTools extends JToolBar implements ChangeListener
 	};
 	public static final Predicate<AppFrame> IS_SELECTED_SAVABLE = app->(app.getActiveSession()!=null && app.getActiveSession().getSelectedComponent() instanceof SavableData);
 	public static final Predicate<AppFrame> IS_SELECTED_EXPORTABLE = app->(app.getActiveSession()!=null && app.getActiveSession().getSelectedComponent() instanceof ExportableData);
-	public static final Predicate<AppFrame> IS_SELECTED_REMOVABLE = app->(app.getActiveSession()!=null && app.getActiveSession().getSelectedComponent() instanceof Removable);
+	public static final Predicate<AppFrame> IS_SELECTED_REMOVABLE = app->(app.getActiveSession()!=null && app.getActiveSession().isSelectedRemovable());
 	
 	private JButton addAction(Action action, Predicate<AppFrame> enabler)
 	{
@@ -208,7 +208,7 @@ public class CountTools extends JToolBar implements ChangeListener
 	public JButton addOptimizeRates(String name, ActionListener do_it)
 	{
 		Action optimizeRates = CountActions.createOptimizeRates(name, do_it);
-		return addAction(optimizeRates, HAS_SELECTED_TABLE);
+		return addAction(optimizeRates, HAS_SELECTED_TABLE.and(Predicate.not(HAS_SELECTED_BINARY)));
 	}
 	public JButton addDollo(String name, ActionListener do_it)
 	{
@@ -223,17 +223,23 @@ public class CountTools extends JToolBar implements ChangeListener
 	public JButton addPosteriors(String name, ActionListener do_it)
 	{
 		Action posteriors = CountActions.createPosteriors(name, do_it);
-		return addAction(posteriors, HAS_SELECTED_TABLE.and(HAS_SELECTED_RATES));
+		return addAction(posteriors, HAS_SELECTED_TABLE.and(Predicate.not(HAS_SELECTED_BINARY)).and(HAS_SELECTED_RATES));
 	}
 	public JButton addRemove(String name, ActionListener do_it)
 	{
 		Action remove = CountActions.createRemove(name, do_it);
-		return addAction(remove, HAS_ACTIVE_SESSION);
+		return addAction(remove, IS_SELECTED_REMOVABLE);
 	}
 	public JButton addSave(String name, ActionListener do_it)
 	{
 		Action save = CountActions.createSave(name, do_it);
 		return addAction(save, IS_SELECTED_SAVABLE.or(IS_SELECTED_EXPORTABLE));
+	}
+	
+	public JButton addQuit(String name, ActionListener do_it)
+	{
+		Action quit = CountActions.createQuit(name, do_it);
+		return addAction(quit, always->true);
 	}
 	
 	/**
