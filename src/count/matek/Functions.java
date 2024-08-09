@@ -15,6 +15,8 @@
  */
 package count.matek;
 
+import java.util.Arrays;
+
 /**
  * Some functions adapted from Numerical Recipes, and other useful calculations.
  *
@@ -137,6 +139,7 @@ public class Functions
 		
 		public RisingFactorial(double offset, int capacity)
 		{
+			capacity = Integer.max(MAX_DIRECTLY_COMPUTED_FACTORIAL, capacity); // some are precalculated anyway
 			this.offset = offset; 
 			this.log_offset = Math.log(offset);
 			precomputed_rising = new double[capacity];
@@ -201,6 +204,23 @@ public class Functions
 				double f = gammln(offset+n)-gammln_offset;
 				return f;
 			}
+		}
+		
+		/**
+		 * Debugging info
+		 */
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append(getClass().getSimpleName()).append("[");
+			sb.append("offset=").append(offset);
+			sb.append(", log=").append(log_offset);
+			sb.append(", gammaln=").append(gammln_offset);
+			sb.append("; pre=").append(Arrays.toString(precomputed_rising));
+			sb.append("]");
+			return sb.toString();
+			
 		}
 	}
     

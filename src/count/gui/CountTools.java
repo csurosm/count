@@ -22,18 +22,16 @@ import java.util.Map;
 import java.util.HashMap;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
 
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
-import count.gui.BundleTree.Node;
 import count.gui.kit.CountActions;
 import count.io.SavableData;
 import count.io.ExportableData;
-import count.io.Removable;
+//import count.io.Removable;
 import count.io.ModelBundle;
 
 /**

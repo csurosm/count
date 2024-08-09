@@ -35,7 +35,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.List;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -47,7 +46,6 @@ import javax.swing.event.ListSelectionEvent;
 
 import count.ds.IndexedTree;
 import count.ds.TreeTraversal;
-import count.gui.TreePanel.DisplayedNode;
 import count.gui.kit.BoxIcon;
 import count.gui.kit.DiamondIcon;
 import count.gui.kit.DiscIcon;
@@ -60,7 +58,6 @@ import count.io.CommandLine;
 import count.io.DataFile;
 import count.io.ExportableData;
 import count.io.NewickParser;
-import count.io.SavableData;
 import count.matek.Functions;
 
 

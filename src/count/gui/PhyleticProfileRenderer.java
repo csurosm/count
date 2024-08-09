@@ -25,7 +25,6 @@ import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
 
 import count.ds.AnnotatedTable;
-import count.gui.kit.ColoredValueRenderer;
 
 /**
  * A class for rendering phylogenetic profiles which are  

@@ -26,7 +26,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JEditorPane;
-import javax.swing.JLabel;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
 import javax.swing.event.TableModelEvent;
@@ -74,6 +73,8 @@ public class PosteriorsView extends HistoryView
 	
 	private List<HistoryModel.Column<RoundedDouble>> table_family_class;
 	
+	private List<MinCopies> min_copiesRB;
+	
 //	private IndexedTree getTree()
 //	{
 //		return table_model.getTree();
@@ -105,51 +106,60 @@ public class PosteriorsView extends HistoryView
 			}
 			table_model.fireTableStructureChanged();
 		}
-	}		
+	}	
 	
+	private class MinCopies extends JRadioButton
+    {
+    	MinCopies(int n)
+    	{
+    		super(Integer.toString(n));
+    		if (n==0)
+    			this.setToolTipText("All, even empty profiles are observed; no correction to family statistics");
+    		else
+    			this.setToolTipText("Profiles with at least "
+    					+Integer.toString(n)
+    					+" member"
+    					+(n>1?"s":"")
+    					+"are observed; correction for unobserved empty"
+    					+(n>1?" and singleton":"")
+    					+"  profiles in family statistics");
+    		this.addActionListener(click->
+    		{
+    			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+    			int[] selected_rows = table_scroll.getSelectedModelRows();
+    			posteriors.setMinimumObserved(n);
+    			setUnobservedCorrections();
+    			Color max_color = table_family_score.getColor();
+    			double min = table_family_score.getMinimum();
+    			double max = table_family_score.getMaximum();
+				ColoredValueRenderer renderer
+				= new ColoredValueRenderer(Color.WHITE,max_color,min,max);
+				table_scroll.setColumnRenderer(table_model.firstHistoryColumn(), renderer);
+    			table_scroll.setSelectedModelRows(selected_rows);
+    			table_scroll.repaint();
+    		});
+    	}
+    }
+	
+	/**
+	 * A container with radio buttons for min.copies 0,1,2.
+	 * @return
+	 */
 	private Component createMincopiesControl()
 	{
         Box minCopiesB = new Box(BoxLayout.LINE_AXIS);
         minCopiesB.setBorder(BorderFactory.createTitledBorder("Family correction"));
-
-        class MinCopies extends JRadioButton
-        {
-        	MinCopies(int n)
-        	{
-        		super(Integer.toString(n));
-        		if (n==0)
-        			this.setToolTipText("All, even empty profiles are observed; no correction to family statistics");
-        		else
-        			this.setToolTipText("Profiles with at least "
-        					+Integer.toString(n)
-        					+" member"
-        					+(n>1?"s":"")
-        					+"are observed; correction for unobserved empty"
-        					+(n>1?" and singleton":"")
-        					+"  profiles in family statistics");
-        		this.addActionListener(click->
-        		{
-	    			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
-	    			int[] selected_rows = table_scroll.getSelectedModelRows();
-	    			posteriors.setMinimumObserved(n);
-	    			setUnobservedCorrections();
-	    			Color max_color = table_family_score.getColor();
-	    			double min = table_family_score.getMinimum();
-	    			double max = table_family_score.getMaximum();
-					ColoredValueRenderer renderer
-					= new ColoredValueRenderer(Color.WHITE,max_color,min,max);
-					table_scroll.setColumnRenderer(table_model.firstHistoryColumn(), renderer);
-	    			table_scroll.setSelectedModelRows(selected_rows);
-	    			table_scroll.repaint();
-        		});
-        	}
-        }
-        
         
         int data_min_copies = table_data.getContent().minCopies();
-        JRadioButton minCopies0 = new MinCopies(0);
-        JRadioButton minCopies1 = new MinCopies(1);
-        JRadioButton minCopies2 = new MinCopies(2);
+        MinCopies minCopies0 = new MinCopies(0);
+        MinCopies minCopies1 = new MinCopies(1);
+        MinCopies minCopies2 = new MinCopies(2);
+        
+        min_copiesRB = new ArrayList<>();
+        min_copiesRB.add(minCopies0);
+        min_copiesRB.add(minCopies1);
+        min_copiesRB.add(minCopies2);
+        
         
         ButtonGroup minCopiesG = new ButtonGroup();
         minCopiesG.add(minCopies0);
@@ -206,7 +216,7 @@ public class PosteriorsView extends HistoryView
 	private void initComponents()
 	{
         getTreeControl().addControlAt(2, createMincopiesControl());
-        getLineageControl().add(createMincopiesControl());
+        getLineageControl().add(createMincopiesControl()); // sets min_copiesRB too
         
         JTabbedPane selected_rows_display = this.getSelectedRowsDisplay();
 		String table_legend = "<p>The inferred counts are posterior expectations across selected families. "
@@ -418,6 +428,16 @@ public class PosteriorsView extends HistoryView
 		
 	}
 	
+	@Override
+	public void computeAll()
+	{
+		for (MinCopies RB: min_copiesRB)
+		{
+			RB.setEnabled(false);
+		}
+		super.computeAll();
+	}
+	
 	
 	@Override
 	protected void computeHistoriesPrepare()
@@ -432,6 +452,13 @@ public class PosteriorsView extends HistoryView
 	@Override
 	protected void computeDone()
 	{
+		int data_min_copies = table_data.getContent().minCopies();
+		for (int m=0; m<=2; m++)
+		{
+			MinCopies RB = min_copiesRB.get(m);
+			RB.setEnabled(m<=data_min_copies);
+		}
+		
 		computation_cancel.setVisible(false);
 		
 		if (getTableScroll().getDataTable().getSelectedRowCount()==0)
@@ -443,7 +470,7 @@ public class PosteriorsView extends HistoryView
 	{
 		MixedRatePosteriors.Profile P = posteriors.getProfile(f);
 		
-//		if (f<5 || f%5000==0)
+//		if (f==3337) // DEBUG
 //			System.out.println("#**PV.cF "+f);
 		
 		double LL = P.getLL();
@@ -489,6 +516,8 @@ public class PosteriorsView extends HistoryView
 			table_family_expand.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.EXPAND));
 			table_family_contract.get(node).setValue(f,P.getFamilyEvent(node, FamilyEvent.CONTRACT));
 		} // for node
+//		if (f==3337) // DEBUG
+//			System.out.println("#**PV.cF "+f+"\tnodes done");
 		
 		if (posteriors.getClassCount()>1)
 		{

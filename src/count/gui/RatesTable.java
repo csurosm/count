@@ -15,9 +15,7 @@ package count.gui;
  * limitations under the License.
  */
 
-import java.awt.Font;
 
-import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 
 import count.ds.IndexedTree;

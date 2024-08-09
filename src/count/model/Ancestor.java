@@ -16,7 +16,6 @@ package count.model;
  */
 
 import count.ds.IndexedTree;
-import count.model.Likelihood.Profile;
 
 /**
  * Likelihood computations for ancestral reconstruction at a node.

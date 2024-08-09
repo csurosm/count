@@ -23,10 +23,6 @@ import java.awt.FileDialog;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import javax.swing.Box;
@@ -42,19 +38,16 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingWorker;
 import javax.swing.event.ChangeListener;
-import javax.swing.plaf.metal.MetalProgressBarUI;
+//import javax.swing.plaf.metal.MetalProgressBarUI;
 
 import count.io.CountXML;
 import count.io.DataFile;
 import count.io.ModelBundle;
 import count.io.SavableData;
 import count.io.ExportableData;
-import count.io.Removable;
-import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
-import count.gui.kit.ShmancyFileDialog;
 
 
 /**
@@ -1062,8 +1055,8 @@ public class Session extends JSplitPane
                 JProgressBar progress = new JProgressBar(0,100);
                 
                 
-                progress.setUI(new javax.swing.plaf.metal.MetalProgressBarUI());
-                progress.setIndeterminate(true); // does not animate
+                progress.setUI(new javax.swing.plaf.metal.MetalProgressBarUI()); // native proressbar does not animate on MacOS
+                progress.setIndeterminate(true); 
             	progress.setVisible(true);
             	progress.setStringPainted(true);
 

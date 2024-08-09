@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JCheckBox;
-import javax.swing.event.TableModelEvent;
 
 import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;

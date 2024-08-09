@@ -63,7 +63,6 @@ import count.gui.kit.ShmancyFileDialog;
 import count.io.CommandLine;
 import count.io.DataFile;
 
-import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 
 /**

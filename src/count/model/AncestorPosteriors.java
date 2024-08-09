@@ -234,7 +234,7 @@ public class AncestorPosteriors
 				double[] J = ancestor[node].getEdgeOutside(node);
 				double[] K = ancestor[node].inside.getEdgeLikelihoods(node);
 				double nu = post.factory.extinction[node]
-						*(1.0-post.factory.getDuplicationParameter(node)); 
+						*post.factory.getDuplicationParameterComplement(node); 
 				pS = computePosteriors(J, K, nu);
 			}
 			return pS;

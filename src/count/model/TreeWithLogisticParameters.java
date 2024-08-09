@@ -28,6 +28,8 @@ import count.matek.Logarithms;
 public class TreeWithLogisticParameters extends TreeWithRates
 {
 	private static final boolean FIX_INFINITE_GAIN=true;
+	private static final double MINIMUM_LOGIT_LOSS = Logarithms.toLogit(1e-99); //  Logarithms.toLogit(Math.ulp(1.0)); // Double.NEGATIVE_INFINITY
+	
 	
 	public TreeWithLogisticParameters(TreeWithRates rates)
 	{
@@ -390,6 +392,28 @@ public class TreeWithLogisticParameters extends TreeWithRates
 	public void setLogitLossRelativeDuplication(int v, double logit_p, double logit_λ, double log_gain,  int gain_bound, boolean linear_gain)
 	{
 
+		if (logit_p<MINIMUM_LOGIT_LOSS)
+		{
+			// the correction makes this rate model instance's parameters differ from the caller's intention
+			// hopefully, just an intermediate step in line minimization
+			
+			double new_logit_p = MINIMUM_LOGIT_LOSS;
+
+			// adjust lambda?
+			if (gain_bound == PARAMETER_LOSS)
+			{
+				double log_r = log_gain + Logarithms.logitToLogValue(logit_p);
+				double new_log_gain = log_r - Logarithms.logitToLogValue(new_logit_p);
+				
+				//System.out.println("#**TWLP.sLLRD "+v+"\tsmall logit_p "+logit_p+"\treset to "+ new_logit_p+"\tlogitlm "+logit_λ+"\tloggn "+log_gain+"\treset to "+new_log_gain);
+				log_gain = new_log_gain;
+			} else
+			{
+				//System.out.println("#**TWLP.sLLRD "+v+"\tsmall logit_p "+logit_p+"\treset to "+ new_logit_p+"\tlogitlm "+logit_λ+"\tloggn "+log_gain+"\tstays");
+			}
+			logit_p = new_logit_p;
+		}
+		
 		double logit_q;
 		
 		if (logit_λ == Double.NEGATIVE_INFINITY) // Poisson
@@ -443,6 +467,9 @@ public class TreeWithLogisticParameters extends TreeWithRates
 				{
 					double log_q = Logarithms.logitToLogValue(logit_q);
 					log_kappa = log_r - log_q;
+					log_gain = log_kappa;
+					
+					
 					double kappa = Math.exp(log_kappa);
 						
 					
@@ -456,15 +483,28 @@ public class TreeWithLogisticParameters extends TreeWithRates
 					}
 					if (FIX_INFINITE_GAIN && kappa==Double.POSITIVE_INFINITY && log_kappa!=Double.POSITIVE_INFINITY)
 					{
+						// set to a max finite value?
 						kappa = 1024.0 / Math.ulp(1.0);
 						log_kappa = Math.log(kappa);
+						log_gain = log_kappa;
+						
+						// switch to Poisson
+						logit_λ = Double.NEGATIVE_INFINITY;
+						logit_q = Double.NEGATIVE_INFINITY;
+						log_gain = log_r;
+						
+						// at this point, the caller and this instance have different parameters for this node 
+						
 						// DEBUG
-						System.out.println("#**TWLP.sLLRD "+v+"\tinfinite kappa fixed: kappa "+kappa+"\tlogkapa "+log_kappa);
+						System.out.println("#**TWLP.sLLRD "+v+"\tinfinite kappa fixed: kappa "+kappa+"\tlogkapa "+log_kappa+"\tlogitq "+logit_q+"\tlog_gain "+log_gain+"/gain "+Math.exp(log_gain));
+					} else if (kappa==Double.POSITIVE_INFINITY)
+					{
+						System.out.println("#**TWLP.sLLRD "+v+"\tinfinite kappa not fixed");
 					}
 					
 				} else
 				{
-					// dubious setting 
+					// "universal gain" : dubious setting 
 					double loglog1_q = Math.log(-Logarithms.logitToLogComplement(logit_q));
 					if (loglog1_q==Double.NEGATIVE_INFINITY)
 						log_kappa = log_r-Logarithms.logitToLogValue(logit_q); // same for small q
@@ -483,7 +523,6 @@ public class TreeWithLogisticParameters extends TreeWithRates
 
 				}
 			}
-			log_gain = log_kappa;
 			
 		} // Polya
 		
@@ -496,7 +535,9 @@ public class TreeWithLogisticParameters extends TreeWithRates
 
 		if (!Double.isFinite(gain_param)) // DEBUG
 		{
-			System.out.println("#**TWLP.sLLRD "+v+"\tloggn "+log_gain
+			System.out.println("#**TWLP.sLLRD "+v
+			+"\tgain_param "+gain_param
+			+"\tloggn "+log_gain
 			+"\tlogitp "+logit_p+"\tlogitq "+logit_q+"\tlogitlm "+logit_λ
 			+"\tlog1_q "+Logarithms.logitToLogComplement(logit_q)
 			+"\tlogq "+Logarithms.logitToLogValue(logit_q)
@@ -627,6 +668,12 @@ public class TreeWithLogisticParameters extends TreeWithRates
 		} else if (y==Double.NEGATIVE_INFINITY && x!=Double.NEGATIVE_INFINITY)
 		{
 			double gamma = gain_param*Math.exp(-log_parameters[node][PARAMETER_LOSS]);
+			
+			if (!Double.isFinite(gamma))
+			{
+				System.out.println("#***TWLP.cPTR node "+node+"\tx "+x+"\tgainp "+gain_param+"\tlogp "+log_parameters[node][PARAMETER_LOSS]+"\tgm "+gamma);
+			}
+			
 			
 			assert (Double.isFinite(gamma));
 			

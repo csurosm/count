@@ -27,16 +27,12 @@ import count.io.CommandLine;
 import count.io.RateVariationParser;
 import count.matek.Logarithms;
 
-import static count.Count.THREAD_PARALLELISM;
 import static count.Count.THREAD_UNIT_TASK;
-import static count.model.Likelihood.PARAMETER_GAIN;
-import static count.model.Likelihood.PARAMETER_LOSS;
 import static count.model.GLDParameters.PARAMETER_DUPLICATION;
 import static count.model.GLDParameters.PARAMETER_GAIN;
 import static count.model.GLDParameters.PARAMETER_LENGTH;
 import static count.model.GLDParameters.PARAMETER_LOSS;
-import static count.model.Likelihood.PARAMETER_DUPLICATION;
-import static count.model.Likelihood.PARAMETER_LENGTH;
+
 
 /**
  * Computing the likelihood and its base-rate gradient in a 

@@ -49,9 +49,9 @@ import count.gui.kit.TableScroll;
  * 
  * 
  * 
+ * Tree panel used in {@link HistoryView}
  * 
  * 
- * @author csuros
  *
  */
 class HistoryTreePanel extends TreePanel

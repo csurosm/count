@@ -22,6 +22,7 @@ import count.matek.DiscreteGamma;
 /**
  * Rate variation model: gamma + invariant rate factors
  * for edge length, loss, duplication and transfer.
+ * Not used anymore.
  *
  * <h2>Rate variation</h2>
  * Rate variation across families is by using a multiplier with
@@ -41,6 +42,7 @@ import count.matek.DiscreteGamma;
  * The corresponding rate multipliers are 0 in those categories.
  *
  * @author Mikl&oacute;s Cs&#369;r&ouml;s
+ * 
  */
 public class GammaInvariant implements MixedRateModel.RateMultipliers
 {

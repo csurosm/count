@@ -1,3 +1,4 @@
+package count.io;
 /*
  * Copyright 2021 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
@@ -13,14 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package count.io;
 
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static count.io.CommandLine.OPT_OUTPUT;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,10 +35,11 @@ import count.matek.ShiftedGeometric;
 import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.model.RateVariationModel;
-//import count.model.TreeWithLogisticParameters;
 import count.model.TreeWithRates;
-//import count.model.old.FreeMixedModel;
+//import count.model.TreeWithLogisticParameters;
+//import count.model.junkyard.FreeMixedModel;
 
+import static count.io.CommandLine.OPT_OUTPUT;
 /**
  * Static methods for reading and writing rate variation models. 
  * 
@@ -105,123 +105,6 @@ public class RateVariationParser
 	
 	private static String last_rate_line= null; 
 	
-//	public static class Model
-//	{
-//		private GammaInvariant gamma_invariant;
-//		private RateVariationLogGradient rate_modifiers;
-//		private final List<String[]> category_specs;
-//		private final IndexedTree tree;
-//		
-//		private Model(IndexedTree tree)
-//		{
-//			this.gamma_invariant = null;
-//			this.rate_modifiers = null;
-//			this.category_specs = new ArrayList<>();
-//			this.tree = tree;
-//		}
-//		
-//		private void parseModel(BufferedReader input) throws FileFormatException, IOException
-//		{
-//			// TODO
-//			
-//			this.gamma_invariant = null;
-//			this.rate_modifiers = null;
-//			
-//			TreeWithRates base_rates = new TreeWithRates(tree);			
-//			
-//			int root = tree.getRoot();
-//			DiscreteDistribution root_prior=null;
-//			final int[] postorder = TreeTraversal.postOrder(tree); // legacy logic: input file lists the rates in postorder
-//			int node_idx = 0;
-//			
-//			String line = null;
-//	        do
-//	        {
-//	            line=input.readLine();
-//	            if (line != null)
-//	            {
-//	                if (line.startsWith(MODEL_END))
-//	                    break;
-//	                line = line.trim();
-//	                if (line.length()==0)
-//	                    continue;
-//	                String field_data=null;
-//	                boolean is_node_line = false;
-//	                boolean is_variation_line = false;
-//	                if (line.startsWith("#"))	
-//	                {
-//	                	if (line.startsWith(ROOT_RATES))
-//	                	{
-//	                		field_data = line.substring(ROOT_RATES.length()+1); // + 1 space
-//	                		is_node_line = true;
-//	                	} else
-//	                		continue;
-//	                } else if (line.startsWith(RATE_VARIATION_PREFIX))
-//	                {
-//	                	is_variation_line = true;
-//	                	field_data = line.substring(RATE_VARIATION_PREFIX.length()+1);
-//	                } else if (line.startsWith(ROOT_PRIOR_PREFIX))
-//	                {
-//	                	root_prior = parseRootPrior(line);
-//	                } else
-//	                {
-//	                	is_node_line = true;
-//	                	field_data = line;
-//	                }
-//	                
-//	                if (is_node_line)
-//	                {
-//	                	// regular node with edge length and rates
-//	                	int node = postorder[node_idx];
-//	        	        String[] fields=field_data.split("\\s+");
-//	                	
-//	        	        // legacy order: length, dup, loss, gain
-//	        	        double len = Double.parseDouble(fields[0]);
-//	        	        double drate =  Double.parseDouble(fields[1]);
-//	        	        double lrate = Double.parseDouble(fields[2]);
-//	        	        double grate = Double.parseDouble(fields[3]);
-//	        	        
-//	        	        base_rates.setEdgeLength(node, len);
-//	        	        base_rates.setDuplicationRate(node, drate);
-//	        	        base_rates.setLossRate(node, lrate);
-//	        	        if (drate==0.0)
-//	        	        {
-//	        	        	if (lrate==0.0)
-//	        	    	        base_rates.setGainRate(node, grate);
-//	        	        	else
-//	        	        		base_rates.setGainRate(node, grate/lrate); // legacy logic: store κ*μ
-//	        	        } else
-//	        	        {
-//	        	        	base_rates.setGainRate(node, grate/drate); // legacy logic: store κ*λ
-//	        	        }
-//	        	        
-//	        	        node_idx++;
-//	                } else if (is_variation_line)
-//	                {
-//	        	        String[] fields=field_data.split("\\s+");
-//	                    if ("transfer".equals(fields[0]) 
-//	                    		|| "gain".equals(fields[0])
-//	                    		|| "loss".equals(fields[0])
-//	                    		|| "duplication".equals(fields[0])
-//	                    		|| "length".equals(fields[0]))
-//	                    {
-//	                    	// GammaInvariant
-//	                    	if (gamma_invariant==null)
-//	                    	{
-//	                    		gamma_invariant = new GammaInvariant(base_rates);
-//	                    	}
-//	                    	category_specs.add(fields);
-//	                    } else if ("common".equals(fields[0])
-//	                    		|| RateVariationLogGradient.LogisticShift.class.getSimpleName().equals(fields[0])
-//	                    		|| RateVariationLogGradient.Multiplier.class.getSimpleName().equals(fields[0]))
-//	                    {
-//	                    }
-//	                }
-//	            }
-//	        } while (line != null);
-//		}
-//	}
-//	
 	
 	private static DiscreteDistribution parseRootPrior(String line) throws FileFormatException
 	{

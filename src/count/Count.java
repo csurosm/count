@@ -44,7 +44,7 @@ public class Count
      * Version string starting with a float value (integer part=major version); 
      * set to the date during development.
      */
-    public static final String APP_VERSION = "24.08.02-beta";
+    public static final String APP_VERSION = "24.08.09-beta";
     
     /**
      * Name of the application.

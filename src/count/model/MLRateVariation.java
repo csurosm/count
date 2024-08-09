@@ -184,24 +184,113 @@ public class MLRateVariation extends ML
 	 */
 	private void initDataStructures()
 	{
-		gradient_factory.computeClasses();
+		
 		
 		int num_nodes = node_parameters.length;
 		int ncat = variation_model.getNumClasses();
 		
 		TreeWithLogisticParameters lrates = variation_model.getBaseModel();
+		int common_gain = variation_model.getCommonGainType();
+
+		boolean have_adjusted_parameters = false;
+
 		for (int v=0; v<num_nodes; v++)
 		{
+			double logit_p = lrates.getLogitLossParameter(v);
+			double logit_lambda = lrates.getLogitRelativeRate(v);
+			double log_gain = lrates.getLogGainParameter(v, common_gain, !variation_model.isUniversalGain());
+
+			
+			// check large gain 
+			double log_max_gain = Math.log(max_gain);
+			if (log_max_gain<log_gain)
+			{
+				double new_log_gain = log_max_gain + Math.log(1023.0/1024.0);
+				if (common_gain == PARAMETER_LOSS) 
+				{
+					if (ALWAYS_UNBOUNDED_GAIN_LOSS)
+					{
+						// nothing to do: max_gain is ignored
+					} else
+					{
+						if (PRINT_OPTIMIZATION_MESSAGES)
+							System.out.println("#*MLRV.iDS "+v+" reset gamma log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
+						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						log_gain = new_log_gain;
+						have_adjusted_parameters = true;
+					}
+				} else if (common_gain == PARAMETER_DUPLICATION && logit_lambda != Double.NEGATIVE_INFINITY)
+				{
+					double log_lambda = lrates.getLogRelativeRate(v);
+					double new_log_lambda = log_lambda + log_gain - new_log_gain;
+					if (new_log_lambda < 0.0)
+					{
+						logit_lambda = Logarithms.logToLogit(new_log_lambda);
+						if (PRINT_OPTIMIZATION_MESSAGES)
+							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda log="+log_lambda+"\tto "+new_log_lambda+"\t// "+lrates.toString(v));
+						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+					} else
+					{
+						if (PRINT_OPTIMIZATION_MESSAGES)
+							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+					}
+					log_gain = new_log_gain;
+					have_adjusted_parameters = true;
+				} else
+				{
+					double log_lambda = lrates.getLogRelativeRate(v);
+					if (common_gain == PARAMETER_GAIN || (common_gain==PARAMETER_DUPLICATION && logit_lambda==Double.NEGATIVE_INFINITY))
+					{
+						if (PRINT_OPTIMIZATION_MESSAGES)
+							System.out.println("#*MLRV.iDS "+v+" reset r log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+					} else 
+					{
+						if (PRINT_OPTIMIZATION_MESSAGES)
+							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+					}
+					lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+					log_gain = new_log_gain;
+					have_adjusted_parameters = true;
+				}
+			}
+			
+			// check lambda == 1.0
+			double reset_lambda;
+			double small = 1.0/(1L<<20);
+			if (logit_lambda == Double.POSITIVE_INFINITY)
+			{
+				reset_lambda = Logarithms.logToLogit(Math.log1p(-small));
+			} else
+				reset_lambda = logit_lambda;
+			if (reset_lambda != logit_lambda)
+			{
+				String old_node_str = lrates.toString(v);
+				lrates.setLogitLossRelativeDuplication(v, logit_p, reset_lambda, log_gain, common_gain, !variation_model.isUniversalGain());
+				have_adjusted_parameters=true;
+				
+				// DEBUG
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#*MLRV.iDS "+v+" reset lambda "+logit_lambda+"\tto "+reset_lambda+"\t// "+lrates.toString(v)+"\t// was "+old_node_str);
+				
+				logit_lambda = reset_lambda;
+			}			
+			
+			boolean first_init = node_parameters[v]==null;
+			
 			double[] params = new double[3];
-			double logit_p = params[PARAMETER_LOSS] 		  = lrates.getLogitLossParameter(v);
-			double logit_lambda = params[PARAMETER_DUPLICATION] = lrates.getLogitRelativeRate(v);
-			double log_gain = params[PARAMETER_GAIN] = lrates.getLogGainParameter(v, variation_model.getCommonGainType(), !variation_model.isUniversalGain());
-			
+			params[PARAMETER_LOSS] 		  = logit_p;
+			params[PARAMETER_DUPLICATION] = logit_lambda;
+			params[PARAMETER_GAIN] = log_gain;
 			this.node_parameters[v] = params;
-			
-			fixLoss(v, lrates.getTree().isRoot(v) || logit_p == Double.POSITIVE_INFINITY);
-			fixDuplication(v, logit_lambda == Double.NEGATIVE_INFINITY);
-			fixGain(v, log_gain == Double.NEGATIVE_INFINITY);
+
+			if (first_init)
+			{
+				fixLoss(v, lrates.getTree().isRoot(v) || logit_p == Double.POSITIVE_INFINITY);
+				fixDuplication(v, logit_lambda == Double.NEGATIVE_INFINITY);
+				fixGain(v, log_gain == Double.NEGATIVE_INFINITY);
+			}
+
 		}
 
 		this.category_parameters = new double[ncat][];
@@ -227,9 +316,28 @@ public class MLRateVariation extends ML
 			full_parameters.add(defaultCategoryParameter(k, PARAMETER_MOD_LENGTH));
 			full_parameters.add(defaultCategoryParameter(k, PARAMETER_MOD_DUPLICATION));
 		}
-		
+		gradient_factory.computeClasses();		
 	}	
 
+//	private boolean initNodeParameters(int v)
+//	{
+//		TreeWithLogisticParameters lrates = variation_model.getBaseModel();
+//		int common_gain = variation_model.getCommonGainType();
+//
+//		double logit_p = lrates.getLogitLossParameter(v);
+//		double logit_lambda = lrates.getLogitRelativeRate(v);
+//		double log_gain = lrates.getLogGainParameter(v, common_gain, !variation_model.isUniversalGain());
+//		
+//		boolean have_adjusted_parameters = false;
+//		
+//		
+//		
+//		
+//		
+//		return have_adjusted_parameters;
+//	}
+	
+	
 	/**
 	 * Sets initial values for in {@link #do_optimize_parameters} 
 	 * for category mods.
@@ -392,6 +500,8 @@ public class MLRateVariation extends ML
 	 * Replaces 0.0 and 1.0 duplication rates to facilitate optimization
 	 * in the base rates . 
 	 * 
+	 * The same functionality is assumed by {@link #initDataStructures()}.
+	 * 
 	 * @return true if at least one lambda was reset
 	 */
 	private boolean reduceInfiniteDuplicationRates()
@@ -426,6 +536,9 @@ public class MLRateVariation extends ML
 					String old_node_str = lrates.toString(v);
 					lrates.setLogitLossRelativeDuplication(v, logit_p, reset_lambda, log_gain, variation_model.getCommonGainType(), !variation_model.isUniversalGain());
 //					this.fixDuplication(v, false);
+					
+					
+					
 					have_adjusted=true;
 					
 					// DEBUG
@@ -439,6 +552,7 @@ public class MLRateVariation extends ML
 		if (have_adjusted) // bug fix 2024/07/26: need to update if rates change 
 		{
 			gradient_factory.computeClasses();
+			
 		}
 		
 		return have_adjusted;
@@ -905,7 +1019,7 @@ public class MLRateVariation extends ML
 		
 	}
 		
-		
+	private static boolean ALWAYS_UNBOUNDED_GAIN_LOSS = false;	
 	private static double MAX_DUPLICATION_MARGIN = 0.0; // 1.0-0.1; // 0.0 
 	
 	
@@ -918,7 +1032,7 @@ public class MLRateVariation extends ML
 		if (param_type == PARAMETER_GAIN)
 		{
 			MinGradient LG = new LogGain(node);
-			if (max_gain==Double.POSITIVE_INFINITY)
+			if (max_gain==Double.POSITIVE_INFINITY || (ALWAYS_UNBOUNDED_GAIN_LOSS && variation_model.getCommonGainType()==PARAMETER_LOSS))
 			{
 				P = LG;
 			} else
@@ -1025,7 +1139,7 @@ public class MLRateVariation extends ML
 			if (log_max_value < log_gn)
 			{
 				double newval = log_max_value + Math.log(1023.0/1024.0);
-				System.out.println("#**MLRV.Logistic: too large "+log_gn+"\t; resetting "+newval);
+				System.out.println("#**MLRV.LogisticFromLogarithmic: too large "+log_gn+"\t; resetting "+newval+"\t"+variation_model.getBaseModel().toString(LG.emt_idx));
 				LG.set(newval);
 			}
 		}

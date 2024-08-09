@@ -32,11 +32,7 @@ import count.io.CommandLine;
 import count.io.RateVariationParser;
 import count.matek.Logarithms;
 import count.model.LogGradient.PosteriorStatistics;
-import count.model.Posteriors.FamilyEvent;
-import count.model.Posteriors.Profile;
-import count.model.RateVariationModel.Category;
-import count.model.RateVariationModel.LogisticShift;
-import count.model.RateVariationModel.Multiplier;
+
 
 import static count.io.CommandLine.OPT_MINCOPY;
 import static count.io.CommandLine.OPT_MODEL_ROOT_PRIOR;

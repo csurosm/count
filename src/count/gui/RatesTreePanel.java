@@ -34,7 +34,6 @@ import count.gui.kit.DiscreteDistributionPlot;
 import count.gui.kit.DrawString;
 import count.io.DataFile;
 import count.matek.DiscreteDistribution;
-import count.matek.Functions;
 import count.model.TreeWithRates;
 
 

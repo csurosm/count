@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;
 import count.gui.kit.RoundedDouble;
-import count.io.CommandLine;
 
 /**
  * TableModel for ancestral reconstructions

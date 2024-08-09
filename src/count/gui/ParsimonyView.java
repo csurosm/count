@@ -17,23 +17,17 @@ package count.gui;
 
 
 import count.ds.IndexedTree;
-import count.gui.kit.ColoredValueRenderer;
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.util.ArrayList;
-import java.util.List;
+
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeListener;
 
 import count.ds.AnnotatedTable;
 import count.io.DataFile;

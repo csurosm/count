@@ -21,8 +21,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
 import java.util.ArrayList;
@@ -42,7 +40,7 @@ import count.io.DataFile;
 import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.model.RateVariationModel;
-import count.model.old.MLGamma;
+//import count.model.junkyard.MLGamma;
 import count.model.ML;
 
 /**

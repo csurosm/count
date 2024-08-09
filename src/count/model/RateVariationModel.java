@@ -39,18 +39,36 @@ import count.matek.Logarithms;
 public class RateVariationModel implements MixedRateModel, Iterable<RateVariationModel.Category>
 {
 	private static boolean DEBUG_NUMERICAL = true;
+	/**
+	 * Default value for common gain parameter {@link #common_gain_by} 
+	 */ 
+	private static final int DEFAULT_COMMON_GAIN = PARAMETER_GAIN;
 
+	/**
+	 * Instantiation with zero categories; add categories subsequently. 
+	 * 
+	 * @param base_rates
+	 */
 	public RateVariationModel(TreeWithLogisticParameters base_rates)
 	{
 		this.main_rates = base_rates;
 		this.rate_categories = new ArrayList<>();
 	}
 	
+	/**
+	 * Conve nience to main instantiation method. 
+	 * 
+	 * 
+	 * @param base_rates
+	 */
 	public RateVariationModel(TreeWithRates base_rates)
 	{
-		this(new TreeWithLogisticParameters(base_rates, false)); // hard link 
+		this(new TreeWithLogisticParameters(base_rates, false)); // hard link between the two instances
 	}
 	
+	/**
+	 * Lineage-specific parameters in the base model. 
+	 */
 	private final TreeWithLogisticParameters main_rates; 
 	/**
 	 * Rate-variation categories
@@ -64,7 +82,29 @@ public class RateVariationModel implements MixedRateModel, Iterable<RateVariatio
 	 * Common gain
 	 * 
 	 */
-	private int common_gain_by = PARAMETER_GAIN; //PARAMETER_DUPLICATION;
+	/** 
+	 * Common gain parameter across rate categories 
+	 * with respect to 
+	 * loss parameter <var>p</var> and duplication parameter <var>q</var>.
+	 * <ul>
+	 * <li>{@link GLDParameters#PARAMETER_DUPLICATION} means 
+	 * raw distribution parameter: relative gain-duplication rate kappa <var>κ</var> for Polya
+	 * (<var>κ</var>,<var>q</var>) or <var>r</var> for 
+	 * Poisson (no-duplication <var>q</var>=0);</li>
+	 * <li> {@link GLDParameters#PARAMETER_GAIN} for gain intensity 
+	 * <var>r</var>=<var>κ</var><var>q</var> with smooth transition from Polya to Poisson 
+	 * when <var>q</var>&rarr;0;</li>
+	 * <li> {@link GLDParameters#PARAMETER_GAIN} for relative gain-loss rate gamma <var>γ</var>
+	 * with <var>r</var>=<var>p</var><var>γ</var>, so <var>γ</var>=<var>κ</var><var>q</var>/</var>p</var>=
+	 * <var>κ</var><var>λ</var> with the relative duplication rate lambda <var>λ</var></li>
+	 * </ul>
+	 */
+	private int common_gain_by = DEFAULT_COMMON_GAIN; //PARAMETER_DUPLICATION;
+	/**
+	 * Universal gain defines <var>r</var>=<var>κ</var>(-ln(1-<var>q</var>))
+	 * instead of the linear definition <var>r</var>=<var>κ</var><var>q</var>; 
+	 * for experiments - does not work well
+	 */
 	private boolean use_universal_gain = false;
 	
 	/*
@@ -727,7 +767,7 @@ public class RateVariationModel implements MixedRateModel, Iterable<RateVariatio
 				// Polya
 				double cat_logit_λ = logit_λ + getModDuplication();// mod_duplication;
 				if (logit_λ != Double.POSITIVE_INFINITY)
-				{				
+				{				 
 					// add log(1-lambda)-log(1-cat_lambda)
 					cat_logit_p += main_rates.getLogRelativeComplement(v)-Logarithms.logitToLogComplement(cat_logit_λ);				
 				}

@@ -21,18 +21,13 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.text.Format;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,8 +72,8 @@ import count.model.MixedRateModel;
 import count.model.RateVariationModel;
 import count.model.StraightEM;
 import count.model.TreeWithRates;
-import count.model.old.DirectEM;
-import count.model.old.MLGamma;
+//donotimport count.model.DirectEM;
+//donotimport count.model.MLGamma;
 
 /**
  * A modal dialog to select starting model and optimization parameters. 
@@ -90,7 +85,7 @@ public class ModelSelectionDialog extends JDialog
 	private static final boolean DEVELOPMENT_CODE = false;
 	
 	private static final int OPT_ROUNDS = 256;
-	private static final double OPT_EPS = 1.0/(1<<20);
+	private static final double OPT_EPS = 1.0/(1L<<26);
 	private static final int OPT_NUM_FAMILIES = 100;
 	
 	private static final boolean WANT_GENERAL_VARIATION = false; // if true, dup- and gain-rate discrete-Gamma variation is enabled
@@ -393,76 +388,77 @@ public class ModelSelectionDialog extends JDialog
         {
         	if (starting_model instanceof GammaInvariant)
         	{
-	        	MLGamma opt_gamma = new MLGamma((GammaInvariant)starting_model, data_file.getContent());
-		    
-		        boolean has_duplication = rates.hasDuplication();
-		        boolean has_gain = rates.hasGain();
-		        
-		        if (has_gain)
-		        {
-		        	if (alpha_gainT.fixedCB.isSelected())
-		        		opt_gamma.fixGainAlpha();
-		        	if (!forbidden_gainCB.isSelected() || forbidden_gainT.fixedCB.isSelected())
-		        		opt_gamma.fixForbiddenGain();
-		        	
-		        	if (uniform_gainCB.isSelected() && !lineage_gainP.fixed_parameters.isSelected())
-		        	{
-		        		opt_gamma.setUniformGain(true);
-		        	} else
-		        	{
-			        	for (int node=0; node<lineage_gainP.numFields(); node++)
-			        	{
-			        		if (lineage_gainP.getField(node).fixedCB.isSelected())
-			        			opt_gamma.fixGain(node);
-			        	}
-		        	}
-		        }
-		        if (has_duplication)
-		        {
-		        	if (alpha_duplicationT.fixedCB.isSelected())
-		        		opt_gamma.fixDuplicationAlpha();
-		        	if (!forbidden_duplicationCB.isSelected() || forbidden_duplicationT.fixedCB.isSelected())
-		        		opt_gamma.fixForbiddenDuplication();
-		        	
-		        	if (uniform_duplicationCB.isSelected() && !lineage_duplicationP.fixed_parameters.isSelected())
-		        	{
-		        		opt_gamma.setUniformDuplication(true);
-		        	} else
-		        	{
-			        	for (int node=0; node<lineage_duplicationP.numFields(); node++)
-			        	{
-			        		if (lineage_duplicationP.getField(node).fixedCB.isSelected())
-			        			opt_gamma.fixDuplication(node);
-			        	}
-		        	}
-		        }
-		    	// loss
-		    	if (alpha_lossT.fixedCB.isSelected())
-		    		opt_gamma.fixLossAlpha();
-		    	for (int node=0; node<lineage_lossP.numFields(); node++)
-		    	{
-		    		if (lineage_lossP.getField(node).fixedCB.isSelected())
-		    			opt_gamma.fixLoss(node);
-		    	}
-		    	// length
-		    	if (alpha_lengthT.fixedCB.isSelected())
-		    		opt_gamma.fixLengthAlpha();
-		    	for (int node=0; node<lineage_lengthP.numFields(); node++)
-		    		if (lineage_lengthP.getField(node).fixedCB.isSelected())
-		    			opt_gamma.fixLength(node);
-		    	// root
-		    	if (uniform_duplicationCB.isSelected() && uniform_gainCB.isSelected())
-		    		opt_gamma.setStationaryRoot(has_gain || has_duplication);
-		    	if (fixed_rootCB.isSelected())
-		    	{
-		    		int root = phylo.getRoot();
-		    		opt_gamma.fixGain(root);
-		    		opt_gamma.fixLoss(root);
-		    		opt_gamma.fixDuplication(root);
-		    		opt_gamma.fixLength(root);
-		    	}
-		    	
-		    	opt = opt_gamma;
+        		throw new UnsupportedOperationException("No optimization for GammaInvariant model");
+//	        	MLGamma opt_gamma = new MLGamma((GammaInvariant)starting_model, data_file.getContent());
+//		    
+//		        boolean has_duplication = rates.hasDuplication();
+//		        boolean has_gain = rates.hasGain();
+//		        
+//		        if (has_gain)
+//		        {
+//		        	if (alpha_gainT.fixedCB.isSelected())
+//		        		opt_gamma.fixGainAlpha();
+//		        	if (!forbidden_gainCB.isSelected() || forbidden_gainT.fixedCB.isSelected())
+//		        		opt_gamma.fixForbiddenGain();
+//		        	
+//		        	if (uniform_gainCB.isSelected() && !lineage_gainP.fixed_parameters.isSelected())
+//		        	{
+//		        		opt_gamma.setUniformGain(true);
+//		        	} else
+//		        	{
+//			        	for (int node=0; node<lineage_gainP.numFields(); node++)
+//			        	{
+//			        		if (lineage_gainP.getField(node).fixedCB.isSelected())
+//			        			opt_gamma.fixGain(node);
+//			        	}
+//		        	}
+//		        }
+//		        if (has_duplication)
+//		        {
+//		        	if (alpha_duplicationT.fixedCB.isSelected())
+//		        		opt_gamma.fixDuplicationAlpha();
+//		        	if (!forbidden_duplicationCB.isSelected() || forbidden_duplicationT.fixedCB.isSelected())
+//		        		opt_gamma.fixForbiddenDuplication();
+//		        	
+//		        	if (uniform_duplicationCB.isSelected() && !lineage_duplicationP.fixed_parameters.isSelected())
+//		        	{
+//		        		opt_gamma.setUniformDuplication(true);
+//		        	} else
+//		        	{
+//			        	for (int node=0; node<lineage_duplicationP.numFields(); node++)
+//			        	{
+//			        		if (lineage_duplicationP.getField(node).fixedCB.isSelected())
+//			        			opt_gamma.fixDuplication(node);
+//			        	}
+//		        	}
+//		        }
+//		    	// loss
+//		    	if (alpha_lossT.fixedCB.isSelected())
+//		    		opt_gamma.fixLossAlpha();
+//		    	for (int node=0; node<lineage_lossP.numFields(); node++)
+//		    	{
+//		    		if (lineage_lossP.getField(node).fixedCB.isSelected())
+//		    			opt_gamma.fixLoss(node);
+//		    	}
+//		    	// length
+//		    	if (alpha_lengthT.fixedCB.isSelected())
+//		    		opt_gamma.fixLengthAlpha();
+//		    	for (int node=0; node<lineage_lengthP.numFields(); node++)
+//		    		if (lineage_lengthP.getField(node).fixedCB.isSelected())
+//		    			opt_gamma.fixLength(node);
+//		    	// root
+//		    	if (uniform_duplicationCB.isSelected() && uniform_gainCB.isSelected())
+//		    		opt_gamma.setStationaryRoot(has_gain || has_duplication);
+//		    	if (fixed_rootCB.isSelected())
+//		    	{
+//		    		int root = phylo.getRoot();
+//		    		opt_gamma.fixGain(root);
+//		    		opt_gamma.fixLoss(root);
+//		    		opt_gamma.fixDuplication(root);
+//		    		opt_gamma.fixLength(root);
+//		    	}
+//		    	
+//		    	opt = opt_gamma;
         	} else
         	{
         		
@@ -592,18 +588,19 @@ public class ModelSelectionDialog extends JDialog
         	}
         	cli_dialog.addOption(CommandLine.OPT_MINCOPY, Integer.toString(min_observed_copies), "Minimum observed copies in a family");
         	
-        	if (opt instanceof MLGamma)
-        	{
-        		cli_dialog.addOption(CommandLine.OPT_MODEL_LENGTH_CATEGORIES, Integer.toString(((Number)num_catT.getValue()).intValue()), "Discrete Gamma variation categories for edge length");
-        		if (uniform_duplicationCB.isSelected())
-        		{
-            		cli_dialog.addOption(CommandLine.OPT_MODEL_UNIFORM_DUPLICATION, "true", "Same duplication rate on every edge");
-        		}
-        		if (uniform_gainCB.isSelected())
-        		{
-        			cli_dialog.addOption(CommandLine.OPT_MODEL_UNIFORM_GAIN, "true", "Same gain rate on every edge");
-        		}
-        	}
+//        	if (opt instanceof MLGamma)
+//        	{
+//        		cli_dialog.addOption(CommandLine.OPT_MODEL_LENGTH_CATEGORIES, Integer.toString(((Number)num_catT.getValue()).intValue()), "Discrete Gamma variation categories for edge length");
+//        		if (uniform_duplicationCB.isSelected())
+//        		{
+//            		cli_dialog.addOption(CommandLine.OPT_MODEL_UNIFORM_DUPLICATION, "true", "Same duplication rate on every edge");
+//        		}
+//        		if (uniform_gainCB.isSelected())
+//        		{
+//        			cli_dialog.addOption(CommandLine.OPT_MODEL_UNIFORM_GAIN, "true", "Same gain rate on every edge");
+//        		}
+//        	}
+
         	//if (opt instanceof MLGamma || opt instanceof MLDistribution)
         	{
         		count.matek.DiscreteDistribution root_prior = rates.getRootDistribution();

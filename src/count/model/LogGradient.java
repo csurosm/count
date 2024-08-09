@@ -41,6 +41,8 @@ import static count.model.GLDParameters.PARAMETER_LOSS;
  * <li> convert to distribution gradient with {@link #convertToLogDistributionGradient(double[][])}</li>
  * </ol>
  *
+ * 
+ *
  */
 public class LogGradient extends Posteriors implements Count.UsesThreadpool
 {

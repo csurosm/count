@@ -33,7 +33,6 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.table.TableRowSorter;
 
@@ -58,7 +57,7 @@ import static count.gui.RatesTreePanel.RATES_LOSS_COLOR;
 import static count.gui.RatesTreePanel.RATES_DUPLICATION_COLOR;;
 /**
 *
-* A component with split panes to show {@link count.model.GammaInvariant} instance. 
+* A component with split panes to show a rate variation model instance. 
 * 
 * @author Mikl&oacute;s Cs&#369;r&ouml;s 
 */

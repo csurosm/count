@@ -9,7 +9,7 @@ module count {
 //	exports ca.umontreal.iro.evolution.genecontent;
 //	exports ca.umontreal.iro.evolution.malin.ui;
 //	exports ca.umontreal.iro.banality;
-	/* Count 2023 sources */
+	/* Count 2023+ sources */
 	exports count.io;
 	exports count.matek;
 	//exports bad.machine;

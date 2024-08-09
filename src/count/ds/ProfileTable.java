@@ -1,3 +1,4 @@
+package count.ds;
 /*
  * Copyright 2021 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
@@ -15,13 +16,9 @@
  */
 
 
-package count.ds;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
-import javax.xml.transform.stream.StreamSource;
 
 /**
  * Public interface used by the algorithms:  

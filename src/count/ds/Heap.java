@@ -17,15 +17,9 @@ package count.ds;
 
 import java.io.PrintStream;
 
-/**
- * A binary heap structure (min-heap).
- *
- * @author  csuros
- */
 
 import java.util.AbstractCollection;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;

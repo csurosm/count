@@ -19,10 +19,7 @@ import java.awt.Component;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableCellRenderer;
 
-import count.gui.kit.RoundedDouble;
 
 
 /**

@@ -731,6 +731,11 @@ public class HistoryView
 	
 	protected SwingWorker<Void,Integer> history_task=null;
 		
+	/**
+	 * Prepares the computation of the statistics for families; 
+	 * executed on working thread. 
+	 * 
+	 */
 	protected void computeHistoriesPrepare()
 	{
 //		computation_progress.setIndeterminate(false);
@@ -760,6 +765,8 @@ public class HistoryView
 	}
 	
 
+	private static final boolean DEBUG_THREADS=false;
+	
 	/**
 	 * Sets {@link #history_task} and launches execution
 	 * in the background on a working thread.
@@ -780,7 +787,6 @@ public class HistoryView
 				
 				
 				if (executor != null && nF>THREAD_UNIT_TASK)
-					
 				{
 					final BlockingQueue<Integer> families_done=new ArrayBlockingQueue<>(nF);
 					
@@ -804,15 +810,16 @@ public class HistoryView
 							for (int f=range[0]; f<range[1] && !isCancelled(); f++)
 							{
 								if (Thread.currentThread().isInterrupted())
+								{
 									return;
-								
+								}
 								computeFamily(f);
 								boolean fits_in_queue = families_done.offer(f);
 								assert (fits_in_queue);
-								
-							}
+									
+							} 
 						}
-					}
+					} // class ComputingTask
 					
 					int num_tasks = Math.min(1+(nF-1)/THREAD_UNIT_TASK, 256);
 					int task_size = 1+(nF-1)/num_tasks;
@@ -832,20 +839,24 @@ public class HistoryView
 					}
 					try
 					{
+//						if (DEBUG_THREADS)
+//							System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tstarting nF="+nF);
 						for (int iter=0; iter<nF; iter++)
 						{
-//							System.out.println("#**HV.cA/HW.dIB "+Thread.currentThread()+"\twaiting queue "+iter);
 							int f = families_done.take();
 							publish(f);
-//							System.out.println("#**HV.cA/HW.dIB "+Thread.currentThread()+"\tpublish "+f);
+							if (DEBUG_THREADS)
+								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tpublish "+f+"\titer "+iter+"\t/"+nF);
 						}
 						for (int t=0; t<computing_tasks.size(); t++)
 						{
-//							System.out.println("#**HV.cA/HW.dIB "+Thread.currentThread()+"\twaiting task "+t);
+//							if (DEBUG_THREADS)
+//								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\twaiting task "+t+"/"+computing_tasks.size());
 							Future<int[]> this_one_done = completion.take();
 							
 							int[] range = this_one_done.get();
-//							System.out.println("#**HV.cA/HW.dIB "+Thread.currentThread()+"\tgot "+range[0]+".."+range[1]);
+//							if (DEBUG_THREADS)
+//								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tgot "+range[0]+".."+range[1]);
 							
 //							for (int f=range[0]; f<range[1]; f++)
 //								publish(f);
@@ -863,13 +874,20 @@ public class HistoryView
 						System.out.println("#**HV.cA/HW.dIB "+EE);
 						this.cancel(true);
 //						throw new RuntimeException(EE);
+					} catch (Throwable t)
+					{
+						System.out.println("#**HV.cA/HW.dIB "+t);
+						this.cancel(true);
 					}
 				} else
 				{
 					for (int f=0; f<nF; f++)
 					{
 						if (Thread.currentThread().isInterrupted())
+						{
+							System.out.println("#**HV.cA/HW.dIB interrupted @ f="+f+"\t// "+Thread.currentThread());							
 							return (Void)null;
+						}
 						computeFamily(f);
 						publish(f);
 					}

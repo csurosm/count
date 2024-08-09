@@ -846,7 +846,8 @@ public class SimulatedEvolution
 	{
 		PrintStream out = System.out;
 		
-		CommandLine cli = new CommandLine(args, SimulatedEvolution.class, 1);
+		Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		CommandLine cli = new CommandLine(args, our_class, 1);
 		if (cli.getMixedrateModel() == null)
 			throw new IllegalArgumentException("Specify the rates model");
 		int num_rows;
@@ -871,11 +872,11 @@ public class SimulatedEvolution
 		out.println(CommandLine.getStandardHeader("Families: -"+OPT_ROWCOUNT+" "+num_rows));
 		out.println(CommandLine.getStandardHeader("Minimum observed: -"+OPT_MINCOPY+" "+min_obs));
 		MixedRateModel input_model = cli.getMixedrateModel();
-		if (cli.getFreeModel()!=null)
-		{
-			input_model= cli.getFreeModel();
-			out.println("#SE.main: FreeModel ("+input_model.getNumClasses()+" classes)");
-		}
+//		if (cli.getFreeModel()!=null)
+//		{
+//			input_model= cli.getFreeModel();
+//			out.println("#SE.main: FreeModel ("+input_model.getNumClasses()+" classes)");
+//		}
 		
 		
 		Random RND = cli.getOptionRND(out);

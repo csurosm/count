@@ -15,11 +15,7 @@ package count.model;
  * limitations under the License.
  */
 
-import static count.io.CommandLine.OPT_MINCOPY;
-import static count.io.CommandLine.OPT_MODEL_ROOT_PRIOR;
-import static count.io.CommandLine.OPT_TRUNCATE;
-import static count.model.GLDParameters.PARAMETER_DUPLICATION;
-import static count.model.GLDParameters.PARAMETER_LOSS;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,8 +33,12 @@ import count.io.CommandLine;
 import count.io.RateVariationParser;
 import count.matek.Logarithms;
 import count.model.LogGradient.PosteriorStatistics;
-import count.model.RateVariationLogGradient.SampleLogGradient;
 
+import static count.io.CommandLine.OPT_MINCOPY;
+import static count.io.CommandLine.OPT_MODEL_ROOT_PRIOR;
+import static count.io.CommandLine.OPT_TRUNCATE;
+import static count.model.GLDParameters.PARAMETER_DUPLICATION;
+import static count.model.GLDParameters.PARAMETER_LOSS;
 /**
  * Computations for the gradient in rate-variation model.  
  * Used in main BFGS implementation {@link MLRateVariation}.

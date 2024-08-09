@@ -36,8 +36,8 @@ import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.model.RateVariationModel;
 import count.model.TreeWithRates;
-import count.model.old.BasicRateVariation;
-import count.model.old.FreeMixedModel;
+//import count.model.junkyard.BasicRateVariation;
+//import count.model.junkyard.FreeMixedModel;
 
 import static count.model.GLDParameters.PARAMETER_DUPLICATION;
 import static count.model.GLDParameters.PARAMETER_GAIN;
@@ -212,22 +212,22 @@ public class CommandLine
 		    MixedRateModel input_model = RateVariationParser.readModel(B, tree);
 		    if (input_model instanceof GammaInvariant)
 		    {
-		    	FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, (GammaInvariant)input_model);
+		    	//FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, (GammaInvariant)input_model);
 			    model_data = new DataFile<>((GammaInvariant)input_model, new File(rates_file));
-			    free_model_data = new DataFile<>(free_model, new File(rates_file));
+			    //free_model_data = new DataFile<>(free_model, new File(rates_file));
 			    variation_data = new DataFile<>(RateVariationModel.convert((GammaInvariant)input_model),  new File(rates_file));
 		    } else
 		    {
 		    	assert (input_model instanceof RateVariationModel);
 		    	model_data = null;
-		    	free_model_data = null;
+		    	//free_model_data = null;
 		    	variation_data = new DataFile<>((RateVariationModel)input_model, new File(rates_file));
 		    }
 		    B.close();
 	    } else
 	    {
 	    	model_data = null;
-	    	free_model_data = null;
+	    	//free_model_data = null;
 	    	variation_data = null;
 	    }
 	
@@ -284,7 +284,7 @@ public class CommandLine
 	    {
 		    BufferedReader B = new BufferedReader(GeneralizedFileReader.guessReaderForInput(rates_file));
 		    GammaInvariant input_model = RateVariationParser.readRates(B, tree);
-		    FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, input_model);
+		    //FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, input_model);
 		    B.close();
 		    getModel = new DataFile<>(input_model, new File(rates_file));
 	    } else
@@ -318,7 +318,7 @@ public class CommandLine
 	public Phylogeny getTree() { return DataFile.getContent(tree_data);}
 	public DataFile<Phylogeny> getTreeData(){ return tree_data;}
 	public GammaInvariant getGammaModel() { return DataFile.getContent(model_data);}
-	public FreeMixedModel getFreeModel() { return DataFile.getContent(free_model_data);}
+	//public FreeMixedModel getFreeModel() { return DataFile.getContent(free_model_data);}
 	public DataFile<GammaInvariant> getModelData(){ return model_data;}
 	
 	/**
@@ -356,17 +356,17 @@ public class CommandLine
 		return DataFile.getContent(variation_data);
 	}
 	
-	/**
-	 * DEBUG code 
-	 * @return
-	 */
-	public BasicRateVariation getBasicVariationModel()
-	{
-		RateVariationModel var_model = getVariationModel();
-		BasicRateVariation basic_var = new BasicRateVariation(var_model);
-		return basic_var;
-	}
-	
+//	/**
+//	 * DEBUG code 
+//	 * @return
+//	 */
+//	public BasicRateVariation getBasicVariationModel()
+//	{
+//		RateVariationModel var_model = getVariationModel();
+//		BasicRateVariation basic_var = new BasicRateVariation(var_model);
+//		return basic_var;
+//	}
+//	
 	public MixedRateModel getMixedrateModel()
 	{
 		if (model_data != null)
@@ -381,7 +381,7 @@ public class CommandLine
 	private final DataFile<GammaInvariant> model_data;
 	private final DataFile<RateVariationModel> variation_data;
 	
-	private final DataFile<FreeMixedModel> free_model_data;
+//	private final DataFile<FreeMixedModel> free_model_data;
 	
 	
 	public static final String OPT_TABLE = "table";

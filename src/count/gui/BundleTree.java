@@ -54,7 +54,6 @@ import count.gui.kit.PointIcon;
 import count.gui.kit.TableIcon;
 import count.gui.kit.TreeIcon;
 
-import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 
 /**

@@ -19,7 +19,6 @@ package count.model;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -767,17 +766,22 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		timeM += System.nanoTime()-time0; // TIMING
 	}	
 	
+	/**
+	 * Whether start with an adjustment of the input model in {@link #findLikelihoodInterval(int, int, double, double, int)}
+	 */
 	private static final boolean LIKELIHOOD_INTERVAL_OPTIMIZE_START = false;
 
 	
 	/**
-	 * LRT test
+	 * LRT test: set max or min adjustment of a parameter 
+	 * for log-likelihood increase bounded by chi-square-test
+	 * significance level. 
 	 * 
-	 * @param node
-	 * @param param_type
+	 * @param node lineage
+	 * @param param_type loss,gain,or duplication from {@link GLDParameters}
 	 * @param significance_alpha chi-square-test significance level: negative for lower tail; positive for upper tail 
-	 * @param delta
-	 * @param itmax
+	 * @param delta convergence for adjusted model optimization
+	 * @param itmax max iteration for adjusted model optimization
 	 */
 	private void findLikelihoodInterval(int node, int param_type, double significance_alpha, double delta, int itmax)
 	{
@@ -816,13 +820,13 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 				x0 = kappa0; // kappa
 			}
 		}
-		
-		out.println("#**SEM.fLI start\t"+node+"/"+param_type
-				+"\tx0 "+x0
-				+"\tlp "+logit_p0+"("+factory.getLogitLossParameter(node)+")"
-				+"\tlq "+logit_q0+"("+factory.getLogitDuplicationParameter(node)+")"  
-				+"\tr " +r0+"("+factory.getUniversalGainParameter(node)+")"
-				+"\t// "+factory.toString(node));
+		if (PRINT_OPTIMIZATION_MESSAGES)
+			out.println("#**SEM.fLI start\t"+node+"/"+param_type
+					+"\tx0 "+x0
+					+"\tlp "+logit_p0+"("+factory.getLogitLossParameter(node)+")"
+					+"\tlq "+logit_q0+"("+factory.getLogitDuplicationParameter(node)+")"  
+					+"\tr " +r0+"("+factory.getUniversalGainParameter(node)+")"
+					+"\t// "+factory.toString(node));
 		
 		// diff_cache stores difference in log-likelihood for x settings  
 		final Map<Double,Double> diff_cache = new HashMap<>();
@@ -895,7 +899,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 					factory.copyParametersToModel();
 					factory.computeParameters();
 
-					out.println("#**SEM.fLI.dL\tset "+node
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						out.println("#**SEM.fLI.dL\tset "+node
 								+"\tlp "+logit_p+"("+factory.getLogitLossParameter(node)+")"
 								+"\tlq "+logit_q+"("+factory.getLogitDuplicationParameter(node)+")"  
 								+"\tr " +r+"("+factory.getUniversalGainParameter(node)+")"
@@ -912,17 +917,20 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 					{
 						fixGain(node, true);
 					}
-					out.println("#**SEM.fLI.dL\teval "+x+"\tx0 "+x0+"\t// start "+factory.toString(node));
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						out.println("#**SEM.fLI.dL\teval "+x+"\tx0 "+x0+"\t// start "+factory.toString(node));
 					double[] model_start = factory.getParameters();
 					
 					PosteriorStatistics S = Estep();
 					double debugLL = -S.LL;
-					out.println("#**SEM.fLI.dL\tdebugE negLL "+debugLL); 
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						out.println("#**SEM.fLI.dL\tdebugE negLL "+debugLL); 
 
 					Mstep(S);
 					S = Estep();
 					debugLL = -S.LL;
-					out.println("#**SEM.fLI.dL\tdebugM+E negLL "+debugLL); 					
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						out.println("#**SEM.fLI.dL\tdebugM+E negLL "+debugLL); 					
 					
 					double negLL = optimize(delta, itmax);
 					diffLL = negLL-negLL0;
@@ -930,14 +938,16 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 					diff_cache.put(x, diffLL);
 					param_cache.put(x, model);
 					
-					out.println("#**SEM.fLI.dL put\t"+x+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL "+negLL+"\tLL0 "+negLL0
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						out.println("#**SEM.fLI.dL put\t"+x+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL "+negLL+"\tLL0 "+negLL0
 									+"\tlp "+logit_p+"("+factory.getLogitLossParameter(node)+")"
 									+"\tlq "+logit_q+"("+factory.getLogitDuplicationParameter(node)+")"  
 									+"\tr " +r+"("+factory.getUniversalGainParameter(node)+")"
 									+"\t// "+factory.toString(node));
 					
 					
-					if (diffLL<0.0) // DEBUG
+					if (diffLL<0.0) // we found a better model than the input?? 
+						// DEBUG
 					{
 						double[] model_end = factory.getParameters();
 						StringBuilder sb = new StringBuilder();
@@ -946,7 +956,7 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 							if (model_start[j]!=model_end[j])
 							{
 								if (0<sb.length())
-									sb.append(";");
+									sb.append("\n#**SEM.fLI.dL ; ");
 								int node = j/3;
 								int type = j%3;
 								sb.append("par").append(j).append('(').append(node).append('/').append(type)
@@ -962,10 +972,11 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 						
 						
 						
-						
+						// we might as well quit now
 						RateVariationModel vmodel = new RateVariationModel(factory.rates);
 						vmodel.initConstantRates();
 						out.println(RateVariationParser.printRates(vmodel));
+						out.println("#SCORE\t"+(negLL0+diffLL)+"\twas "+negLL0);
 						System.exit(99);
 					}
 					
@@ -985,7 +996,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 				}
 				// LRT test
 				double chi_square_p = Functions.Chi_square_tail(1, 2.0*Math.max(0.0, diffLL)); 
-				out.println("#**SEM.fLI.dL\t"+x+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL0 "+negLL0+"\tp "+chi_square_p);
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					out.println("#**SEM.fLI.dL\t"+x+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL0 "+negLL0+"\tp "+chi_square_p);
 				return Math.abs(significance_alpha) - chi_square_p;
 			}
 		};
@@ -1035,7 +1047,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			} else 
 			{
 				// d2>0
-				out.println("#**SEM.fLI brackethi\t"+x1+"\t"+x2);
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					out.println("#**SEM.fLI brackethi\t"+x1+"\t"+x2);
 				xmax = FunctionMinimization.zbrent(diffLL, x1, x2, xtol);
 			}
 			
@@ -1059,7 +1072,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			double[] model = param_cache.get(xmax);
 			
 			factory.setParametersAndCopy(model);
-			out.println("#**SEM.fLI\txmax "+xmax+"\tmax "+dmax+"\tx0 "+x0+"\t// "+factory.toString(node));
+			if (PRINT_OPTIMIZATION_MESSAGES)
+				out.println("#**SEM.fLI\txmax "+xmax+"\tmax "+dmax+"\tx0 "+x0+"\t// "+factory.toString(node));
 		} else
 		{
 			// bracket for xmin
@@ -1095,7 +1109,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			if (d1<=0.0) xmin = x1;
 			else
 			{
-				out.println("#**SEM.fLI bracketlow\t"+x1+"\t"+x2);
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					out.println("#**SEM.fLI bracketlow\t"+x1+"\t"+x2);
 				xmin = FunctionMinimization.zbrent(diffLL, x1, x2, xtol);
 			}
 
@@ -1118,7 +1133,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			double dmin = diffLL.apply(xmin);
 			double[] model = param_cache.get(xmin);
 			factory.setParametersAndCopy(model);
-			out.println("#**SEM.fLI\txmin "+xmin+"\tmin "+dmin+"\tx0 "+x0+"\t// "+factory.toString(node));
+			if (PRINT_OPTIMIZATION_MESSAGES)
+				out.println("#**SEM.fLI\txmin "+xmin+"\tmin "+dmin+"\tx0 "+x0+"\t// "+factory.toString(node));
 		}
 		
 		
@@ -1137,6 +1153,7 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		
 		if (dbest<0.0)
 		{
+			// a better model was found
 			double[] model = param_cache.get(xbest);
 			factory.setParametersAndCopy(model);
 			out.println("#*SEM.fLI\txbest "+xbest+"\tbest "+dbest+"\tx0 "+x0+"\t// "+factory.toString(node));
@@ -1800,6 +1817,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
         int min_copies = Integer.min(2, table.minCopies());
         min_copies = cli.getOptionInt(OPT_MINCOPY, min_copies);
 		O.setMinimumObservedCopies(min_copies);
+		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+OPT_MINCOPY+" "+min_copies));
+		
 		
 		int absolute = 1;
 		double relative = 1.0;
