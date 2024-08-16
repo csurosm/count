@@ -23,6 +23,14 @@ import count.ds.ProfileTable;
 import count.io.CommandLine;
 import count.matek.Logarithms;
 
+
+/**
+ * Standalone class for testing Ancestor calculations during early code development. 
+ *
+ * 
+ * @author csuros
+ * @deprecated
+ */
 public class AncestorPosteriors
 {
 	public AncestorPosteriors(TreeWithRates rates, ProfileTable table)
@@ -91,7 +99,7 @@ public class AncestorPosteriors
 	}
 	
 	
-	public Profile getAncestorProfile(int family_idx)
+	protected Profile getAncestorProfile(int family_idx)
 	{
 		int m = post.factory.table.maxCopies(family_idx);
 		int cwidth = getCalculationWidth(m);
@@ -100,7 +108,7 @@ public class AncestorPosteriors
 		return AP;
 	}
 	
-	class Profile 
+	protected class Profile 
 	{
 		private Profile(int family_idx, int profile_width)
 		{

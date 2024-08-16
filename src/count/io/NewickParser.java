@@ -27,6 +27,8 @@ import java.util.Map;
 
 import count.ds.IndexedTree;
 import count.ds.Phylogeny;
+import count.ds.TreeTraversal;
+
 import java.io.PrintStream;
 
 
@@ -917,8 +919,22 @@ public class NewickParser
         
         boolean line_breaks = false;
         
+		int subtree_root = cli.getOptionInt(CommandLine.OPT_SUBTREE, -1);
+		if (0<= subtree_root)
+		{
+			int[] subtree_nodes = TreeTraversal.getSubtreeNodes(tree, subtree_root);			
+    		List<String> leaves_kept = new ArrayList<>();
+			for (int j=0; j<subtree_nodes.length; j++)
+			{
+				int node = subtree_nodes[j];
+				if (tree.isLeaf(node))
+					leaves_kept.add(tree.getName(node));
+			}
+    		tree.filterLeaves(leaves_kept.toArray(new String[0])); 
+		}
 		String filter_file = cli.getOptionValue(CommandLine.OPT_FILTER);
-		if (filter_file != null)
+		
+		if (filter_file != null )
     	{
     		List<String> leaves_kept = new ArrayList<>();
     		BufferedReader R = new BufferedReader(GeneralizedFileReader.guessReaderForInput(filter_file));
@@ -936,6 +952,9 @@ public class NewickParser
     			}
     		} while (line != null);
     		R.close();
+    		
+    		
+    		
     		tree.filterLeaves(leaves_kept.toArray(new String[0])); 
     	}
     	String relabel_file = cli.getOptionValue(CommandLine.OPT_RELABEL);

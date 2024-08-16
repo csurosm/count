@@ -78,6 +78,7 @@ import count.model.TreeWithRates;
 /**
  * A modal dialog to select starting model and optimization parameters. 
  * 
+ * 
  */
 public class ModelSelectionDialog extends JDialog 
 {
@@ -1681,8 +1682,8 @@ public class ModelSelectionDialog extends JDialog
         		+ "three-quarter of your available vCPUs."
         		+ "</em></p>"
         		+ "<p><em>Best practices: "
-        		+ "(1) Start with a random model + expectation-maximization at limited truncation (e.g., relative 4.0 and absolute 4), a few (200-500) iterations should suffice; "
-        		+ "(2) refine using BFGS with auto-truncation and stricter convergence (in the order of the square root of machine precision, say 1e-9) and a few thousand iterations."
+        		+ "(1) Start with a random model + expectation-maximization at limited truncation (e.g., relative 3.0 and absolute 3), a few (200-500) iterations should suffice; "
+        		+ "(2) refine using BFGS with auto-truncation and stricter convergence (in the order of the square root of machine precision, say 1e-8) and a few thousand iterations."
         		+ "(3) If the optimization finishes with the maximum number of iterations, then the model can converge more, and you can relaunch BFGS."
         		+ "Otherwise, the model is converged to a (local) optimum. "
         		+  "You can repeat the procedure "

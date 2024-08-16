@@ -757,9 +757,9 @@ public class Likelihood implements GLDParameters
 	 * @author csuros
 	 *
 	 */
-	class Profile
+	protected class Profile
 	{
-		Profile(int family_idx)
+		protected Profile(int family_idx)
 		{
 			this.family_idx = family_idx;
 			int num_nodes = tree.getNumNodes();

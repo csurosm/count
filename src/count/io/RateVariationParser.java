@@ -32,6 +32,7 @@ import count.matek.NegativeBinomial;
 import count.matek.PointDistribution;
 import count.matek.Poisson;
 import count.matek.ShiftedGeometric;
+import count.model.GLDParameters;
 import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.model.RateVariationModel;
@@ -780,6 +781,7 @@ public class RateVariationParser
 		.append('\t').append(ncat)
 		.append('\t').append(rates.getCommonGainType())
 		.append('\t').append(rates.isUniversalGain()?"universal":"linear")
+		.append("\t// .gainpar ").append(GLDParameters.paramName(rates.getCommonGainType()))
 		.append('\n');
 		for (int k=0;k<ncat; k++)
 		{

@@ -415,6 +415,8 @@ public class Phylogeny implements IndexedTree
     		}
     	}
     	
+    	this.cleanUnaryNodes(); // removes single-child root if necessary
+    	
     	int nmiss = 0;
     	for (String s: leaves_kept)
     	{

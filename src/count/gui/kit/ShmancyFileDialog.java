@@ -358,7 +358,7 @@ public class ShmancyFileDialog extends JDialog implements ActionListener
 		this.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter() {
 		    public void windowClosing(WindowEvent we) {
-		        System.out.println("#**SFF.iC/windowClose");
+		        //System.out.println("#**SFF.iC/windowClose");
 		        
 		    }
 		});

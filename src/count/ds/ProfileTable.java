@@ -100,6 +100,73 @@ public interface ProfileTable
 		return max_m;
 	}
 	
+	/**
+	 * Calculates an array of maximum copy number per node (for an ancestral node, 
+	 *    max copy number is the maximum of copy numbers at the leaves in its subtree).
+	 * 
+	 * @param tree tree over which the summation is carried out 
+	 * @return an array with as many entries as the tree nodes 
+	 */
+	public default int[] getMaxCopies(IndexedTree tree)
+	{
+		int num_nodes = tree.getNumNodes();
+		int num_leaves = tree.getNumLeaves();
+		// maximum copy numbers
+		int[] max_m = new int[num_nodes];
+		for (int fidx=0; fidx<getFamilyCount(); fidx++)
+		{
+			int[] profile = getFamilyProfile(fidx);
+			
+			for (int node=0; node<num_leaves; node++)
+			{
+				max_m[node]=Integer.max(profile[node], max_m[node]);
+			}
+		}
+		for (int node=num_leaves; node<num_nodes; node++)
+		{
+			int num_children = tree.getNumChildren(node);
+			for (int ci=0; ci<num_children; ci++)
+			{
+				int child = tree.getChild(node, ci);
+				max_m[node] = Integer.max(max_m[child],max_m[node]);
+			}
+		}	
+		return max_m;
+	}
+	
+	
+	/**
+	 * 
+	 * @param geometric whether geometric or arithmetic mean across families
+	 * @return
+	 */
+	public default double getMeanCopies(boolean geometric)
+	{
+		double sum_avg=0.0;
+		double sum_avgsq = 0.0;
+		
+		int nF = getFamilyCount();
+		for (int f=0; f<nF; f++)
+		{
+			int[] profile = getFamilyProfile(f);
+			double sum = 0.0;
+			for (int u=0; u<profile.length; u++)
+			{
+				sum = sum+Integer.max(0, profile[u]);
+			}
+			double avg = sum/profile.length;
+			sum_avg += avg;
+			sum_avgsq += avg*avg;
+		}
+		double avg_avg = sum_avg/nF;
+		double avg_avgsq = sum_avgsq/nF;
+		
+		//System.out.println("#**PT.gMC arimean "+avg_avg+"\tgeomean "+Math.sqrt(avg_avgsq));
+		
+		return geometric?Math.sqrt(avg_avgsq):avg_avg;
+	}
+	
+	
 	public default int minCopies()
 	{
 		int min=Integer.MAX_VALUE;
@@ -132,6 +199,7 @@ public interface ProfileTable
 		for (int n: profile) max = Integer.max(max, n);
 		return max;
 	}
+	
 	public default boolean isBinaryTable()
 	{
 		int nF = getFamilyCount();

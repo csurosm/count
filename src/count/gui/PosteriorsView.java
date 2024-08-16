@@ -53,9 +53,11 @@ import count.model.Posteriors.FamilyEvent;
 public class PosteriorsView extends HistoryView 
 {
 	/** 
-	 * Phred scale.
+	 * Phred scale for profile rarity.
 	 */
 	private static final double EVIDENCE_SCALE = -10.0/Math.log(10.0);
+	
+	private static final boolean FAMILY_PRESENCE_BY_SURVIVAL = true;
 	
 	public PosteriorsView(DataFile<? extends MixedRateModel> rates_data, DataFile<AnnotatedTable> table_data)
 	{
@@ -231,15 +233,28 @@ public class PosteriorsView extends HistoryView
 				+ "the terminal nodes. Deaths are copies at the parent which <var>u</var> "
 				+ "does not inherit; births are ancestral copies originating at <var>u</var> "
 				+ "by duplication or gain."
-				+ "</p>"
+				+ "</p>";
+		if (FAMILY_PRESENCE_BY_SURVIVAL)
+		{
+			table_legend = table_legend
+					+ "<p>Family statistics track the history of family repertoires, and  "
+					+ "count the families that have at least one ancestral copy "
+					+ "with descendant ortholog(s). ";
+		} else
+		{ 
+			table_legend = table_legend
 				+ "<p>Family statistics track the history of family repertoires, and  "
 				+ "count the families that have at least one copy "
 				+ "at the ancestor, with or without descendant orthologs. "
-				+ "(Thus, more families may be inferred than ancestral copies.) "
+				+ "(Thus, more families may be inferred than ancestral copies.) ";
+		}
+		table_legend = table_legend
 				+ "Families with multiple copies are also inferred, and changes "
 				+ "to and from 0 (gain and loss), or between single- and multiple-members "
 				+ "(contraction and expansion)."
 				+"</p>"
+				+ "<p><b>Family correction</b> adds statistics for the implied unobserved families with "
+				+ "fewer copy numbers than selected by the radio buttons.</p>"
 //				+ "<p>In the family table, "
 //				+ "rarity is the negative log-likelihood of the family profile, "
 //				+ "as -10 log<sub>10</sub> <var>L</var>(profile). Family statistics "
@@ -349,9 +364,11 @@ public class PosteriorsView extends HistoryView
 					table_model.firstHistoryColumn()));
 
 		double[] factor = new double[unobserved.length];
+		double[] log_factor = new double[unobserved.length];
 		for (int i=0; i<unobserved.length; i++)
 		{
 			double Ldiff = unobserved[i].getLL()-Lobs;
+			log_factor[i] = Ldiff;
 			factor[i] = Math.exp(Ldiff);
 			
 //			System.out.println("#**PP.sUC factor "+i+"\t"+factor[i]+"\tL0 "+L0+"\tpo "+p_obs+"\tLo "+Lobs+"\tLd "+Ldiff);
@@ -394,23 +411,62 @@ public class PosteriorsView extends HistoryView
 				for (int i=0; i<unobserved.length; i++)
 				{
 					MixedRatePosteriors.Profile P = unobserved[i];
-					double N = P.getNodeMean(node);
-					double S = P.getEdgeMean(node);
-					delta_member_count[node] += factor[i]*N;
-					double birth = P.getBirthMean(node);
-					delta_member_birth[node] += factor[i]*birth;
-					if (!phylo.isRoot(node))
+					
+					if (FAMILY_PRESENCE_BY_SURVIVAL)
 					{
-						double death = P.getDeathMean(node);
-						delta_member_death[node] += factor[i]*(death);
+						double[] log_pn = P.getLogNodePosteriors(node);
+						double log_present = Double.NEGATIVE_INFINITY;
+						double log_mean = Double.NEGATIVE_INFINITY;
+						
+						int n=log_pn.length-1;
+						while (1<n)
+						{
+							log_present = Logarithms.add(log_present, log_pn[n]);
+							log_mean = Logarithms.add(log_mean, log_pn[n]+Math.log(n));
+							--n;
+						}
+						double log_multi = log_present;
+						if (0<n)
+						{
+							log_present = Logarithms.add(log_present, log_pn[n]);
+							log_mean = Logarithms.add(log_mean, log_pn[n]);
+							--n;
+						}
+						
+						delta_member_count[node] += Math.exp(log_factor[i]+log_mean);
+						double birth = P.getBirthMean(node);
+						delta_member_birth[node] += factor[i]*birth;
+						if (!phylo.isRoot(node))
+						{
+							double death = P.getDeathMean(node);
+							delta_member_death[node] += factor[i]*(death);
+						}
+						delta_family_present[node] +=  Math.exp(log_factor[i]+log_present);
+						delta_family_multi[node] += Math.exp(log_factor[i]+log_multi);
+						delta_family_gain[node] += Math.exp(log_factor[i]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.GAIN));
+						delta_family_lose[node] += Math.exp(log_factor[i]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.LOSS));
+						delta_family_expand[node] += Math.exp(log_factor[i]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.EXPAND));
+						delta_family_contract[node] += Math.exp(log_factor[i]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.CONTRACT));
+					} else
+					{
+						double N = P.getNodeMean(node);
+						double S = P.getEdgeMean(node);
+						delta_member_count[node] += factor[i]*N;
+						double birth = P.getBirthMean(node);
+						delta_member_birth[node] += factor[i]*birth;
+						if (!phylo.isRoot(node))
+						{
+							double death = P.getDeathMean(node);
+							delta_member_death[node] += factor[i]*(death);
+						}
+						double[] pN = P.getNodeAncestor(node);
+						delta_family_present[node] += factor[i] * (1.0-pN[0]);
+						delta_family_multi[node] += factor[i]*(1.0-pN[0]-pN[1]);
+						delta_family_gain[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.GAIN);
+						delta_family_lose[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.LOSS);
+						delta_family_expand[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.EXPAND);
+						delta_family_contract[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.CONTRACT);
 					}
-					double[] pN = P.getNodeAncestor(node);
-					delta_family_present[node] += factor[i] * (1.0-pN[0]);
-					delta_family_multi[node] += factor[i]*(1.0-pN[0]-pN[1]);
-					delta_family_gain[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.GAIN);
-					delta_family_lose[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.LOSS);
-					delta_family_expand[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.EXPAND);
-					delta_family_contract[node] += factor[i]*P.getFamilyEvent(node, FamilyEvent.CONTRACT);
 				}
 			}
 		}
@@ -480,10 +536,6 @@ public class PosteriorsView extends HistoryView
 		int num_nodes = phylo.getNumNodes();
 		for (int node=0; node<num_nodes; node++)
 		{
-			double N = P.getNodeMean(node);
-			double S = P.getEdgeMean(node);
-			
-			table_member_count.get(node).setValue(f, N);
 			double birth = P.getBirthMean(node);
 			table_member_birth.get(node).setValue(f, birth);
 			double death;
@@ -497,27 +549,65 @@ public class PosteriorsView extends HistoryView
 			}
 			table_member_death.get(node).setValue(f, death);
 			
-			double[] pn = P.getNodeAncestor(node);
-			assert (pn.length>=2);
+			
+			if (FAMILY_PRESENCE_BY_SURVIVAL)
+			{
+				double[] log_pn = P.getLogNodePosteriors(node);
+				double log_present = Double.NEGATIVE_INFINITY;
+				double log_mean = Double.NEGATIVE_INFINITY;
+				
+				int n=log_pn.length-1;
+				while (1<n)
+				{
+					log_present = Logarithms.add(log_present, log_pn[n]);
+					log_mean = Logarithms.add(log_mean, log_pn[n]+Math.log(n));
+					--n;
+				}
+				double log_multi = log_present;
+				if (0<n)
+				{
+					log_present = Logarithms.add(log_present, log_pn[n]);
+					log_mean = Logarithms.add(log_mean, log_pn[n]);
+					--n;
+				}
+				table_member_count.get(node).setValue(f, Math.exp(log_mean));
+				
+				table_family_present.get(node).setValue(f, Math.exp(log_present));
+				table_family_multi.get(node).setValue(f, Math.exp(log_multi));
+				
+				table_family_gain.get(node).setValue(f, Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.GAIN)));
+				table_family_lose.get(node).setValue(f, Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.LOSS)));;
+				table_family_expand.get(node).setValue(f, Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.EXPAND)));
+				table_family_contract.get(node).setValue(f, Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.CONTRACT)));
+				
+			} else
+			{
+				double N = P.getNodeMean(node);
+				double S = P.getEdgeMean(node);
+				
+				table_member_count.get(node).setValue(f, N);
 
-			double sum1;
-			double sum2=0.0;
-			for (int i=2; i<pn.length; i++)
-				sum2+=pn[i];
-			sum1 = sum2+pn[1];
-			
-			double present = Double.max(1.0-pn[0],sum1);
-			double multi = Double.max(1.0-pn[0]-pn[1], sum2);
-			table_family_present.get(node).setValue(f, present);
-			table_family_multi.get(node).setValue(f, multi);
-			
-			table_family_gain.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.GAIN));
-			table_family_lose.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.LOSS));;
-			table_family_expand.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.EXPAND));
-			table_family_contract.get(node).setValue(f,P.getFamilyEvent(node, FamilyEvent.CONTRACT));
+				double[] pn = P.getNodeAncestor(node);
+				assert (pn.length>=2);
+	
+				double sum1;
+				double sum2=0.0;
+				for (int i=2; i<pn.length; i++)
+					sum2+=pn[i];
+				sum1 = sum2+pn[1];
+				
+				double present = Double.max(1.0-pn[0],sum1);
+				double multi = Double.max(1.0-pn[0]-pn[1], sum2);
+				table_family_present.get(node).setValue(f, present);
+				table_family_multi.get(node).setValue(f, multi);
+				
+				table_family_gain.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.GAIN));
+				table_family_lose.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.LOSS));;
+				table_family_expand.get(node).setValue(f, P.getFamilyEvent(node, FamilyEvent.EXPAND));
+				table_family_contract.get(node).setValue(f,P.getFamilyEvent(node, FamilyEvent.CONTRACT));
+			}
 		} // for node
-//		if (f==3337) // DEBUG
-//			System.out.println("#**PV.cF "+f+"\tnodes done");
+
 		
 		if (posteriors.getClassCount()>1)
 		{

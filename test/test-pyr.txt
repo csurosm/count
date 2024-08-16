@@ -1,4 +1,0 @@
-#| Count 12.0127::ca.umontreal.iro.evolution.malin.ui.count.FamilySizeTableDisplay
-Family	Censy	Naneq	Theko	Pyrfu	Pyrab	Metka	Metth	Metst	Metmp	Metja	Metma	Metac	Metbu	Methu	Metcu	Halsp	Halma	Arcfu	Picto	Thevo	Theac	Thepe	Pyrae	Calma	Sulso	Sulac	Hypbu	Aerpe
-arCOG00538modif	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-arCOG01104	0	0	0	1	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0

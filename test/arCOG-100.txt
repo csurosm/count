@@ -1,1 +1,0 @@
-../../../../Count/test/arCOG-100.txt

@@ -20,12 +20,18 @@ import java.awt.Component;
 
 import java.io.File;
 import java.io.IOException;
-
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import javax.swing.Box;
 import javax.swing.JComponent;
+import javax.swing.JEditorPane;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
@@ -247,6 +253,9 @@ public class BundleTree extends JTree
     private static final float MAX_HUE = 5f/6f; //keep gap between red and purple
 	
     private TreeComparator tree_comparator=null;
+    
+    
+    
     
 //    private Map<String,Integer> leaf_name_mapping=null;
     
@@ -652,6 +661,75 @@ public class BundleTree extends JTree
 		}
     }
     
+    
+    /**
+     * Checks if a new tree has the same set of terminal nodes as the main one.
+     * 
+     * 
+     * @param tree new tree to be added
+     * @return false if not the same terminal nodes
+     */
+    private boolean hasSameLeaves(IndexedTree tree)
+    {
+        Phylogeny main_tree = getMainPhylogeny();
+        Map<String,Integer> original_leaves = new HashMap<>();
+        for (int leaf=0; leaf<main_tree.getNumLeaves(); leaf++)
+        {
+        	String leaf_name = main_tree.getName(leaf);
+        	original_leaves.put(leaf_name, leaf);
+        }        
+        
+        Map<String, Integer> mapped_leaves = new HashMap<>(); // index mapping in this tree
+        StringBuilder sb_problem = new StringBuilder();
+        
+        for (int leaf=0; leaf<tree.getNumLeaves(); leaf++)
+        {
+            String leaf_name = tree.getName(leaf);
+            if (mapped_leaves.containsKey(leaf_name))
+            {
+                sb_problem.append("<li>Leaf ").append(leaf_name).append(" appears more than once in the tree.</li>\n");
+            } else
+            {
+            	mapped_leaves.put(leaf_name, leaf);
+            }
+        	if (!original_leaves.containsKey(leaf_name))
+        	{
+                sb_problem.append("<li>Leaf ").append(leaf_name).append(" does not appear in main tree.</li>\n");
+            }
+        }
+        for (int leaf=0; leaf<main_tree.getNumLeaves(); leaf++)
+        {
+        	String leaf_name = main_tree.getName(leaf);
+        	if (!mapped_leaves.containsKey(leaf_name))
+        	{
+                sb_problem.append("<li>Leaf ").append(leaf_name).append(" is missing in this tree.</li>\n");
+        	}
+        }
+        boolean tree_is_correct = (sb_problem.length()==0);
+        
+        if (!tree_is_correct)
+        {
+            StringBuilder page_text = new StringBuilder("<h1>Cannot add this tree</h1>");
+            page_text.append("<p><em>(But you can start a new session with it...)</em></p>");
+            page_text.append("<ul>").append(sb_problem).append("</ul>");
+            JEditorPane problems_pane = new JEditorPane("text/html", page_text.toString());
+            problems_pane.setEditable(false);
+            problems_pane.setBackground(AppFrame.WARNING_COLOR);
+            JScrollPane problems_scroll = new JScrollPane(problems_pane);
+            problems_scroll.setMaximumSize(new java.awt.Dimension(500,600));
+            problems_scroll.setPreferredSize(problems_scroll.getMaximumSize());
+            JOptionPane.showMessageDialog(Session.getApp(BundleTree.this),
+                    problems_scroll,
+                    "Is your tree file correct?",
+                    JOptionPane.WARNING_MESSAGE
+                    );
+        }
+        return tree_is_correct;
+    }
+    
+    
+    
+    
 	private JComponent newTreeDisplay(final DataFile<Phylogeny> tree_data)
 	{
 		if (tree_comparator == null)
@@ -889,8 +967,13 @@ public class BundleTree extends JTree
 		{
 			decorateByMainTree(history_view.getTreePanel());
 			setComponent(history_view);
-			history_view.computeAll();
-			
+			try
+			{
+				history_view.computeAll();
+			} catch (Throwable t)
+			{
+				System.out.println("#***BT.N.sHC "+toString()+"\tcaught "+t);
+			}
 		}
 		
 		protected JComponent getComponent()
@@ -925,15 +1008,28 @@ public class BundleTree extends JTree
 			return tree_panel;
 		}
 		
-		
+		/**
+		 * Attempts to add a new tree but cheks if it has the same leaf set.
+		 * 
+		 * @param tree_data
+		 * @return null if invalid tree
+		 */
 		protected Node addTree(DataFile<Phylogeny> tree_data)
 		{
-			Entry enode = getEntry();
-			Entry etree = enode.addTree(tree_data);
-			Node child = new Node(etree);
-//			this.insert(child, this.getChildCount());
-			tree_model.insertNodeInto(child, this, this.getChildCount());
-			child.setComponent(child.createTreeComponent());
+			Node child;
+			if ( main_phylo != null //tree_comparator != null
+					&& !hasSameLeaves(tree_data.getContent()))
+			{
+				child = null;
+			} else
+			{
+				Entry enode = getEntry();
+				Entry etree = enode.addTree(tree_data);
+				child = new Node(etree);
+	//			this.insert(child, this.getChildCount());
+				tree_model.insertNodeInto(child, this, this.getChildCount());
+				child.setComponent(child.createTreeComponent());
+			}
 			return child;
 		}
 		

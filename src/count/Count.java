@@ -44,7 +44,7 @@ public class Count
      * Version string starting with a float value (integer part=major version); 
      * set to the date during development.
      */
-    public static final String APP_VERSION = "24.08.09-beta";
+    public static final String APP_VERSION = "24.0815::BundleTree.Node.addTree";
     
     /**
      * Name of the application.

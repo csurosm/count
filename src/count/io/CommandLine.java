@@ -247,7 +247,11 @@ public class CommandLine
 	    		out.println(getStandardHeader("Table file: "+table_file+
 	    				(table_data==null
 	    					?""
-	    					:"\t(hash "+table_data.getContent().tableHashCode()+")")));
+	    					:"\t(hash "+table_data.getContent().tableHashCode()
+	    						+"; nfam "+table_data.getContent().getFamilyCount()
+	    						+"; avg copies "+table_data.getContent().getMeanCopies(true)
+	    						+")"
+	    				)));
 	    	}
     		if (rates_file != null)
     			out.println(getStandardHeader("Rates file: "+rates_file));
@@ -409,6 +413,7 @@ public class CommandLine
 	
 	public static final String OPT_RELABEL = "relabel";
 	public static final String OPT_FILTER = "filter";
+	public static final String OPT_SUBTREE = "subtree";
 	
 	public static final String OPT_SPR = "walk";
 	public static final String OPT_NNI = "nni";

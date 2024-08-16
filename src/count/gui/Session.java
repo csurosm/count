@@ -368,6 +368,9 @@ public class Session extends JSplitPane
 		
 		
     	JComponent table_component = data_browser.addTable(table_data, true);
+    	
+    	
+    	
     	if (table_component instanceof AnnotatedTablePanel)
     	{
     		AnnotatedTablePanel table_panel = (AnnotatedTablePanel) table_component;

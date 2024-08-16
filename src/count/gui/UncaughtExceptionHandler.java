@@ -59,24 +59,12 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
      */
     private static final int TOO_MANY_EXCEPTIONS = 10;
     
-    /**
-     * Calls {@link #handle(Throwable, String)} with 
-     * this error.
-     * 
-     * @param thread where the exception was thrown
-     * @param T the exception that was thrown
-     * 
-     */
-    @Override
-    public void uncaughtException(Thread thread, final Throwable T)
+
+    
+    private static final String anyError()
     {
-        SwingUtilities.invokeLater(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                String[] synonyms = 
-                {   "puzzling", 
+    	String[] synonyms = 
+            {   "puzzling", 
                     "bewildering", 
                     "perplexing", 
                     "mystifying", 
@@ -93,17 +81,63 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
                     "unanticipated",
                     "unforeseen",
                     "unexpected",
-                    "startling"};
-                java.util.Random RND = new java.util.Random();
-                String error_attribute = synonyms[RND.nextInt(synonyms.length)];
-                String article = "aeiou".indexOf(error_attribute.charAt(0))==-1?"A ":"An ";
-                handle(T, article+error_attribute+" error...");
+                    "startling"
+        };
+        java.util.Random RND = new java.util.Random();
+        String error_attribute = synonyms[RND.nextInt(synonyms.length)];
+        String article = "aeiou".indexOf(error_attribute.charAt(0))==-1?"A ":"An ";
+        return article+error_attribute+" error...";    	
+    }
+
+    
+    
+    /**
+     * Calls {@link #handle(Throwable, String)} with 
+     * this error.
+     * 
+     * @param thread where the exception was thrown
+     * @param T the exception that was thrown
+     * 
+     */
+    @Override
+    public void uncaughtException(Thread thread, final Throwable T)
+    {
+        SwingUtilities.invokeLater(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+//                String[] synonyms = 
+//                {   "puzzling", 
+//                    "bewildering", 
+//                    "perplexing", 
+//                    "mystifying", 
+//                    "baffling", 
+//                    "mysterious", 
+//                    "peculiar", 
+//                    "curious", 
+//                    "bizarre", 
+//                    "strange", 
+//                    "weird",
+//                    "unfathomable",
+//                    "abstruse",
+//                    "enigmatic",
+//                    "unanticipated",
+//                    "unforeseen",
+//                    "unexpected",
+//                    "startling"};
+//                java.util.Random RND = new java.util.Random();
+//                String error_attribute = synonyms[RND.nextInt(synonyms.length)];
+//                String article = "aeiou".indexOf(error_attribute.charAt(0))==-1?"A ":"An ";
+//                handle(T, article+error_attribute+" error...");
+            	handle(T);
             }
         });
     }
     
     /**
-     * Pop-up dialog for generic error message. This should be called from within the Event Dispatch Thread.
+     * Pop-up dialog for generic error message. 
+     * This should be called from within the Event Dispatch Thread.
      * 
      * @param E the exception that is reported here
      * @param title title for the dialog window
@@ -112,6 +146,14 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
     public void handle(Throwable E, String title)
     {
         handle(E, title, null);
+    }
+    
+    /**
+     * Pop-up dialog for generic error message.
+     */     
+    public void handle(Throwable T)
+    {
+    	handle(T, anyError());
     }
     
     /**
@@ -136,7 +178,15 @@ public class UncaughtExceptionHandler implements Thread.UncaughtExceptionHandler
         }
 
         StringWriter SW = new StringWriter();
-        E.printStackTrace(new PrintWriter(SW));
+        PrintWriter PW = new PrintWriter(SW);
+        E.printStackTrace(PW);
+        
+//        while ((E=E.getCause())!=null) // prinStackTrace inclues the cause
+//        {
+//        	PW.println(".. caused by ");
+//        	E.printStackTrace(PW);
+//        }
+        
         //String stack_trace = SW.toString().trim();
         
         StringBuilder short_message = new StringBuilder();

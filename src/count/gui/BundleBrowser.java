@@ -450,11 +450,22 @@ public class BundleBrowser extends JPanel
 		if (parent == null)
 			return null;
 		Node addTree = parent.addTree(tree_data);
-		item_browser.setSelectedNode(addTree);
-		item_browser.requestFocus();
 		
-		
-		return addTree.getComponent();
+		if (addTree == null)
+		{
+			item_browser.setSelectedNode(parent);
+			item_browser.requestFocus();
+			
+			return null;
+		} else
+		{
+			
+			item_browser.setSelectedNode(addTree);
+			item_browser.requestFocus();
+			
+			
+			return addTree.getComponent();
+		}
 	}
 	
 	public JComponent addRates(DataFile<MixedRateModel> rates_data, boolean at_root)

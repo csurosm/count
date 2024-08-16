@@ -102,15 +102,17 @@ public class PhyleticProfileRenderer extends DefaultTableCellRenderer
             double scale_y = h/Math.log(1+max_membership);
             int n = pattern.length;
             double n_1 = 1.0/n;
+            
+            double dw = w*n_1;
             for (int i = 0; i<n; i++)
             {
-                double pos_left  = w*i*n_1;
-                double pos_right = pos_left+w*n_1;
+                double pos_left  = i*dw;
+                double pos_right = pos_left+dw; 
                 int x_left = (int)pos_left;
-                if (x_left != pos_left) x_left++; // ceiling
+               // if (x_left != pos_left) x_left++; // ceiling
                 int x_right = (int)pos_right;
-                if (x_right != pos_right)
-                    x_right--;
+//                if (dw>=2.0)
+//                	x_right--;
                 
                 //System.out.println("#*OTM.PR.pC ["+i+"] "+pattern[i]+"\txl "+x_left+" xr "+x_right+"\t// "+rendering_profile.getPatternString());
                 double l0 = (pattern[i]==0?0.0:Math.log(1+Math.min(Math.abs(pattern[i]),max_membership)));
@@ -135,7 +137,7 @@ public class PhyleticProfileRenderer extends DefaultTableCellRenderer
                     		
                         double pos_top = scale_y*l0;
                         int y_top = Integer.min(1+(int)pos_top,h);
-                        g2.fillRect(x_left, h-y_top, x_right-x_left+1, y_top);
+                        g2.fillRect(x_left, h-y_top, x_right-x_left+1, y_top+1);
                     } 
 //                    else
 //                    {

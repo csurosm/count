@@ -47,7 +47,9 @@ public class LikelihoodParametrized extends Likelihood
 	
 	public LikelihoodParametrized(TreeWithRates rates, ProfileTable table)
 	{
-		this(new TreeWithLogisticParameters(rates), table);
+		this(rates instanceof TreeWithLogisticParameters
+				?(TreeWithLogisticParameters)rates
+				:new TreeWithLogisticParameters(rates), table);
 	}
 	
 	/**
@@ -193,9 +195,6 @@ public class LikelihoodParametrized extends Likelihood
 					logit_e = Logarithms.mulLogit(logit_e, logit_p);
 				}
 			}
-			setLogitSurvivalParameter(node, PARAMETER_EXTINCTION, logit_e);
-			// copy to super's 
-			super.setExtinction(node, Math.exp(this.getLogExtinction(node)), Math.exp(this.getLogExtinctionComplement(node)));
 			
 			setNodeParametersLogit(node, logit_e);
 			
@@ -264,6 +263,11 @@ public class LikelihoodParametrized extends Likelihood
 	
 	protected void setNodeParametersLogit(int node, double logit_e)
 	{
+		setLogitSurvivalParameter(node, PARAMETER_EXTINCTION, logit_e);
+		// copy to super's 
+		super.setExtinction(node, Math.exp(this.getLogExtinction(node)), Math.exp(this.getLogExtinctionComplement(node)));
+		
+		
 		TreeWithLogisticParameters logit_model = (TreeWithLogisticParameters) rates;
 		// calculate duplication
 		double y = logit_model.getLogitDuplicationParameter(node);//   logit_parameters[node][PARAMETER_DUPLICATION];
@@ -336,9 +340,9 @@ public class LikelihoodParametrized extends Likelihood
     	return this.new Profile(family_idx);
     }
 	
-	private class Profile extends Likelihood.Profile
+	protected class Profile extends Likelihood.Profile
 	{
-		Profile(int family_idx)
+		protected Profile(int family_idx)
 		{
 			super(family_idx);
 		}

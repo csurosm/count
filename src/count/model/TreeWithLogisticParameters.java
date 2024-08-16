@@ -16,6 +16,11 @@ package count.model;
  */
 
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
+import java.io.PrintStream;
+
+import count.io.CommandLine;
 import count.matek.Logarithms;
 
 /**
@@ -749,6 +754,35 @@ public class TreeWithLogisticParameters extends TreeWithRates
     }
 	
 	
+	public void setMaxGainDuplicationRate(double max_kappa)
+	{
+		double log_max =Math.log(max_kappa);
+		System.out.println("#**TWLP.sMGDR maxkapa "+max_kappa+"\tlog "+log_max);
+		int num_nodes = getTree().getNumNodes();
+		for (int u=0; u<num_nodes; u++)
+		{
+			
+			if (! Double.isInfinite(getLogitDuplicationParameter(u)) ) // including q=0, q=1 (the latter would be a problem anyway)
+			{
+				double log_kappa = this.getLogGainParameter(u);
+				if (log_max < log_kappa)
+				{
+					// go to Poisson instead
+					double log_q = this.getLogDuplicationParameter(u);
+					double log_r = log_kappa + log_q;
+					
+					String old_node_str = this.toString(u);
+					
+					double logit_p = getLogitLossParameter(u);
+					this.setLogitLossDuplication(u, logit_p, Double.NEGATIVE_INFINITY, Math.exp(log_r));
+					System.out.println("#**TWLP.sMGDR node "+u+"\tlogkapa "+log_kappa+"\tlogq "+log_q+"\tto Poisson w/logr "+log_r+"\twas "+old_node_str+"\tnow "+this.toString(u));
+				}
+			}
+		}
+		
+		
+	}	
+	
 	
 	@Override
 	public String toString(int node)
@@ -759,4 +793,54 @@ public class TreeWithLogisticParameters extends TreeWithRates
 		.append(", loggn ").append(this.getLogGainParameter(node, PARAMETER_DUPLICATION, true));
 		return sb.toString();
 	}
+	
+	/**
+	 * Test code: convert large gain/small duplication to Poisson (with <tt>-maxgain</tt> <var>maxkappa</var>)
+	 * 
+	 * @param args
+	 * @throws Exception
+	 */
+	public static void main(String[] args) throws Exception
+	{
+		Class<?> us = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		CommandLine cli = new CommandLine(args,  us);
+		
+        PrintStream out = System.out; 
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	    out.println(CommandLine.getStandardHeader(us));
+    	    out.println(CommandLine.getStandardRuntimeInfo(us, args));
+    	}
+		
+        MixedRateModel zeb  = cli.getMixedrateModel();
+        TreeWithRates rates = zeb.getBaseModel();
+        TreeWithLogisticParameters lrates;
+        if (rates instanceof TreeWithLogisticParameters)
+        	lrates = (TreeWithLogisticParameters) rates;
+        else
+        	lrates = new TreeWithLogisticParameters(rates,false);
+        
+        
+        String maxgain = cli.getOptionValue("max"+CommandLine.OPT_GAIN);
+        if (maxgain == null)
+        {
+        } else
+        {
+        	double max = Double.parseDouble(maxgain);
+        	lrates.setMaxGainDuplicationRate(max);
+        	
+        }
+    	out.println(count.io.RateVariationParser.printRates(zeb));        	
+        
+		if (out != System.out)
+		{
+			if (out.checkError())
+				throw new java.io.IOException("Write failed.");
+			out.close();
+		}
+        
+	}
+	
 }

@@ -312,7 +312,10 @@ public class AppFrame extends JFrame
 			+ "<br />"
 			+ "Make sure you filter your table for observation bias on the membership count (<tt>#mem</tt>): "
 			+ "families with at least 1 member, or families with at least 2 members "
-			+ "if you work with rate models."			
+			+ "if you work with rate models."	
+			+"<br />"
+			+ "If you have a rate model, you can <b>simulate a table</b> "
+			+ "with a particular observation bias (e.g, in order to compare the true ancestral history to an inference)."
 			+ "</li>"
 			+ ""
 //			+ "<h4>Ancestral reconstructions</h4>"
@@ -338,7 +341,7 @@ public class AppFrame extends JFrame
 			+ "<li><b>Limitations in this beta version</b>:"
 			+ "<ul>"
 			+ "<li>optimization with rate variation across families (rate categories) is not supported</li>"
-			+ "<li>optimization with homogeneous rates (same duplication or gain across lineages) is not supoprted</li>"
+			+ "<li>optimization with homogeneous rates (same duplication or gain across lineages) is not supported</li>"
 			+ "<li>help menu is not available</li>"
 			+"</ul>"
 			+ "</li>"
@@ -508,8 +511,11 @@ public class AppFrame extends JFrame
     	bouton.setToolTipText("Infer a phylogeny from the copy numbers or randomly");
     	createToolBar.addSeparator(gap);
     	
-    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(true));
-    	bouton.setToolTipText("Load a copy-number table, keep columns with family annotations");
+//    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(true));
+//    	bouton.setToolTipText("Load a copy-number table, keep columns with family annotations");
+    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(false));
+    	bouton.setToolTipText("Load a copy-number table, keep columns with corresponding taxa in tree");
+
     	bouton = createToolBar.addImportTable("Import table", e->doImportTableData());
     	bouton.setToolTipText("Load copy-number data from membership (COG) or clustering (MCL) data file.");
     	
@@ -1767,7 +1773,7 @@ public class AppFrame extends JFrame
         if (has_zero!=0)
         {
             String msg = "<p><b>"+(has_zero==1?"Taxon ":"Taxa ")+zero_taxa.toString()+(has_zero==1?" has":" have");
-            msg += " no members in any of the families.</b> <br />Maybe the names are misspelled in the tree.";
+            msg += " no members in any of the families.</b> <br />Maybe the names are misspelled in the tree or in the table colummn headers, or the table has missing columns.";
             if (has_spaces)
                 msg += " <br />(Attention: in the Newick format, underscore is replaced by space unless the name is enclosed by quotation marks.)";
             msg += "</p>";

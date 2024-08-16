@@ -1,8 +1,0 @@
->seq1 /length=2
-oo
->seq2 /length=4
-oooo
->seq3 /length=1
-o
->seq4 /length=3
-ooo

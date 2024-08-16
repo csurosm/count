@@ -42,7 +42,7 @@ public class RateVariationModel implements MixedRateModel, Iterable<RateVariatio
 	/**
 	 * Default value for common gain parameter {@link #common_gain_by} 
 	 */ 
-	private static final int DEFAULT_COMMON_GAIN = PARAMETER_GAIN;
+	private static final int DEFAULT_COMMON_GAIN = PARAMETER_LOSS;
 
 	/**
 	 * Instantiation with zero categories; add categories subsequently. 

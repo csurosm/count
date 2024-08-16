@@ -2362,6 +2362,11 @@ public class MLRateVariation extends ML
 		
 		
     	AnnotatedTable table = cli.getTable();
+    	
+//    	double avg_copy_number = table.getMeanCopies(true);
+//    	System.out.println("#**MLRV.main table mean copies "+avg_copy_number);
+    	
+    	
     	MLRateVariation O = new MLRateVariation(model, table);
     	
 		int absolute = Integer.MAX_VALUE;
@@ -2539,12 +2544,16 @@ public class MLRateVariation extends ML
         
         
 		// model fit 
+
+		double ascore = score/table.getFamilyCount();
+		
 		int npars = O.getModelParameterCount();
         double bic_pty = 0.5*npars*Math.log(table.getFamilyCount());
 
+		out.println("#TREE "+NewickParser.printTree(cli.getTree()));
         out.println("#SCORE "+score+"\tBICpty "+bic_pty+"\tregularized "+(score+bic_pty)
         			+"\tnum.parameters "+npars+"\tsamplesize "+table.getFamilyCount());
-		out.println("#TREE "+NewickParser.printTree(cli.getTree()));
+        out.println("#AVGSCORE "+ascore);
         		
 		// save model
 		if (0<maxiter)

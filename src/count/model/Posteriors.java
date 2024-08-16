@@ -248,7 +248,18 @@ public class Posteriors
 	}
 	
 
-	
+	/**
+	 * If set to true, then it is verified if the 
+	 * Ancestor calculations in {@link Profile#getNodeAncestorPosteriors(int)} 
+	 * give believable 
+	 * posteriors for ancestor copies: if greater than 1, then 
+	 * exception is thrown and debug messages are written about the calculations. 
+	 * Otherwise, greater than 1 is dismissed as a numerical error, and 
+	 * replaced by 1.0. 
+	 * (For very large trees, a small 1e-8 relative error may occur: cannot attribute it to bad code).   
+	 */
+	private static final boolean DEBUG_EVENT_POSTERIORS = true;
+
 	public class Profile 
 	{
 		private Profile(int family_idx)
@@ -398,52 +409,52 @@ public class Posteriors
 
 			double[] getNodeAncestorPosteriors = computeAncestorPosteriors(B, C, epsi);
 			
-//			if (getNodeAncestorPosteriors==null) // numerical problem: debugging code
-//			{
-//				IndexedTree tree = inside.getOwner().tree;
-//				int root = tree.getRoot();
-//				double[] K = inside.getEdgeLikelihoods(root);
-//				
-//				double[] Bsurv = getNodeOutside(node);
-//				double LL = Double.NEGATIVE_INFINITY;	
-//				for (int ell=0; ell<Bsurv.length; ell++)
-//				{
-//					LL = Logarithms.add(LL,  Bsurv[ell]+C[ell]);
-//				}
-//				System.out.println("#***P.P.gNAP fam "+inside.family_idx+"\tnode "+node
-//						+"\tB "+Arrays.toString(B)
-//						+"\tC "+Arrays.toString(C)
-//						+"\tBsurv "+Arrays.toString(Bsurv)
-//						+"\tpost "+Arrays.toString(computePosteriors(Bsurv, C))
-//						+"\tLL "+LL
-//						+"\tKroot "+Arrays.toString(K)
-//						+"\tLLempty "+inside.getOwner().getEmptyLL()
-//						+"\t// "+inside.toString());
-//				
-//				for (int v=0; v<=root; v++)
-//				{
-//					Bsurv = getNodeOutside(v);
-//					C = inside.getNodeLikelihoods(v);
-//					double LLn = computeLogLikelihood(Bsurv,C);
-//					double[] Jsurv = getEdgeOutside(v);
-//					K = inside.getEdgeLikelihoods(v); 
-//					double LLe = computeLogLikelihood(Jsurv,K);
-//					System.out.println("#***P.P.gNAP fam "+inside.family_idx+"\tnode "+v
-//							+"\tB "+Arrays.toString(Bsurv)
-//							+"\tC "+Arrays.toString(C)	
-//							+"\tJ "+Arrays.toString(Jsurv)
-//							+"\tK "+Arrays.toString(K)
-//							+"\tLLn "+LLn
-//							+"\tLLe "+LLe
-//							+"\tkappa "+factory.rates.getGainParameter(v)
-//							+"\tlog1_q "+factory.rates.getLogDuplicationComplement(v)
-//							+"\tmul "+(factory.rates.getGainParameter(v)*factory.rates.getLogDuplicationComplement(v))
-//							+"\t// "+inside.getOwner().rates.toString(v));
-//				}
-//				
-//				
-//				
-//			}
+			if (getNodeAncestorPosteriors==null) // numerical problem: DEBUG code
+			{
+				IndexedTree tree = inside.getOwner().tree;
+				int root = tree.getRoot();
+				double[] K = inside.getEdgeLikelihoods(root);
+				
+				double[] Bsurv = getNodeOutside(node);
+				double LL = Double.NEGATIVE_INFINITY;	
+				for (int ell=0; ell<Bsurv.length; ell++)
+				{
+					LL = Logarithms.add(LL,  Bsurv[ell]+C[ell]);
+				}
+				System.out.println("#***P.P.gNAP fam "+inside.family_idx+"\tnode "+node
+						+"\tB "+Arrays.toString(B)
+						+"\tC "+Arrays.toString(C)
+						+"\tBsurv "+Arrays.toString(Bsurv)
+						+"\tpost "+Arrays.toString(computePosteriors(Bsurv, C))
+						+"\tLL "+LL
+						+"\tKroot "+Arrays.toString(K)
+						+"\tLLempty "+inside.getOwner().getEmptyLL()
+						+"\t// "+inside.toString());
+				
+				for (int v=0; v<=root; v++)
+				{
+					Bsurv = getNodeOutside(v);
+					C = inside.getNodeLikelihoods(v);
+					double LLn = computeLogLikelihood(Bsurv,C);
+					double[] Jsurv = getEdgeOutside(v);
+					K = inside.getEdgeLikelihoods(v); 
+					double LLe = computeLogLikelihood(Jsurv,K);
+					System.out.println("#***P.P.gNAP fam "+inside.family_idx+"\tnode "+v
+							+"\tB "+Arrays.toString(Bsurv)
+							+"\tC "+Arrays.toString(C)	
+							+"\tJ "+Arrays.toString(Jsurv)
+							+"\tK "+Arrays.toString(K)
+							+"\tLLn "+LLn
+							+"\tLLe "+LLe
+							+"\tkappa "+factory.rates.getGainParameter(v)
+							+"\tlog1_q "+factory.rates.getLogDuplicationComplement(v)
+							+"\tmul "+(factory.rates.getGainParameter(v)*factory.rates.getLogDuplicationComplement(v))
+							+"\t// "+inside.getOwner().rates.toString(v));
+				}
+				
+				
+				
+			}
 			assert getNodeAncestorPosteriors!=null;
 			return getNodeAncestorPosteriors;
 		}
@@ -758,6 +769,52 @@ public class Posteriors
 //			
 //		}
 		
+		/**
+		 * 
+		 * Family event posteriors calculated for conserved ancestral copies.
+		 * 
+		 * @param node
+		 * @return
+		 */
+		public double[] getFamilyLogSurvivalEventPosteriors(int node)
+		{
+			double[][] log_death_ls = this.getLogEdgeTransitionPosteriors(node);
+			double[][] log_birth_ls = this.getLogNodeTransitionPosteriors(node);
+
+			// family gain for sum_n>0 log_birth[n][0]
+			// family loss for sum_l>0 log_death[l][0]
+			// family contraction sum_l>1 log_death[l][1]
+			// family expansion sum_n>1 log_birth[n][1]
+			
+			double log_family_gain = Double.NEGATIVE_INFINITY;
+			double log_family_loss = Double.NEGATIVE_INFINITY;
+			double log_family_expand = Double.NEGATIVE_INFINITY;
+			double log_family_contract = Double.NEGATIVE_INFINITY;
+			
+			for (int ell=1; ell<log_death_ls.length; ell++)
+			{
+				
+				log_family_loss = Logarithms.add(log_family_loss, log_death_ls[ell][0]);
+				if (1<ell)
+					log_family_contract = Logarithms.add(log_family_contract, log_death_ls[ell][1]);
+			}
+			for (int ell=1; ell<log_birth_ls.length; ell++)
+			{
+				log_family_gain = Logarithms.add(log_family_gain, log_birth_ls[ell][0]);
+				if (1<ell)
+				{
+					log_family_expand = Logarithms.add(log_family_expand, log_birth_ls[ell][1]);
+				}
+			}
+			double[] log_event_probs = new double[FamilyEvent.values().length];
+			log_event_probs[FamilyEvent.GAIN.ordinal()] = log_family_gain;
+			log_event_probs[FamilyEvent.LOSS.ordinal()] = log_family_loss;
+			log_event_probs[FamilyEvent.EXPAND.ordinal()] = log_family_expand;
+			log_event_probs[FamilyEvent.CONTRACT.ordinal()] = log_family_contract;
+			
+			return log_event_probs;
+		}
+		
 		
 		/**
 		 * Posterior probabilities for family-level events on the edge leading to a node.
@@ -871,6 +928,10 @@ public class Posteriors
 			return event_probs;
 		}
 		
+		
+		
+		
+		
 		/**
 		 * 
 		 * @param outsideLL outside ancestor log-likelihoods
@@ -897,6 +958,7 @@ public class Posteriors
 					for (int n=0; n<posteriors.length; n++)
 					{
 						int ell = 0;
+						double nle = n==0?0.0:n*log_e;
 						double ins = insideLL[ell]+n*log_e;
 						++ ell;
 						while ( ell<=n && ell<insideLL.length)
@@ -904,7 +966,9 @@ public class Posteriors
 							double binom = factory.factorials.factln(n)
 									-factory.factorials.factln(ell)
 									-factory.factorials.factln(n-ell);
-							double log_p = binom + ell*log_1e+(n-ell)*log_e;
+							double l1e = ell*log_1e;
+							nle = (n==ell?0.0:(n-ell)*log_e);
+							double log_p = binom +l1e+nle;
 							ins = Logarithms.add(ins, insideLL[ell]+log_p);
 							++ ell;
 						}
@@ -914,38 +978,41 @@ public class Posteriors
 				
 				for (int n=0; n<posteriors.length; n++)
 				{
-					// TODO 
-//					// DEBUG
-//					if (LL<posteriors[n])
-//					{
-//						double d = posteriors[n]-LL;
-//						System.out.println("#***P.P.cAP fam "+inside.family_idx+"\text "+extinct+"\tLL "+LL+"\tn "+n+"\tp[n] "+posteriors[n]+"\tdiff "+d+"\t"+Arrays.toString(posteriors));
-//						int ell = 0;
-//						double ins = insideLL[ell]+n*log_e;	
-//						double ipluso = ins + outsideLL[n];
-//						System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tell "+ell+"\tins "+ins+"\tiLL "+insideLL[ell]+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
-//						++ ell;
-//						while ( ell<=n && ell<insideLL.length)
-//						{
-//							double binom = factory.factorials.factln(n)
-//									-factory.factorials.factln(ell)
-//									-factory.factorials.factln(n-ell);
-//							double log_p = binom + ell*log_1e+(n-ell)*log_e;
-//							ins = Logarithms.add(ins, insideLL[ell]+log_p);
-//							ipluso = ins + outsideLL[n];
-//							System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tell "+ell+"\tins "+ins+"\tiLL "+insideLL[ell]+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
-//							++ ell;
-//						}
-//						ipluso = ins + outsideLL[n];
-//						System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tins "+ins+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
-//						
-////						return null;
-//					}
+					if (DEBUG_EVENT_POSTERIORS)
+					{
+						// TODO 
+						// DEBUG
+						if (LL<posteriors[n])
+						{
+							double d = posteriors[n]-LL;
+							System.out.println("#***P.P.cAP fam "+inside.family_idx+"\text "+extinct+"\tLL "+LL+"\tn "+n+"\tp[n] "+posteriors[n]+"\tdiff "+d+"\t"+Arrays.toString(posteriors));
+							int ell = 0;
+							double ins = insideLL[ell]+n*log_e;	
+							double ipluso = ins + outsideLL[n];
+							System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tell "+ell+"\tins "+ins+"\tiLL "+insideLL[ell]+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
+							++ ell;
+							while ( ell<=n && ell<insideLL.length)
+							{
+								double binom = factory.factorials.factln(n)
+										-factory.factorials.factln(ell)
+										-factory.factorials.factln(n-ell);
+								double log_p = binom + ell*log_1e+(n-ell)*log_e;
+								ins = Logarithms.add(ins, insideLL[ell]+log_p);
+								ipluso = ins + outsideLL[n];
+								System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tell "+ell+"\tins "+ins+"\tiLL "+insideLL[ell]+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
+								++ ell;
+							}
+							ipluso = ins + outsideLL[n];
+							System.out.println("#***P.P.cAP fam "+inside.family_idx+"\tins "+ins+"\toLL "+outsideLL[n]+"\tsum "+ipluso);
+							
+							return null;
+						}
+					}
 
 					posteriors[n]= Math.exp(posteriors[n]-LL);
 					
-					
-					assert (posteriors[n]<=1.0);
+					if (DEBUG_EVENT_POSTERIORS) assert (posteriors[n]<=1.0);
+					else posteriors[n] = Double.min(posteriors[n],1.0); // numerical precision
 //					
 				}
 			}

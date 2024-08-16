@@ -53,7 +53,7 @@ public class StraightLikelihood implements GLDParameters
 		this.rates = rates;
 		this.table = table;
 		this.tree = rates.getTree();
-		this.max_family_size = table.getMaxFamilySizes(tree);
+		this.max_node_copies = table.getMaxCopies(tree);//   table.getMaxFamilySizes(tree);
 		this.transition_probs = new TransitionProbabilities[tree.getNumNodes()];
 		this.parameter_factory = null;
 		this.initDataStructures();
@@ -81,19 +81,19 @@ public class StraightLikelihood implements GLDParameters
 		this.rates = that.rates;
 		this.table = table;
 		this.tree = that.tree;
-		this.max_family_size = table.getMaxFamilySizes(tree);
+		this.max_node_copies = table.getMaxCopies(tree); // table.getMaxFamilySizes(tree);
 		this.transition_probs = new TransitionProbabilities[tree.getNumNodes()];
 		this.initDataStructures();
 		this.parameter_factory = that;
 		this.copyParametersFromFactory();
 	}
 	
-	// TODO  use TreeWithLogisticParameters
+	
 	protected final TreeWithLogisticParameters rates;
 	protected final ProfileTable table;
 	protected final IndexedTree tree;
 	protected RisingFactorial factorials;
-	protected final int[] max_family_size;
+	protected final int[] max_node_copies;
 	protected final TransitionProbabilities[] transition_probs;
 	protected final StraightLikelihood parameter_factory;
 	
@@ -181,7 +181,7 @@ public class StraightLikelihood implements GLDParameters
 		int num_nodes = tree.getNumNodes();
 		this.node_parameters = new double[3*num_nodes];
 		this.gain_factorials = new RisingFactorial[num_nodes];
-		int m = getCalculationWidth(max_family_size[tree.getRoot()]);
+		int m = getCalculationWidth(max_node_copies[tree.getRoot()]);
 		factorials = new RisingFactorial(1.0, 1+m); 		
 	}
 	
@@ -333,7 +333,7 @@ public class StraightLikelihood implements GLDParameters
 //			System.out.println("#**DL.cP "+node+"\tq=0"+"\tr "+r);
 		} else if (g!=0.0) // Polya distribution
 		{
-			int m = max_family_size[tree.isLeaf(node)?node:tree.getRoot()]; // logic of allocation for node_likelihoods[]
+			int m = max_node_copies[tree.isLeaf(node)?node:tree.getRoot()]; // logic of allocation for node_likelihoods[]
 			int cw = getCalculationWidth(m); 
 			double kappa;
 			if (USE_UNIVERSAL_GAIN_PARAMETER)
@@ -565,7 +565,7 @@ public class StraightLikelihood implements GLDParameters
 		{
 			this.node = node;
 			
-			int nmax = StraightLikelihood.this.max_family_size[tree.isLeaf(node)?node:tree.getRoot()];
+			int nmax = StraightLikelihood.this.max_node_copies[tree.isLeaf(node)?node:tree.getRoot()];
 			nmax = getCalculationWidth(nmax);
 			int pmax;
 			if (tree.isRoot(node))
@@ -573,13 +573,21 @@ public class StraightLikelihood implements GLDParameters
 				pmax = 0;
 			} else
 			{
-				pmax = max_family_size[tree.getRoot()];
+				pmax = max_node_copies[tree.getRoot()];
 			}
+			//System.out.println("#**SL.TP() node "+node+"\tpmax "+pmax+"\tcw "+getCalculationWidth(pmax));
 			pmax = getCalculationWidth(pmax);
 
-			this.fromparent = new double[1+pmax][];
-			this.tochild = new double[1+pmax][1+nmax];
-			this.calculateValues();
+//			try // DEBUG out-of-memory 
+//			{
+				//System.out.println("#**SL.TP() node "+node+"\tpmax "+pmax+"\tnmax "+nmax);
+				this.fromparent = new double[1+pmax][];
+				this.tochild = new double[1+pmax][1+nmax];
+				this.calculateValues();
+//			} catch (OutOfMemoryError not_enought_memory)
+//			{
+//				throw not_enought_memory;
+//			}
 		}		
 		
 		/**

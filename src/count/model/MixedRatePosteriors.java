@@ -281,19 +281,22 @@ public class MixedRatePosteriors
 				post[c] = class_posteriors[c].getPosteriors(family_idx);
 				post[c].computeLikelihoods();
 			}
-			class_LL = new double[num_classes];
-			pc = new double[num_classes];
+			cat_LL = new double[num_classes];
+			cat_post = new double[num_classes];
+			cat_log_post = new double[num_classes];
 //			System.out.println("#**MRP.P() "+family_idx+"\talloc");
 			initDataStructures();
 //			System.out.println("#**MRP.P() "+family_idx+"\tdone");
 		}
 		private final Posteriors.Profile[] post;
 		private double LL;
-		private double[] class_LL;
+		private double[] cat_LL;
 		/**
 		 * Posterior class probabilities
 		 */
-		private double[] pc;
+		private final double[] cat_post;
+		private final double[] cat_log_post;
+		
 //		/**
 //		 * Node survival means 
 //		 */
@@ -304,6 +307,7 @@ public class MixedRatePosteriors
 //		private double[] expS;
 //		
 		private double[][] events;
+		private double[][] log_survival_events;
 		
 		private void initDataStructures()
 		{
@@ -311,32 +315,40 @@ public class MixedRatePosteriors
 			{
 				Likelihood.Profile cLik = post[c].inside;
 				double ll = cLik.getLogLikelihood();
-				class_LL[c]=ll;
+				cat_LL[c]=ll;
 			}
-			LL = calculateLL(class_LL);
+			LL = calculateLL(cat_LL);
 
 			for (int c=0; c<num_classes; c++)
 			{
-				pc[c]=Math.exp(class_LL[c]+log_class_prob[c]-LL);
+				double log_p =
+				cat_log_post[c] = cat_LL[c]+log_class_prob[c]-LL;
+				cat_post[c]=Math.exp(log_p);
 			}
 			int num_nodes = getTree().getNumNodes();
 			events = new double[num_nodes][];
+			log_survival_events = new double[num_nodes][];
 			
 //			System.out.println("#**MRP.P.iDS classes ");
-			for (int node=0; node<num_nodes; node++)
-			{
-				events[node]=new double[Posteriors.FamilyEvent.values().length];
-				for (int c=0; c<num_classes; c++)
-				{
-					Posteriors.Profile P = post[c];
-					double[] ev = P.getFamilyEventPosteriors(node);
-					assert (ev.length==events[node].length);
-					for (int j=0; j<ev.length; j++)
-					{
-						events[node][j] += pc[c]*ev[j];
-					}
-				}
-			}
+//			for (int node=0; node<num_nodes; node++)
+//			{
+//				events[node]=new double[Posteriors.FamilyEvent.values().length];
+//				log_survival_events[node]=new double[Posteriors.FamilyEvent.values().length];
+//				Arrays.fill(log_survival_events[node], Double.NEGATIVE_INFINITY);
+//				for (int c=0; c<num_classes; c++)
+//				{
+//					Posteriors.Profile P = post[c];
+//					double[] ev = P.getFamilyEventPosteriors(node);
+//					double[] sv = P.getFamilyLogSurvivalEventPosteriors(node);
+//					assert (ev.length==events[node].length);
+//					assert (sv.length==ev.length);
+//					for (int j=0; j<ev.length; j++)
+//					{
+//						events[node][j] += cat_post[c]*ev[j];
+//						log_survival_events[node][j] = Logarithms.add(log_survival_events[node][j], cat_log_post[c]+sv[j]);
+//					}
+//				}
+//			}
 //			System.out.println("#**MRP.P.iDS events ");
 		}
 		
@@ -360,7 +372,7 @@ public class MixedRatePosteriors
 		 */
 		public double getClassProbability(int class_idx)
 		{
-			return pc[class_idx];
+			return cat_post[class_idx];
 		}
 		
 		private double sumClasses(IntFunction<Double> class_stats)
@@ -370,19 +382,36 @@ public class MixedRatePosteriors
 			{
 				
 				double f = class_stats.apply(c);
-				sum += pc[c]*f;
+				sum += cat_post[c]*f;
 			}
 			return sum;
 		}
+		private double sumPostLog(IntFunction<Double> cat_log_stats)
+		{
+			double sumLog = Double.NEGATIVE_INFINITY;
+			int ncat = cat_log_post.length;
+			for (int k=0; k<ncat; k++)
+			{
+				sumLog = Logarithms.add(sumLog, cat_log_post[k]+cat_log_stats.apply(k));
+			}
+			return sumLog;
+		}
+		
+		
 		
 		public double getNodeMean(int node)
 		{
-			return sumClasses(c->post[c].getNodeMean(node));
+//			return sumClasses(c->post[c].getNodeMean(node));
+			double logN = sumPostLog(k->post[k].getLogNodeMean(node));
+			
+			return Math.exp(logN);	
 		}
 		
 		public double getEdgeMean(int node)
 		{
-			return sumClasses(c->post[c].getEdgeMean(node));
+			double logS = sumPostLog(k->post[k].getLogEdgeMean(node));
+			return Math.exp(logS);
+//			return sumClasses(c->post[c].getEdgeMean(node));
 		}
 		
 		/**
@@ -393,16 +422,19 @@ public class MixedRatePosteriors
 		 */
 		public double getDeathMean(int node)
 		{
-			IndexedTree tree = mixed_model.getBaseModel().getTree();
-			if (tree.isRoot(node))
-				return 0.0;
-			else
-			{
-				int parent = tree.getParent(node);
-				double N = getNodeMean(parent);
-				double S = getEdgeMean(node);
-				return Double.max(0.0, N-S);
-			}
+			double logN_S = this.sumPostLog(k->post[k].getLogEdgeDecrease(node));
+			return Math.exp(logN_S);
+//
+//			IndexedTree tree = mixed_model.getBaseModel().getTree();
+//			if (tree.isRoot(node))
+//				return 0.0;
+//			else
+//			{
+//				int parent = tree.getParent(node);
+//				double N = getNodeMean(parent);
+//				double S = getEdgeMean(node);
+//				return Double.max(0.0, N-S);
+//			}
 		}		
 		
 		/**
@@ -413,10 +445,12 @@ public class MixedRatePosteriors
 		 */
 		public double getBirthMean(int node)
 		{
-			double S = getEdgeMean(node);
-			double N = getNodeMean(node);
-			
-			return Double.max(0.0,N-S);
+			double logN_S = this.sumPostLog(k->post[k].getLogNodeIncrease(node));
+			return Math.exp(logN_S);
+//			double S = getEdgeMean(node);
+//			double N = getNodeMean(node);
+//			
+//			return Double.max(0.0,N-S);
 		}		
 		
 //		public double getConservedGain(int node)
@@ -433,7 +467,100 @@ public class MixedRatePosteriors
 //		}
 		
 		/**
-		 * Posterior probabilities for copy numbers 0,1,...
+		 * Logarithm of the posterior probabilities for ancestral copy numbers
+		 * 
+		 * @param node
+		 * @return at least 3-element array
+		 */
+		public double[] getLogNodePosteriors(int node)
+		{
+			double[] log_pN = new double[3];
+			Arrays.fill(log_pN, Double.NEGATIVE_INFINITY);
+			
+			
+			// P{N=n} = sum_k p_k * P{N=n|k}
+			
+			
+			for (int k=0; k<post.length; k++)
+			{
+				double[] log_cN = post[k].getLogNodePosteriors(node);
+				int n=0;
+				do
+				{
+					log_pN[n] = Logarithms.add(log_pN[n], log_cN[n]+cat_log_post[k]);
+					n++;
+				} while (n<log_pN.length && n<log_cN.length);
+				if (n<log_cN.length)
+				{
+					log_pN = Arrays.copyOf(log_pN, log_cN.length);
+					// no addition in the new cells: just copy 
+					do
+					{
+						log_pN[n] = log_cN[n]+cat_log_post[k];
+						n++;
+					} while (n<log_cN.length);
+				}
+			}
+			return log_pN;
+		}
+		
+		
+		/**
+		 * Posterior distribution of ancestral copy numbers
+		 * 
+		 * @param node
+		 * @return at least 3-element array
+		 */
+		public double[] getNodePosteriors(int node)
+		{
+			double[] log_pN = getLogNodePosteriors(node);
+			double[] getNodePosteriors = new double[log_pN.length];
+			for (int n=0; n<log_pN.length; n++)
+				getNodePosteriors[n] = Math.exp(log_pN[n]);
+			return getNodePosteriors;
+		}
+		
+		public double[] getLogEdgePosteriors(int node)
+		{
+			double[] log_pS = new double[3];
+			Arrays.fill(log_pS, Double.NEGATIVE_INFINITY);
+			for (int k=0; k<post.length; k++)
+			{
+				double[] log_cS = post[k].getLogEdgePosteriors(node);
+				int s=0;
+				do
+				{
+					log_pS[s] = Logarithms.add(log_pS[s], log_cS[s]+cat_log_post[k]);
+					s++;
+				} while (s<log_pS.length && s<log_cS.length);
+				if (s<log_cS.length)
+				{
+					int len = log_pS.length;
+					log_pS = Arrays.copyOf(log_pS, log_cS.length);
+					// no addition in the new cells: just copy 
+					do
+					{
+						log_pS[s] = log_cS[s]+cat_log_post[k];
+						s++;
+					} while (s<log_cS.length);
+				}
+			} // for k 
+			return log_pS;
+		}
+		
+		public double[] getEdgePosteriors(int node)
+		{
+			double[] log_pS = getLogEdgePosteriors(node);
+			double[] getEdgePosteriors = new double[log_pS.length];
+			for (int s=0; s<log_pS.length; s++)
+			{
+				getEdgePosteriors[s] = Math.exp(log_pS[s]);
+			}
+			return getEdgePosteriors;
+		}
+		
+		/**
+		 * Posterior probabilities for ancestor copy numbers 0,1,...
 		 * 
 		 * @param node
 		 * @return
@@ -450,7 +577,7 @@ public class MixedRatePosteriors
 					pN = Arrays.copyOf(pN, cN.length);
 				for (int n=0; n<cN.length; n++)
 				{
-					pN[n] += pc[c]*cN[n];
+					pN[n] += cat_post[c]*cN[n];
 				}
 			}
 			return pN;
@@ -465,9 +592,45 @@ public class MixedRatePosteriors
 		 */
 		public double getFamilyEvent(int node, Posteriors.FamilyEvent event_type)
 		{
+			if (events[node]==null)
+			{
+				events[node]=new double[Posteriors.FamilyEvent.values().length];
+				for (int c=0; c<num_classes; c++)
+				{
+					Posteriors.Profile P = post[c];
+					double[] ev = P.getFamilyEventPosteriors(node);
+					assert (ev.length==events[node].length);
+					for (int j=0; j<ev.length; j++)
+					{
+						events[node][j] += cat_post[c]*ev[j];
+					}
+				}
+			}
 			final int event_idx = event_type.ordinal();
-			return sumClasses(c->events[node][event_idx]);
+			return events[node][event_idx];
 		}
+		
+		public double getFamilyLogSurvivalEvent(int node, Posteriors.FamilyEvent event_type)
+		{
+			if (log_survival_events[node]==null)
+			{
+				log_survival_events[node]=new double[Posteriors.FamilyEvent.values().length];
+				Arrays.fill(log_survival_events[node], Double.NEGATIVE_INFINITY);
+				for (int c=0; c<num_classes; c++)
+				{
+					Posteriors.Profile P = post[c];
+					double[] sv = P.getFamilyLogSurvivalEventPosteriors(node);
+					assert (sv.length==log_survival_events[node].length);
+					for (int j=0; j<sv.length; j++)
+					{
+						log_survival_events[node][j] = Logarithms.add(log_survival_events[node][j], cat_log_post[c]+sv[j]);
+					}
+				}
+			}
+			final int event_idx = event_type.ordinal();
+			return log_survival_events[node][event_idx];
+		}
+		
 		
 		
 		public void reportPosteriors(PrintStream out)

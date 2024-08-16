@@ -37,7 +37,6 @@ import count.gui.kit.RoundedDouble;
  * <li> <var>x</var>+3 profile summary
  * </ul>
  * 
- * Helper classes include a renderer for phyletic profiles. 
  * 
  * @author Mikl&oacute;s Cs&#369;r&ouml;s csurosm@gmail.com
  */
@@ -245,7 +244,10 @@ public class AnnotatedTableModel extends AbstractTableModel
             column_idx--;
         
         if (want_detailed_profiles)
-            return "\u03a6"+leaves[column_idx];
+        {
+            return leaves[column_idx]+":n";
+//            return "\u03a6"+leaves[column_idx];
+        }
         else
             return "Profile";
     }

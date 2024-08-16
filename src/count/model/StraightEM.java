@@ -33,6 +33,7 @@ import count.ds.IndexedTree;
 import count.ds.ProfileTable;
 import count.ds.UniqueProfileTable;
 import count.io.CommandLine;
+import count.io.NewickParser;
 import count.io.RateVariationParser;
 import count.matek.FunctionMinimization;
 import count.matek.Functions;
@@ -1744,6 +1745,9 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 				Count.out.println("#*SEM.o done/iterations ("+iter+")"+"\t LL "+LLprev+"\tdiff "+(LLstart-LLprev)+"\tdrop "+diff+"\trdiff "+(-delta)+timing_info);
 			}
 		}
+		
+		
+		
 		return -LLprev;
 	}	
 	
@@ -1892,9 +1896,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	       score = O.optimize(eps, maxiter);
         }
 
-        // report the optimal values
-		out.println(count.io.RateVariationParser.printRates(model));
 
+        if (PRINT_OPTIMIZATION_MESSAGES)
         {
 	        // test: compare to real likelihood
 	        //Gradient G = new Gradient(model.getBaseModel(),table);
@@ -1905,7 +1908,7 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	        double trueLL = G.getCorrectedLL();
 	        double diff = (score - (-trueLL));
 	        
-	        Count.out.println("#*SEM.main truescore "+(-trueLL)+"\tdiff "+diff+"\trdiff "+diff/(-trueLL));
+	        out.println("#*SEM.main truescore "+(-trueLL)+"\tdiff "+diff+"\trdiff "+diff/(-trueLL));
         }
         
 		
@@ -1913,11 +1916,20 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		// scoring info
 		double ascore = score/table.getFamilyCount();
 
-        double bic_pty = 0.5*O.getModelParameterCount()*Math.log(table.getFamilyCount());
+		int npars = O.getModelParameterCount();
+		int nfams = table.getFamilyCount();
+        double bic_pty = 0.5*npars*Math.log(nfams);
 		
-		out.println("#SCORE "+score+"\tBICpty "+bic_pty+"\tregularized "+(score+bic_pty));
+		out.println("#TREE "+NewickParser.printTree(cli.getTree()));
+		out.println("#SCORE "+score+"\tBICpty "+bic_pty+"\tregularized "+(score+bic_pty)
+					+"\tnum.parameters "+npars+"\tsamplesize "+nfams);
         out.println("#AVGSCORE "+ascore);
         
+        // report the optimal values
+		if (0<maxiter)
+		{
+			out.println(count.io.RateVariationParser.printRates(model));
+		}
 		if (out != System.out)
 		{
 			if (out.checkError())

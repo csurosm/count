@@ -282,12 +282,12 @@ public class HistoryView
                 	int num_nodes = table_model.getTree().getNumNodes();
                 	int w;
                 	if (num_nodes<100)
-                		w = 2*num_nodes;
+                		w = 4*num_nodes/2;
                 	else
                 	{
                 		w = num_nodes;
-                		while (w>400)
-                			w = w/2;
+//                		while (w>400)
+//                			w = w/2;
                 	}
                 	return w;
                 }
@@ -631,7 +631,7 @@ public class HistoryView
 				table_family_score = table_model.newDoubleColumn("Events", "Number of copy births and deaths");
 			} else
 			{
-				table_family_score = table_model.newDoubleColumn("Rarity", "Negative log-likeihood (deciban)");
+				table_family_score = table_model.newDoubleColumn("Rarity", "Negative log-likelihood (deciban= - 10 log_10(L)");
 			}
 		}
 
@@ -765,7 +765,16 @@ public class HistoryView
 	}
 	
 
+	/**
+	 * Chatty execution for tracking the threads when debugging a numerical error.
+	 */
 	private static final boolean DEBUG_THREADS=false;
+	/**
+	 * For a smoother update of the progress, updates are published for 
+	 * individual families using a blocking queue. Otherwise, 
+	 * updates published only when the batch tasks finish a block of families.
+	 */
+	private static final boolean COMPUTE_ALL_WITH_BLOCKING_QUEUE = true;
 	
 	/**
 	 * Sets {@link #history_task} and launches execution
@@ -775,6 +784,8 @@ public class HistoryView
 	protected void computeAll()
 	{
 		final int nF = table_data.getContent().getFamilyCount();
+		
+		// out SwingWorker launches a bunch of working threads to compute families in chunks
 		class HistoryWorker extends SwingWorker<Void,Integer>
 		{
 			private int num_families_done=0;
@@ -788,8 +799,11 @@ public class HistoryView
 				
 				if (executor != null && nF>THREAD_UNIT_TASK)
 				{
+					
+					// we don't use publish directly from the working threads, rather add to a thread-safe blocking queue
 					final BlockingQueue<Integer> families_done=new ArrayBlockingQueue<>(nF);
 					
+					// one chunk of families
 					class ComputingTask implements Runnable //Callable<int[]>
 					{
 						ComputingTask(int fmin, int fmax)
@@ -807,17 +821,23 @@ public class HistoryView
 //						}
 						public void run()
 						{
+							
+							if (DEBUG_THREADS)
+								System.out.println("#***HV.cA/HW.CT.run "+range[0]+"\t"+range[1]+"\t"+Thread.currentThread());
 							for (int f=range[0]; f<range[1] && !isCancelled(); f++)
 							{
 								if (Thread.currentThread().isInterrupted())
 								{
+//									System.out.println("#***HV.cA/HW.CT.run"+range[0]+"\t"+range[1]+"\tinterrrupt at "+f+"\t"+Thread.currentThread());
 									return;
 								}
 								computeFamily(f);
 								boolean fits_in_queue = families_done.offer(f);
 								assert (fits_in_queue);
-									
-							} 
+								
+							}
+							if (DEBUG_THREADS)
+								System.out.println("#***HV.cA/HW.CT.done "+range[0]+"\t"+range[1]+"\t"+Thread.currentThread());
 						}
 					} // class ComputingTask
 					
@@ -837,55 +857,100 @@ public class HistoryView
 						completion.submit(T, T.range);
 						fmin = fmax;
 					}
+					Thread family_tracker = new Thread(
+						new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								Thread our_thread = Thread.currentThread();
+								int iter=0;
+								try 
+								{
+									for (; iter<nF ; iter++)
+									{
+										int f = families_done.take();
+										if (!HistoryWorker.this.isCancelled() && !HistoryWorker.this.isDone())
+											publish(f);
+									}
+								} catch (InterruptedException E) // caused by a worker that caught an ExecutionException
+								{
+									if (DEBUG_THREADS)
+										System.out.println("#**HV.cA/HW.dIB family tracker caught "+E+"\t"+our_thread);
+									//cancel(true);
+//									throw new RuntimeException(E);
+								} 
+								
+								if (iter<nF)
+								{
+									if (DEBUG_THREADS)										
+										System.out.println("#**HV.cA/HW.dIB family tracker finished at "+iter+"\t"+our_thread);
+								}
+							}
+						}
+					);
+					if (COMPUTE_ALL_WITH_BLOCKING_QUEUE)
+					{
+						family_tracker.start();
+					}
+					
 					try
 					{
-//						if (DEBUG_THREADS)
-//							System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tstarting nF="+nF);
-						for (int iter=0; iter<nF; iter++)
-						{
-							int f = families_done.take();
-							publish(f);
-							if (DEBUG_THREADS)
-								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tpublish "+f+"\titer "+iter+"\t/"+nF);
-						}
+						if (DEBUG_THREADS)
+							System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tstarting nF="+nF);
+//						if (COMPUTE_ALL_WITH_BLOCKING_QUEUE)
+//						{
+//							for (int iter=0; iter<nF; iter++)
+//							{
+//								int f = families_done.take();
+//								publish(f);
+//								if (DEBUG_THREADS)
+//									System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tpublish "+f+"\titer "+iter+"\t/"+nF);
+//							}
+//						}
 						for (int t=0; t<computing_tasks.size(); t++)
 						{
-//							if (DEBUG_THREADS)
-//								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\twaiting task "+t+"/"+computing_tasks.size());
+							if (DEBUG_THREADS)
+								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\twaiting task "+t+"/"+computing_tasks.size());
 							Future<int[]> this_one_done = completion.take();
 							
 							int[] range = this_one_done.get();
-//							if (DEBUG_THREADS)
-//								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tgot "+range[0]+".."+range[1]);
-							
-//							for (int f=range[0]; f<range[1]; f++)
-//								publish(f);
+							if (DEBUG_THREADS)
+								System.out.println("#***HV.cA/HW.dIB "+Thread.currentThread()+"\tgot "+range[0]+".."+range[1]);
+							if (!COMPUTE_ALL_WITH_BLOCKING_QUEUE)
+							{
+								for (int f=range[0]; f<range[1]; f++)
+									publish(f);
+							}
 						}
 					} catch (InterruptedException E)
 					{
-						// dunno about this 
-						System.out.println("#**HV.cA/HW.dIB "+E);
+						if (DEBUG_THREADS)
+							System.out.println("#**HV.cA/HW.dIB caught interrupt "+E+"\t"+Thread.currentThread());
+						family_tracker.interrupt(); 
 						this.cancel(true);
-//						throw new RuntimeException(E);
 					} 
 					catch (ExecutionException EE)
 					{
-						// or this
-						System.out.println("#**HV.cA/HW.dIB "+EE);
-						this.cancel(true);
-//						throw new RuntimeException(EE);
-					} catch (Throwable t)
-					{
-						System.out.println("#**HV.cA/HW.dIB "+t);
-						this.cancel(true);
-					}
+						//EE.printStackTrace();
+						if (COMPUTE_ALL_WITH_BLOCKING_QUEUE)
+						{
+							family_tracker.interrupt(); // causes an InterruptedException there
+							
+						}
+						if (DEBUG_THREADS)
+							System.out.println("#**HV.cA/HW.dIB caught ExecutionEception "+EE
+							+"\texecutor sd "+executor.isShutdown()+" term "+executor.isTerminated());
+						throw new RuntimeException(EE); // forward to handler 
+					} 
 				} else
 				{
 					for (int f=0; f<nF; f++)
 					{
 						if (Thread.currentThread().isInterrupted())
 						{
-							System.out.println("#**HV.cA/HW.dIB interrupted @ f="+f+"\t// "+Thread.currentThread());							
+							if (DEBUG_THREADS)
+								System.out.println("#**HV.cA/HW.dIB interrupted @ f="+f+"\t// "+Thread.currentThread());							
 							return (Void)null;
 						}
 						computeFamily(f);
@@ -896,9 +961,43 @@ public class HistoryView
 			}
 			
 			@Override
-			public void done()
+			protected void done()
 			{
-				if (isCancelled())
+				boolean failed_execution;
+				boolean is_canceled = isCancelled();
+				
+				if (DEBUG_THREADS)
+					System.out.println("#**HV.cA/HW.done/cancel? "+is_canceled+"\t"+Thread.currentThread());
+				
+				if (is_canceled)
+				{
+					failed_execution = false;
+				} else
+				{
+					try
+					{
+						get(); // this is where we check if there was a problem 
+						failed_execution = false;
+					} 
+					catch (Throwable t)
+					{
+						if (DEBUG_THREADS)
+							System.out.println("#**HV.cA/HW.done caught "+t+"\tcancel "+isCancelled()+"\t"+Thread.currentThread());
+						
+						AppFrame app = Session.getApp(HistoryView.this);
+						app.getExceptionHandler().handle(t, "Computations had a numerical error");
+						
+						failed_execution = true;
+						//t.printStackTrace();
+					}
+				}
+//				if (DEBUG_THREADS)
+//					System.out.println("#**HV.cA/HW.done/cancel? "+is_canceled+"\tfailed? "+failed_execution+"\t"+Thread.currentThread());
+				
+				if (failed_execution)
+				{
+					computation_progress.setString("Computation failed ");
+				} else if (is_canceled)
 				{
 					computation_progress.setString("Canceled prematurely ");
 				} else
@@ -906,23 +1005,25 @@ public class HistoryView
 					computation_progress.setString("Done "+nF);
 					computation_progress.setVisible(false);
 				}
+				
 				// recolor
-				for (int col=table_model.firstHistoryColumn(); col<table_model.getColumnCount(); col++)
-				{
-					colorHistoryColumn(col);
-//					HistoryModel.Column<?> column_data = table_model.getHistoryColumn(col);
-//					Color max_color = column_data.getColor();
-//					if (max_color!=null)
-//					{
-//						double min = column_data.getMinimum();
-//						if (min<1.0) min=0.0;
-//						double max = Double.max(1.0,column_data.getMaximum());
-//						
-//						ColoredValueRenderer renderer
-//						= new ColoredValueRenderer(Color.WHITE,max_color,min,max);
-//						table_scroll.setColumnRenderer(col, renderer);
-//					}
-				}
+				if (!failed_execution && !is_canceled)
+					for (int col=table_model.firstHistoryColumn(); col<table_model.getColumnCount(); col++)
+					{
+						colorHistoryColumn(col);
+//						HistoryModel.Column<?> column_data = table_model.getHistoryColumn(col);
+//						Color max_color = column_data.getColor();
+//						if (max_color!=null)
+//						{
+//							double min = column_data.getMinimum();
+//							if (min<1.0) min=0.0;
+//							double max = Double.max(1.0,column_data.getMaximum());
+//							
+//							ColoredValueRenderer renderer
+//							= new ColoredValueRenderer(Color.WHITE,max_color,min,max);
+//							table_scroll.setColumnRenderer(col, renderer);
+//						}
+					}
 
 				computation_cancel.setEnabled(false);
 				//computation_cancel.setVisible(false);
@@ -936,30 +1037,41 @@ public class HistoryView
 			@Override
 			protected void process(List<Integer> families)
 			{
-				// find range of families updated 
-				int first = families.get(0);
-				int last = first;
-				for (int j=1; j<families.size(); j++)
+				if (!isCancelled())
 				{
-					int f = families.get(j);
-					first = Integer.min(first, f);
-					last = Integer.max(last, f);
+					// find range of families updated 
+					int first = families.get(0);
+					int last = first;
+					for (int j=1; j<families.size(); j++)
+					{
+						int f = families.get(j);
+						first = Integer.min(first, f);
+						last = Integer.max(last, f);
+					}
+					num_families_done += families.size();
+					int advance = (int)(100.0*num_families_done/nF);
+					this.setProgress(advance);
+					computation_progress.setString("Computed "+num_families_done+"/"+nF);
+					computation_progress.setValue(num_families_done);
+					table_model.fireTableRowsUpdated(first, last);
 				}
-				num_families_done += families.size();
-				int advance = (int)(100.0*num_families_done/nF);
-				this.setProgress(advance);
-				computation_progress.setString("Computing "+num_families_done+"/"+nF);
-				computation_progress.setValue(num_families_done);
-				table_model.fireTableRowsUpdated(first, last);
+				
 			}
 		}
 		history_task = new HistoryWorker();
 		computation_progress.setMaximum(nF);
 		computation_progress.setIndeterminate(false);
 		computation_progress.setValue(0);
-		computation_progress.setString("Computing 0/"+nF);
+		computation_progress.setString("Preparing the computation for "+nF+" families");
 		
-		history_task.execute();
+		try
+		{	
+			history_task.execute();
+			
+		} catch (Throwable t)
+		{
+			System.out.println("#***HV.cA history task execute with "+t);
+		}
 		computation_cancel.setEnabled(true);
 	}
 	

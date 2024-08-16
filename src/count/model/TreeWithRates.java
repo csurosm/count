@@ -15,6 +15,9 @@ package count.model;
  * limitations under the License.
  */
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -22,6 +25,7 @@ import count.ds.IndexedTree;
 import count.ds.Phylogeny;
 import count.io.CommandLine;
 import count.matek.DiscreteDistribution;
+import count.matek.Logarithms;
 import count.matek.NegativeBinomial;
 import count.matek.PointDistribution;
 import count.matek.Poisson;
@@ -1152,6 +1156,9 @@ public class TreeWithRates implements GLDParameters
 		}
 	}
 	
+	
+
+	
 //	/**
 //	 * log(1-x) if we know both x and 1.0-x at double precision. Uses the smaller 
 //	 * value for calculation. 
@@ -1164,103 +1171,103 @@ public class TreeWithRates implements GLDParameters
 //	{
 //		return x<xcomp?Math.log1p(-x):Math.log(xcomp);
 //	}
-	/**
-	 * High-precision rate setting.
-	 * 
-	 * @param node
-	 * @param p
-	 * @param p_1 1-p
-	 * @param q
-	 * @param q_1 1-q
-	 */
-	public void setDuplicationLossRates(int node, double p, double p_1, double q, double q_1)
-	{
-		if (p_1==0.0)
-		{
-			setEdgeLength(node, Double.POSITIVE_INFINITY);
-			double μ = getLossRate(node);
-			assert (μ!=0.0);
-			assert (Double.isFinite(μ));
-			assert (Double.isFinite(q));
-			setDuplicationRate(node, q*μ);
-		} else
-		{
-			double λ,μ;
-			double rate_gap;
-			if (p==q && p_1==q_1) // equal rates
-			{
-				λ=μ=p/p_1;
-				rate_gap = 0.0;
-			} else 
-			{
-				if (p == 0.0)
-				{
-					μ = 0.0;
-					
-//					dup_rate = -Math.log1p(-dup_param);
-//				} else if (dup_param==0.0)
+//	/**
+//	 * High-precision rate setting.
+//	 * 
+//	 * @param node
+//	 * @param p
+//	 * @param p_1 1-p
+//	 * @param q
+//	 * @param q_1 1-q
+//	 */
+//	public void setDuplicationLossRates(int node, double p, double p_1, double q, double q_1)
+//	{
+//		if (p_1==0.0)
+//		{
+//			setEdgeLength(node, Double.POSITIVE_INFINITY);
+//			double μ = getLossRate(node);
+//			assert (μ!=0.0);
+//			assert (Double.isFinite(μ));
+//			assert (Double.isFinite(q));
+//			setDuplicationRate(node, q*μ);
+//		} else
+//		{
+//			double λ,μ;
+//			double rate_gap;
+//			if (p==q && p_1==q_1) // equal rates
+//			{
+//				λ=μ=p/p_1;
+//				rate_gap = 0.0;
+//			} else 
+//			{
+//				if (p == 0.0)
 //				{
-//					dup_rate = 0.0;
-//					loss_rate = -Math.log1p(-loss_param);
-					
-					
-					λ = -GLDParameters.log1m(q, q_1); //  -log1m(q,q_1);
-					rate_gap = -λ;
-				} else if (q==0.0)
-				{
-					λ = 0.0;
-					μ = -GLDParameters.log1m(p,p_1);
-					rate_gap = μ;
-				} else
-				{
-					double diff;
-					if (q<p || p_1<q_1)
-					{
-						diff = Double.max(p-q,q_1-p_1); // the larger value should have better precision when p or q is close to 0 or 1 (?)
-					} else
-					{
-						diff = -Double.max(q-p, p_1-q_1);
-					}
-					rate_gap = GLDParameters.log1m(q,q_1)-GLDParameters.log1m(p,p_1); // mu-lambda = ln(1-q)-ln(1-p)
-					μ = p/diff * rate_gap;
-					λ = q/diff * rate_gap;
-				}
-			}
-			double t = getEdgeLength(node);
-
-			if (getLossRate(node)==1.0)
-			{
-				assert Double.isFinite(λ);
-				assert Double.isFinite(μ);
-				assert (μ != 0.0);
-				// mu = 1
-				// loss_rate = mu * length
-				// want dup_rate = lambda * length
-				setEdgeLength(node, μ);
-				λ /= μ; rate_gap /= μ;
-				setDuplicationRate(node, λ, rate_gap);
-			} else
-			{
-				if (t==Double.POSITIVE_INFINITY)
-				{
-					setLossRate(node, DEFAULT_LOSS_RATE);
-					assert (μ != 0.0); // cannot have 0 edge length
-					t = μ/DEFAULT_LOSS_RATE;
-					setEdgeLength(node, t);
-					λ/=t; rate_gap/=t;
-					setDuplicationRate(node, λ, rate_gap);
-				} else
-				{
-					assert Double.isFinite(μ);
-					assert Double.isFinite(λ);
-					assert (t!=0.0);
-					// keep edge length
-					setLossRate(node, μ/t);
-					setDuplicationRate(node, λ/t, rate_gap/t);
-				}
-			}					
-		}
-	}
+//					μ = 0.0;
+//					
+////					dup_rate = -Math.log1p(-dup_param);
+////				} else if (dup_param==0.0)
+////				{
+////					dup_rate = 0.0;
+////					loss_rate = -Math.log1p(-loss_param);
+//					
+//					
+//					λ = -GLDParameters.log1m(q, q_1); //  -log1m(q,q_1);
+//					rate_gap = -λ;
+//				} else if (q==0.0)
+//				{
+//					λ = 0.0;
+//					μ = -GLDParameters.log1m(p,p_1);
+//					rate_gap = μ;
+//				} else
+//				{
+//					double diff;
+//					if (q<p || p_1<q_1)
+//					{
+//						diff = Double.max(p-q,q_1-p_1); // the larger value should have better precision when p or q is close to 0 or 1 (?)
+//					} else
+//					{
+//						diff = -Double.max(q-p, p_1-q_1);
+//					}
+//					rate_gap = GLDParameters.log1m(q,q_1)-GLDParameters.log1m(p,p_1); // mu-lambda = ln(1-q)-ln(1-p)
+//					μ = p/diff * rate_gap;
+//					λ = q/diff * rate_gap;
+//				}
+//			}
+//			double t = getEdgeLength(node);
+//
+//			if (getLossRate(node)==1.0)
+//			{
+//				assert Double.isFinite(λ);
+//				assert Double.isFinite(μ);
+//				assert (μ != 0.0);
+//				// mu = 1
+//				// loss_rate = mu * length
+//				// want dup_rate = lambda * length
+//				setEdgeLength(node, μ);
+//				λ /= μ; rate_gap /= μ;
+//				setDuplicationRate(node, λ, rate_gap);
+//			} else
+//			{
+//				if (t==Double.POSITIVE_INFINITY)
+//				{
+//					setLossRate(node, DEFAULT_LOSS_RATE);
+//					assert (μ != 0.0); // cannot have 0 edge length
+//					t = μ/DEFAULT_LOSS_RATE;
+//					setEdgeLength(node, t);
+//					λ/=t; rate_gap/=t;
+//					setDuplicationRate(node, λ, rate_gap);
+//				} else
+//				{
+//					assert Double.isFinite(μ);
+//					assert Double.isFinite(λ);
+//					assert (t!=0.0);
+//					// keep edge length
+//					setLossRate(node, μ/t);
+//					setDuplicationRate(node, λ/t, rate_gap/t);
+//				}
+//			}					
+//		}
+//	}
 	
 	/**
 	 * Adjusts edge lengths while keeping the rates the same. 
@@ -1307,7 +1314,7 @@ public class TreeWithRates implements GLDParameters
 		.append("/1-").append(getLossParameterComplement(node))
 		.append(", q ").append(q)
 		.append("/1-").append(getDuplicationParameterComplement(node))
-		.append(", r ").append(r)
+		.append(getLogDuplicationParameter(node)==Double.NEGATIVE_INFINITY?", r ":", kapa ").append(r)
 		.append("/ru ").append(ru);
 		if (q<p)
 		{
@@ -1323,124 +1330,6 @@ public class TreeWithRates implements GLDParameters
 		sb.append(", len ").append(getEdgeLength(node));
 		return sb.append("]").toString();
 	}
-	
-//	public ParameterCache parameterCache()
-//	{
-//		return new ParameterCache();
-//	}
-//	
-//	/**
-//	 * A mirror of the embedding class that uses its own 
-//	 * cache for getXXXParameter(int node). 
-//	 * 
-//	 * @author csuros
-//	 *
-//	 */
-//	public final class ParameterCache extends TreeWithRates
-//	{
-//		private ParameterCache()
-//		{
-//			super(TreeWithRates.this, false);
-//			this.node_parameters = new double[3*tree.getNumNodes()];
-//			setCacheFromRates();
-//			
-//		}
-//		private final double[] node_parameters;
-//		
-//		
-//		public void setCacheFromRates()
-//		{
-//			int num_nodes = tree.getNumNodes();
-//			for (int node=0; node<num_nodes; node++)
-//			{
-//				setCacheFromRates(node);
-//			}
-//		}
-//		
-//		public void setCacheFromRates(int node)
-//		{
-//			node_parameters[3*node+PARAMETER_GAIN]=super.getGainParameter(node);
-//			node_parameters[3*node+PARAMETER_LOSS] = super.getLossParameter(node);
-//			node_parameters[3*node+PARAMETER_DUPLICATION] = super.getDuplicationParameter(node);
-//		}
-//		
-//		public void setRates()
-//		{
-//			int num_nodes = tree.getNumNodes();
-//			for (int node=0; node<num_nodes; node++)
-//			{
-//				setRates(node);
-//			}
-//		}
-//		
-//		/**
-//		 * Sets the rates based on the cached parameter values; updates 
-//		 * the parameter values in the cache. Because of numerical precision, 
-//		 * the parameter values may change, and getXXXParameter 
-//		 * returns a different value matching the stored rates.  
-//		 * 
-//		 * @param node
-//		 */
-//		public void setRates(int node)
-//		{
-//			double p = node_parameters[3*node+PARAMETER_LOSS];
-//			double q = node_parameters[3*node+PARAMETER_DUPLICATION];
-//			double r = node_parameters[3*node+PARAMETER_GAIN];
-//			super.setParameters(node, r, p, q);
-//			setCacheFromRates(node);
-//		}
-//		
-//		/**
-//		 * Sets cached values.
-//		 */
-//		@Override
-//		public void setParameters(int node, double r, double p, double q)
-//		{
-//			System.out.println("#**TWR.PC.sP "+node+"\tr "+r+"\tp "+p+"\tq "+q+"\t// "+tree.getIdent(node));
-//			
-//			node_parameters[3*node+PARAMETER_GAIN]=r;
-//			node_parameters[3*node+PARAMETER_LOSS] = p;
-//			node_parameters[3*node+PARAMETER_DUPLICATION] = q;
-//		}
-//		
-//		/**
-//		 * Cached value
-//		 */
-//		@Override
-//		public double getGainParameter(int node)
-//		{
-//			return node_parameters[3*node+PARAMETER_GAIN];
-//		}
-//		/**
-//		 * Cached value
-//		 */
-//		@Override
-//		public double getLossParameter(int node)
-//		{
-//			return node_parameters[3*node+PARAMETER_LOSS];
-//		}
-//		/**
-//		 * Cached value
-//		 */
-//		@Override
-//		public double getDuplicationParameter(int node)
-//		{
-//			return node_parameters[3*node+PARAMETER_DUPLICATION];
-//		}
-//		
-//		@Override 
-//		public double getLossParameterComplement(int node)
-//		{
-//			return 1.0-getLossParameter(node);
-//		}
-//		
-//		@Override 
-//		public double getDuplicationParameterComplement(int node)
-//		{
-//			return 1.0-getDuplicationParameter(node);
-//		}
-//		
-//	}
 	
 	
 	private void reportParameters(java.io.PrintStream out)
@@ -1458,10 +1347,37 @@ public class TreeWithRates implements GLDParameters
 		Class<?> us = java.lang.invoke.MethodHandles.lookup().lookupClass();
 		CommandLine cli = new CommandLine(args,  us);
 		
+        PrintStream out = System.out; 
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	    out.println(CommandLine.getStandardHeader(us));
+    	    out.println(CommandLine.getStandardRuntimeInfo(us, args));
+    	}
 		
-        TreeWithRates rates = cli.getRates();
-		
-        rates.reportParameters(System.out);
+        MixedRateModel zeb  = cli.getMixedrateModel();
+        TreeWithRates rates = zeb.getBaseModel();
+        
+        
+//        String maxgain = cli.getOptionValue("max"+CommandLine.OPT_GAIN);
+//        if (maxgain == null)
+//        {
+        	rates.reportParameters(out);
+//        } else
+//        {
+//        	double max = Double.parseDouble(maxgain);
+//        	rates.setMaxGainDuplicationRate(max);
+//        	
+//        	out.println(count.io.RateVariationParser.printRates(zeb));        	
+//        }
+        
+		if (out != System.out)
+		{
+			if (out.checkError())
+				throw new java.io.IOException("Write failed.");
+			out.close();
+		}
         
 	}
 }

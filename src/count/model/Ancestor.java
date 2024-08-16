@@ -27,7 +27,7 @@ import count.ds.IndexedTree;
  * @author csuros
  *
  */
-public class Ancestor extends Likelihood
+public class Ancestor extends LikelihoodParametrized
 {
 	public Ancestor(Likelihood factory, int node)
 	{
@@ -58,20 +58,20 @@ public class Ancestor extends Likelihood
 		if (node==ancestor) 
 		{
 			// TODO this.computeNodeParameters(node, Double.NEGATIVE_INFINITY); // logit(0.0)
-			setNodeParameters(node, 0.0);
+			super.setNodeParameters(node, 0.0);
 		} else
 			super.computeNodeParameters(node);
 	}
 	
 	@Override
-	protected Profile getProfileLikelihood(int family_idx)
+	protected Likelihood.Profile getProfileLikelihood(int family_idx)
     {
-    	return new Profile(family_idx);
+    	return this.new Profile(family_idx);
     }	
 	
-	class Profile extends Likelihood.Profile
+	private class Profile extends LikelihoodParametrized.Profile
 	{
-		Profile(int family_idx)
+		private Profile(int family_idx)
 		{
 			super(family_idx);
 		}
