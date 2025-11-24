@@ -68,7 +68,7 @@ public class Likelihood implements GLDParameters
 		this.tree = rates.getTree();
 		this.max_family_size = table.getMaxFamilySizes(tree);
 		int root = tree.getRoot();
-		factorials = new RisingFactorial(1.0, 1+max_family_size[root]); // capacity for precomputing all necessary values; +2 instead of +1 for safety  if ==0
+		factorials = new RisingFactorial(1.0, 1+max_family_size[root]); // capacity for precomputing all necessary values; 
 		
 		computeParameters();
 	}
@@ -190,6 +190,18 @@ public class Likelihood implements GLDParameters
 		}
 		return r;
 	}
+
+	public double getLinearGainParameter(int node) {
+		double r; // return value
+		double log_q = getLogDuplicationParameter(node);
+		double log_gn = this.getLogGainParameter(node);
+		if (log_q == Double.NEGATIVE_INFINITY) {
+			r = Math.exp(log_gn);
+		} else {
+			r = Math.exp(log_gn + log_q);
+		}
+		return r;
+	}
 	
 	
 	private int threshold_width_absolute = Integer.MAX_VALUE;
@@ -231,11 +243,13 @@ public class Likelihood implements GLDParameters
 	 * @param node
 	 * @param g kappa (if Polya), or r (if Poisson) corrected for extinction
 	 */
-	protected final void setGainParameter(int node, double g) 
+	protected void setGainParameter(int node, double g) 
 	{
-		assert Double.isFinite(g);  
+		// assert Double.isFinite(g);  
 		survival_parameters[3*node+PARAMETER_GAIN]=g;
 	}
+	
+	
 	/**
 	 * Loss parameter in survival model. 
 	 * 
@@ -370,10 +384,18 @@ public class Likelihood implements GLDParameters
 			} else
 			{
 				// Pólya
-				double κ = getGainParameter(node);
-				//double q_1 = getDuplicationParameterComplement(node);
-				//double log1_q = getLogDuplicationComplement(node);
-				LL += κ* log1_q; //  Math.log(q_1);  // Math.log1p(-q); //  Math.log(1.0-q); // log(1-q)
+//				double κ = getGainParameter(node);
+//				//double q_1 = getDuplicationParameterComplement(node);
+//				//double log1_q = getLogDuplicationComplement(node);
+//				LL += κ* log1_q; //  Math.log(q_1);  // Math.log1p(-q); //  Math.log(1.0-q); // log(1-q)
+				
+				double log_κ = getLogGainParameter(node);
+				double loglog1_q = Math.log(-log1_q);
+				if (loglog1_q==Double.NEGATIVE_INFINITY) 
+					loglog1_q = log_q;
+				double log_kappa_log1_q = log_κ+loglog1_q;
+				double kappa_log1_q = Math.exp(log_kappa_log1_q);	
+				LL -= kappa_log1_q;
 			}
 		}
 		//double proot = getLossParameter(tree.getRoot());
@@ -536,6 +558,8 @@ public class Likelihood implements GLDParameters
 		{
 			
 			double r = rates.getGainParameter(node);
+			
+			double logr = rates.getLogGainParameter(node);
 			
 			if (!Double.isFinite(r))
 			{
@@ -948,6 +972,11 @@ public class Likelihood implements GLDParameters
 //					throw new RuntimeException();
 			}
 		}
+		
+		protected void destroyLikelihoods(int node) {
+			edge_likelihoods[node] = null;
+			node_likelihoods[node] = null;
+		}
 	
 		public double getLogLikelihood()
 		{
@@ -1013,7 +1042,7 @@ public class Likelihood implements GLDParameters
 		 * 
 		 * @param node must be called in postorder 
 		 */
-		private void computeEdge(int node)
+		protected final void computeEdge(int node)
 		{
 			double[] K; // the edge likelihoods that will be set 
 			double[] C = node_likelihoods[node];
@@ -1024,7 +1053,8 @@ public class Likelihood implements GLDParameters
 			if (tree.isRoot(node))
 			{
 				double p = getLossParameter(node);
-				if (p==1.0) 
+				double logp = getLogLossParameter(node);
+				if (getLogLossComplement(node)==Double.NEGATIVE_INFINITY) //   logp==0.0) 
 					K = new double[1];
 				else 
 					K = new double[2];
@@ -1046,17 +1076,21 @@ public class Likelihood implements GLDParameters
 //			double logq = Math.log(q);
 //			double log1_q = Math.log(one_minus_q);
 //			if (ASSERT_CALCULATIONS) assert (q!=1.0 || one_minus_q != 0.0);
-			double g = getGainParameter(node);
+			//double g = getGainParameter(node);
 			//System.out.println("#**L.P.cE "+node+"\tlogq "+logq+"\tloq1_q "+log1_q+"\tgainpar "+g);
 			
-			assert Double.isFinite(g);
+			//assert Double.isFinite(g);
 			if (logq==Double.NEGATIVE_INFINITY) // test before the loop //if (q==0.0)
 			{
 				// Poisson distribution with parameter r 
-				double r = g;
-				if (r == 0.0)
+				double logr = getLogGainParameter(node);
+				
+				double r = Math.exp(logr);
+				//assert (Double.isFinite(r));
+				
+				if (logr == Double.NEGATIVE_INFINITY)
 				{
-					// no gain, no duplication
+					// no gain, no duplication ??
 					for (int s=0; s<K.length; s++)
 					{
 						K[s] = C[s];
@@ -1064,7 +1098,6 @@ public class Likelihood implements GLDParameters
 					}
 				} else
 				{
-					double logr = Math.log(r);
 					double[] terms = new double[C.length];
 					for (int s=0; s<K.length; s++)
 					{
@@ -1084,11 +1117,12 @@ public class Likelihood implements GLDParameters
 			} else
 			{
 				// Polya distribution with parameters kappa+s and q 
-				double κ = g;
+				//double κ = g;
+				double log_κ = getLogGainParameter(node);
 //				double logq = Math.log(q);
 //				double log1_q = Math.log(one_minus_q);
 				double[] terms =new double[C.length];
-				if (κ == 0.0)
+				if (log_κ  == Double.NEGATIVE_INFINITY)
 				{
 					// no gain: negative binomial with s and q 
 					K[0] = C[0]; // no conservation here
@@ -1110,6 +1144,12 @@ public class Likelihood implements GLDParameters
 					}
 				} else
 				{
+					double loglog1_q = Math.log(-log1_q);
+					if (loglog1_q==Double.NEGATIVE_INFINITY) 
+						loglog1_q = logq;
+					double log_kappa_log1_q = log_κ+loglog1_q;
+					double kappa_log1_q = Math.exp(log_kappa_log1_q);
+					
 //					if (gain_factorials[node] == null)
 //						System.out.println("#**L.P.cE "+node+"\t"+tree.toString(node)+"\t"+rates.getDuplicationRate(node)+"\tq "+rates.getDuplicationParameter(node)); //+"\tq~ "+q);
 					for (int s=0; s<K.length; s++)
@@ -1121,7 +1161,9 @@ public class Likelihood implements GLDParameters
 							assert (ell == s+t); // loop invariant;
 							double binom = gain_factorials[node].factln(ell)-factln_s-factorials.factln(t);
 							double t_logq = (t==0?0.0:t*logq);
-							double w = binom + (κ+s)*log1_q + t_logq;
+							double ks_log1_q = s*log1_q-kappa_log1_q;
+							double w = binom + ks_log1_q //(κ+s)*log1_q 
+									+ t_logq;
 							if (ASSERT_CALCULATIONS) assert !Double.isNaN(binom);
 							if (ASSERT_CALCULATIONS) assert !Double.isNaN(w);
 							if (ASSERT_CALCULATIONS) assert !Double.isNaN(C[ell]);
@@ -1152,7 +1194,7 @@ public class Likelihood implements GLDParameters
 		 * 
 		 * @param node called in postorder, after {@link #computeEdge(int)}
 		 */
-		private void computeNode(int node)
+		protected final void computeNode(int node)
 		{
 			int n = getCalculationWidth(node);
 			assert (n==node_likelihoods[node].length);
@@ -1214,6 +1256,12 @@ public class Likelihood implements GLDParameters
 			}
 		}
 		
+		/**
+		 * Likelihood recurrences with unstable numerical precision. 
+		 * 
+		 * @param node
+		 * @return
+		 */
 		protected double[] computeNodeFromChildren(int node)
 		{
 			double[] C=null;// will be reused
@@ -1251,8 +1299,15 @@ public class Likelihood implements GLDParameters
 			return C;
 		}
 		
-		protected double[] computeSiblingLogit(int junior, double[] C, double logit_eps)
-		{
+		/**
+		 * Placeholder for overriding with a high-precision variant.
+		 * 
+		 * @param junior
+		 * @param C
+		 * @param logit_eps
+		 * @return
+		 */
+		protected double[] computeSiblingLogit(int junior, double[] C, double logit_eps){
 			double log_eps = Logarithms.logitToLogValue(logit_eps);
 			return computeSibling(junior, C, Math.exp(log_eps));
 		}
@@ -1266,8 +1321,7 @@ public class Likelihood implements GLDParameters
 		 * @param eps siblings' extinction 
 		 * @return survival log-likelihoods for junior+siblings 
 		 */
-		protected double[] computeSibling(int junior, double[] C, double eps)
-		{
+		private double[] computeSibling(int junior, double[] C, double eps){
 			
 			
 			
@@ -1577,6 +1631,7 @@ public class Likelihood implements GLDParameters
 	
 	}
 	
+	
 	protected void reportLikelihood(PrintStream out, int min_copies, boolean want_distribution)
 	{
     	double LL = getLL();
@@ -1638,7 +1693,32 @@ public class Likelihood implements GLDParameters
 	    {
 		    out.println("Log-likelihood:      \t"+LL+"\t("+Math.exp(LL)+")");
 		    out.println("Empty log-likelihood:\t"+L0+"\t(p0 "+p0+")");
+		    
+		    double p0r = -L0;
+		    out.printf("# Poisson ngains p0 %.4f", p0);
+		    double p_not0=-Math.expm1(L0);
+		    
+		    double p0k=p0;
+		    for (int k=1; k<8; k++) {
+		    	p0k *= p0r/k; 
+		    	out.printf("\tp%d %.4g/%.2g",  k, p0k,p0k/p_not0);
+		    }
+		    out.printf("\tr %.2f\n", p0r);		
+		    		
 		    out.println("Singleton log-likelihood:\t"+L1+"\t(p1 "+p1+")"+"\t(p0+p1 "+(p0+p1));
+		    if (0<min_copies) {
+		    	int nFam = table.getFamilyCount();
+		    	double N0 = nFam*p0/p_obs;
+		    	double N1;
+		    	if (1==min_copies){
+		    		 N1 = 0.0;
+		    	} else {
+		    		N1 = nFam*p1/p_obs;
+		    	} 
+		    	double Nunobs = N0+N1;
+		    	double Ntot = nFam + Nunobs;
+		    	out.printf("# Implied total families:\t%.1f\tNfam %d\tNunobs(N0+N1) %.1f=%.1f+%.1f\n", Ntot, nFam, Nunobs, N0, N1);
+		    }
 //		    printSingletons(out);
 		    out.println("Corrected log-lik.:  \t"+corrL+"\t("+Math.exp(corrL)+")\t// "+getCorrectedLL());
 	    }
@@ -1659,7 +1739,7 @@ public class Likelihood implements GLDParameters
         {
             out.println(CommandLine.getStandardHeader("(using classic recursion for node likelihoods)"));
         }
-        boolean want_distribution =  cli.getOptionBoolean("distribution", false);
+        boolean want_distribution =  cli.getOptionBoolean(CommandLine.OPT_STATISTICS, false);
         if (cli.getOptionValue(CommandLine.OPT_TRUNCATE)!=null)
         {
         	int absolute = cli.getOptionTruncateAbsolute();

@@ -32,7 +32,8 @@ import count.ds.IndexedTree;
 //import static count.matek.FunctionMinimization.EPS;
 /**
  * Root class for model parameter setting by likelihood maximization, 
- * defining the common interface for extending classes.   
+ * defining the common interface for extending classes, as well as 
+ * PropertyChangeEvent handling. 
  * 
  * @author Mikl&oacute;s Cs&#369;r&ouml;s 
  *
@@ -113,7 +114,7 @@ public abstract class ML
 	
 	
 	/*
-	 * Propetry change support
+	 * Property change support
 	 */
 	public static final String PROPERTY_OPTIMIZATION_PHASE = "phase";
 	
@@ -132,11 +133,11 @@ public abstract class ML
 	
 	public synchronized void addPropertyChangeListener(String propertyName, PropertyChangeListener listener)
 	{
-		//getSupport().addPropertyChangeListener(propertyName, listener);
+		getSupport().addPropertyChangeListener(propertyName, listener);
 	}
 	public synchronized void addPropertyChangeListener(PropertyChangeListener listener)
 	{
-		//getSupport().addPropertyChangeListener(listener);
+		getSupport().addPropertyChangeListener(listener);
 	}
 	protected synchronized void firePropertyChange​(String propertyName, Object oldValue, Object newValue)
 	{
@@ -171,7 +172,7 @@ public abstract class ML
 		if (property_support!=null) 
 		{
 			property_support.removePropertyChangeListener(listener);
-			// set to null if empty?
+			// set property_support to null if empty?
 		}
 	}
 	public void removePropertyChangeListener(String propertyName, PropertyChangeListener listener)
@@ -179,7 +180,7 @@ public abstract class ML
 		if (property_support!=null) 
 		{
 			property_support.removePropertyChangeListener(propertyName, listener);
-			// set to null if empty?
+			// set property_support to null if empty?
 		}
 	}
 	
@@ -442,6 +443,31 @@ public abstract class ML
 		}
 		Logistic newLogistic = new Logistic(theta, max_value);
 		return newLogistic;
+	}
+	
+	protected static double toLogistic(double theta, double max_theta) {
+		double t = theta/max_theta;
+		assert (t<=1.0);
+		double x = Math.log(t)-Math.log1p(-t);
+		return x;
+	}
+	
+	protected static double fromLogistic(double x, double max_theta) {
+		double t;
+		if (x>=0.0)
+		{
+			double e = Math.exp(-x);
+			t = 1.0/(1.0 + e);
+		} else
+		{
+			double e = Math.exp(x);
+			t = e/(1.0+e);
+		}
+		if (Double.isFinite(x))
+		{
+			t = Double.min(Double.max(EPS, t), 1.0-EPS);
+		}
+		return t;
 	}
 	
 	/**

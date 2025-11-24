@@ -148,6 +148,11 @@ public class GammaInvariant implements MixedRateModel.RateMultipliers
     	length_multipliers 
     	= setGammaMultipliers(new double[edge_length_categories], length_alpha, edge_length_categories);
     	
+//    	System.out.println("#**GI.setCl ng "+gain_rate_categories
+//    			+"\tnl "+loss_rate_categories
+//    			+"\tnd "+duplication_rate_categories
+//    			+"\tne "+edge_length_categories);
+    	
 //    	class_rates = new TreeWithRates[getNumClasses()]; 
 //    	setClassRates(); // adjusts the rates on the class trees 
     }

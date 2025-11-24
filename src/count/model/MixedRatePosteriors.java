@@ -29,6 +29,7 @@ import count.model.Posteriors.FamilyEvent;
 
 import static count.io.CommandLine.OPT_ANCESTRAL;
 import static count.io.CommandLine.OPT_HISTORY;
+import static count.io.CommandLine.OPT_MINCOPY;
 
 
 /**
@@ -39,6 +40,9 @@ import static count.io.CommandLine.OPT_HISTORY;
  */
 public class MixedRatePosteriors 
 {
+	
+	private static boolean FAMILY_PRESENCE_BY_SURVIVAL = true;
+
 	public MixedRatePosteriors(MixedRateModel mixed_model, ProfileTable table)
 	{
 		this.mixed_model = mixed_model;
@@ -47,8 +51,8 @@ public class MixedRatePosteriors
 		this.class_index = new int[class_posteriors.length];
 		Arrays.fill(class_index,-1);
 		this.log_class_prob = new double[class_posteriors.length]; // precomputed
-		this.num_classes = 0;
-		this.min_copies = Integer.min(table.minCopies(), 2);
+		this.num_classes = 0; // need to compute classes
+		this.min_copies = Integer.min(table.minCopies(), 7);
 	}
 	private final MixedRateModel mixed_model;
 	private final ProfileTable table;
@@ -132,6 +136,7 @@ public class MixedRatePosteriors
 		Arrays.fill(class_index,-1);
 		Arrays.fill(log_class_prob,Double.NEGATIVE_INFINITY);
 		num_classes=0;
+		int nonzerop = 0;
 		for (int c = 0; c<class_posteriors.length; c++)
 		{
 			double pc = mixed_model.getClassProbability(c);
@@ -145,9 +150,14 @@ public class MixedRatePosteriors
 				
 				class_index[num_classes] = c;
 				log_class_prob[num_classes] = Math.log(pc);
+				
+//				System.out.println("#**MRP.cC class#"+num_classes
+//						+"("+c+")\tpc "+pc);
+				nonzerop++;
 				num_classes++;
 			}
 		}
+//		System.out.println("#**MRP.cC "+num_classes+" classes; nonzero prob "+nonzerop); 
 	}
 	
 	public int getClassCount()
@@ -181,27 +191,29 @@ public class MixedRatePosteriors
 	 */
 	public void setMinimumObserved(int min_copies)
 	{
-		if (min_copies<0 || min_copies>2) throw new UnsupportedOperationException("Min copies 0,1,2 are implemented");
+//		if (min_copies<0 || min_copies>2) throw new UnsupportedOperationException("Min copies 0,1,2 are implemented");
+		if (table.minCopies()<min_copies)
+			throw new IllegalArgumentException("Minimum must be at least "+table.minCopies()+" in this table; requested "+min_copies);
 		assert (min_copies<=table.minCopies());
 		this.min_copies = min_copies;
 	}
 	
 	public int getMinimumObserved() { return  min_copies;}
 	
-	public double getUnobservedLL()
-	{
-		double unobservedLL = Double.NEGATIVE_INFINITY;
-		if (min_copies>0)
-		{
-			unobservedLL = getEmptyLL();
-			if (min_copies>1)
-			{
-				assert (min_copies==2);
-				unobservedLL = Logarithms.add(unobservedLL, getSingletonLL());
-			}
-		}
-		return unobservedLL;
-	}
+//	public double getUnobservedLL()
+//	{
+//		double unobservedLL = Double.NEGATIVE_INFINITY;
+//		if (min_copies>0)
+//		{
+//			unobservedLL = getEmptyLL();
+//			if (min_copies>1)
+//			{
+//				assert (min_copies==2);
+//				unobservedLL = Logarithms.add(unobservedLL, getSingletonLL());
+//			}
+//		}
+//		return unobservedLL;
+//	}
 	
 	/**
 	 * Array for empty and possibly singleton profiles 
@@ -216,7 +228,7 @@ public class MixedRatePosteriors
 		if (min_copies==0)
 		{
 			unobserved = new Profile[0];
-		} else
+		} else if (min_copies <= 2)
 		{			
 			MixedRateModel rates_model = getRateModel();
 			IndexedTree phylo = getTree();
@@ -247,6 +259,9 @@ public class MixedRatePosteriors
 					unobserved[1+leaf] = singleton_posteriors.getProfile(leaf);
 				}
 			}
+		} else { // 2<min_copies
+			unobserved = new Profile[1];
+			unobserved[0] = getProfile(-1);
 		}
 		
 		return unobserved;
@@ -276,10 +291,18 @@ public class MixedRatePosteriors
 			if (num_classes==0) computeClasses();
 //			System.out.println("#**MRP.P() "+family_idx);
 			post = new Posteriors.Profile[num_classes];
-			for (int c=0; c<num_classes; c++)
-			{
-				post[c] = class_posteriors[c].getPosteriors(family_idx);
-				post[c].computeLikelihoods();
+			
+			if (0<=family_idx){
+				for (int c=0; c<num_classes; c++)
+				{
+					post[c] = class_posteriors[c].getPosteriors(family_idx);
+					post[c].computeLikelihoods();
+				}
+			} else { // unbserved
+				for (int c=0; c<num_classes; c++)
+				{
+					post[c] = class_posteriors[c].getUnobservedPosteriors(min_copies-1);
+				}
 			}
 			cat_LL = new double[num_classes];
 			cat_post = new double[num_classes];
@@ -313,8 +336,8 @@ public class MixedRatePosteriors
 		{
 			for (int c=0; c<num_classes; c++)
 			{
-				Likelihood.Profile cLik = post[c].inside;
-				double ll = cLik.getLogLikelihood();
+				//Likelihood.Profile cLik = post[c].inside;
+				double ll = post[c].getLogLikelihood();
 				cat_LL[c]=ll;
 			}
 			LL = calculateLL(cat_LL);
@@ -357,12 +380,12 @@ public class MixedRatePosteriors
 		
 		
 		
-		public double getCorrectedLL()
-		{
-			double not_observed = getUnobservedLL();
-			double pobs = -Math.expm1(not_observed); // 1-e^loglik
-			return LL-Math.log(pobs);
-		}
+//		public double getCorrectedLL()
+//		{
+//			double not_observed = getUnobservedLL();
+//			double pobs = -Math.expm1(not_observed); // 1-e^loglik
+//			return LL-Math.log(pobs);
+//		}
 		
 		/**
 		 * Posterior class probabilities
@@ -548,6 +571,81 @@ public class MixedRatePosteriors
 			return log_pS;
 		}
 		
+		
+		private double[][] sumPostLogMatrix(IntFunction<double[][]> func)
+		{
+			double[][] logsum = new double[0][];
+			for (int k=0; k<post.length; k++)
+			{
+				double[][] log_tNS =func.apply(k);
+				int n=0; 
+				while (n<logsum.length && n<log_tNS.length)
+				{
+					assert (logsum[n]!=null);
+					int s = 0; 
+					while (s<logsum[n].length && s<log_tNS[n].length)
+					{
+						logsum[n][s]=Logarithms.add(logsum[n][s],log_tNS[n][s]+cat_log_post[k]);
+						++s;
+					}
+					if (s<log_tNS[n].length)
+					{
+						logsum[n] = Arrays.copyOf(logsum[n], log_tNS[n].length);
+						do 
+						{
+							logsum[n][s]=log_tNS[n][s]+cat_log_post[k];
+							++s;
+						} while (s<logsum[n].length);
+					}
+					++n;
+				}
+				if (n<log_tNS.length)
+				{
+					logsum = Arrays.copyOf(logsum, log_tNS.length);
+					do 
+					{
+						logsum[n]=log_tNS[n];
+						for (int s=0; s<logsum[n].length; s++)
+							logsum[n][s] += cat_log_post[k];
+						++n;
+					} while (n<logsum.length);
+				}
+			}
+			return logsum;
+		}
+		
+		/**
+		 * Posterior probabilities for death (loss) changes
+		 * on logarithmic scale : post[<var>n</var>][<var>s</var>] is the 
+		 * logarithm of the posterior probability
+		 * for <var>n</var>&rarr;<var>s</var> transition  
+		 * to have <var>s</var> surviving copies at node
+		 * with <var>n</var>  at parent.
+		 * 
+		 * @param node
+		 * @return post[][]
+		 */
+		public double[][] getLogEdgeTransitionPosteriors(int node)
+		{
+			return sumPostLogMatrix(k->post[k].getLogEdgeTransitionPosteriors(node));
+		}
+		
+		/**
+		 * Posterior probabilities for birth (gain+duplication) changes
+		 * on logarithmic scale : post[<var>n</var>][<var>s</var>] is the 
+		 * logarithm of the posterior probability
+		 * for <var>s</var>&rarr;<var>n</var> transition  
+		 * to have <var>n</var> surviving copies at node
+		 * with <var>s</var> inherited among them. 
+		 * 
+		 * @param node
+		 * @return
+		 */
+		public double[][] getLogNodeTransitionPosteriors(int node)
+		{
+			return sumPostLogMatrix(k->post[k].getLogNodeTransitionPosteriors(node));
+		}
+		
 		public double[] getEdgePosteriors(int node)
 		{
 			double[] log_pS = getLogEdgePosteriors(node);
@@ -658,8 +756,7 @@ public class MixedRatePosteriors
 		
 	}
 	
-	
-	private void printPosteriors(PrintStream out, boolean want_families)
+	private void printPosteriors(PrintStream out, boolean want_families, int selected_node)
 	{
 		// init unobserved[]
 		Profile[] unobserved = getUnobservedProfiles();
@@ -671,54 +768,107 @@ public class MixedRatePosteriors
 		}
 		// double p_unobs = Math.exp(L0);
 		double p_obs = -Math.expm1(L0); // 1-exp(L0)
-		double Lobs = Math.log(p_obs);
+		double Lobs = Logarithms.logToLogComplement(L0);
+//		double Lobs = Math.log(p_obs);
 		
 		// expected number of times unobserved profile comes up for each observed one
 		double[] factor = new double[unobserved.length];
+		double[] log_factor = new double[unobserved.length];
 		for (int i=0; i<unobserved.length; i++)
 		{
 			double Ldiff = unobserved[i].getLL()-Lobs;
+			log_factor[i] = Ldiff;
 			factor[i] = Math.exp(Ldiff);
 		}			
 		
 		IndexedTree phylo = getTree();
-		int n = phylo.getNumNodes();
+		int num_nodes = phylo.getNumNodes();
 		// unobserved corrections
-		double[] delta_family_present = new double[n];
-		double[] delta_family_multi = new double[n];
-		double[] delta_family_gain = new double[n];
-		double[] delta_family_loss = new double[n];
-		double[] delta_family_expand = new double[n];
-		double[] delta_family_contract = new double[n];
-		double[] delta_copies_surviving = new double[n];
-		double[] delta_copies_true = new double[n];
+		double[] delta_family_present = new double[num_nodes];
+		double[] delta_family_multi = new double[num_nodes];
+		double[] delta_family_gain = new double[num_nodes];
+		double[] delta_family_loss = new double[num_nodes];
+		double[] delta_family_expand = new double[num_nodes];
+		double[] delta_family_contract = new double[num_nodes];
+		double[] delta_copies_surviving = new double[num_nodes];
+		double[] delta_copies_true = new double[num_nodes];
 		
+		double[] delta_copies_birth = new double[num_nodes];
+		double[] delta_copies_death = new double[num_nodes];
+		
+		
+		int nodemin, nodemax;
+		if (selected_node==-1) {
+			nodemin=0; nodemax=num_nodes;
+		} else {
+			nodemin=selected_node; nodemax=selected_node+1;
+		}
 		
 		for (int f=0; f<unobserved.length; f++)
 		{
 			Profile P = unobserved[f];
-			for (int node=0; node<n; node++)
+			for (int node=nodemin; node<nodemax; node++)
 			{
-				double[] pN = P.getNodeAncestor(node);
-				double fp = 1.0-pN[0];
-				double fm = 1.0-(pN[0]+pN[1]);
-				double fgain = P.getFamilyEvent(node, FamilyEvent.GAIN);
-				double floss = P.getFamilyEvent(node, FamilyEvent.LOSS);
-				double fexpand = P.getFamilyEvent(node, FamilyEvent.EXPAND);
-				double fcontract = P.getFamilyEvent(node,  FamilyEvent.CONTRACT);
-				double fsurviving = P.getNodeMean(node);
-				double truecopies = mean(pN);
-				
-
-				delta_family_present[node] += factor[f]*fp;
-				delta_family_multi[node] += factor[f]*fm;
-				delta_family_gain[node] += factor[f]*fgain;
-				delta_family_loss[node] += factor[f]*floss;
-				delta_family_expand[node] += factor[f]*fexpand;
-				delta_family_contract[node] += factor[f]*fcontract;
-				delta_copies_surviving[node] += factor[f]*fsurviving;
-				delta_copies_true[node] += factor[f]*truecopies;
-			}
+				if (FAMILY_PRESENCE_BY_SURVIVAL)
+				{
+					double[] log_pn = P.getLogNodePosteriors(node);
+					double log_present = Double.NEGATIVE_INFINITY;
+					double log_mean = Double.NEGATIVE_INFINITY;
+					
+					int n=log_pn.length-1;
+					while (1<n)
+					{
+						log_present = Logarithms.add(log_present, log_pn[n]);
+						log_mean = Logarithms.add(log_mean, log_pn[n]+Math.log(n));
+						--n;
+					}
+					double log_multi = log_present;
+					if (0<n)
+					{
+						log_present = Logarithms.add(log_present, log_pn[n]);
+						log_mean = Logarithms.add(log_mean, log_pn[n]);
+						--n;
+					}
+					
+					delta_family_present[node] +=  Math.exp(log_factor[f]+log_present);
+					delta_family_multi[node] += Math.exp(log_factor[f]+log_multi);
+					delta_family_gain[node] += Math.exp(log_factor[f]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.GAIN));
+					delta_family_loss[node] += Math.exp(log_factor[f]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.LOSS));
+					delta_family_expand[node] += Math.exp(log_factor[f]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.EXPAND));
+					delta_family_contract[node] += Math.exp(log_factor[f]+P.getFamilyLogSurvivalEvent(node, FamilyEvent.CONTRACT));
+					delta_copies_surviving[node] += Math.exp(log_factor[f]+log_mean);
+				} else
+				{
+					double[] pN = P.getNodeAncestor(node);
+					
+					double fp = 1.0-pN[0];
+					double fm = 1.0-(pN[0]+pN[1]);
+					double fgain = P.getFamilyEvent(node, FamilyEvent.GAIN);
+					double floss = P.getFamilyEvent(node, FamilyEvent.LOSS);
+					double fexpand = P.getFamilyEvent(node, FamilyEvent.EXPAND);
+					double fcontract = P.getFamilyEvent(node,  FamilyEvent.CONTRACT);
+					double fsurviving = P.getNodeMean(node);
+					double truecopies = mean(pN);
+					
+	
+					delta_family_present[node] += factor[f]*fp;
+					delta_family_multi[node] += factor[f]*fm;
+					delta_family_gain[node] += factor[f]*fgain;
+					delta_family_loss[node] += factor[f]*floss;
+					delta_family_expand[node] += factor[f]*fexpand;
+					delta_family_contract[node] += factor[f]*fcontract;
+					delta_copies_surviving[node] += factor[f]*fsurviving;
+					delta_copies_true[node] += factor[f]*truecopies;
+				}
+				double birth = P.getBirthMean(node);
+				delta_copies_birth[node] += factor[f]*birth;
+				if (!phylo.isRoot(node))
+				{
+					double death = P.getDeathMean(node);
+					delta_copies_death[node] += factor[f]*death;
+				}
+			} // for node 
+		
 		}
 
 		String prefix_ancestral = OPT_ANCESTRAL.toUpperCase();
@@ -726,58 +876,127 @@ public class MixedRatePosteriors
 		
 		if (want_families)
 		{
-			out.println(prefix_families+"\tfamily\tnodeidx\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.\tvarp:vp");
+			out.println(prefix_families+"\tfamily\tnodeidx\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.\tvarp:vp\tbirth:+\tdeath:-");
 		}
 		
 		// lineage totals
-		double[] lineage_family_present = new double[n];
-		double[] lineage_family_present_corrected = new double[n];
-		double[] lineage_family_multi = new double[n];
-		double[] lineage_family_gain = new double[n];
-		double[] lineage_family_loss = new double[n];
-		double[] lineage_family_expand = new double[n];
-		double[] lineage_family_contract = new double[n];
-		double[] lineage_copies_surviving = new double[n];
-		double[] lineage_copies_true = new double[n];
-		double[] var_family_present = new double[n];
+		double[] lineage_family_present = new double[num_nodes];
+		double[] lineage_family_present_corrected = new double[num_nodes];
+		double[] lineage_family_multi = new double[num_nodes];
+		double[] lineage_family_gain = new double[num_nodes];
+		double[] lineage_family_loss = new double[num_nodes];
+		double[] lineage_family_expand = new double[num_nodes];
+		double[] lineage_family_contract = new double[num_nodes];
+		double[] lineage_copies_surviving = new double[num_nodes];
+		double[] lineage_copies_true = new double[num_nodes];
+		double[] var_family_present = new double[num_nodes];
+		double[] lineage_copies_birth = new double[num_nodes];
+		double[] lineage_copies_death = new double[num_nodes];
+		
+		int[] max_family_sizes = table.getMaxFamilySizes(phylo);
+		
+		double[][] lineage_copies_distribution = new double[num_nodes][];
+		for (int node=nodemin; node<nodemax; node++) {
+			int max = max_family_sizes[node];
+			lineage_copies_distribution[node]=new double[max+1];
+			Arrays.fill(lineage_copies_distribution[node], Double.NEGATIVE_INFINITY);
+		}
+			
 		
 		for (int f=0; f<table.getFamilyCount(); f++)
 		{
 			Profile P = getProfile(f);
-			for (int node=0; node<n; node++)
+			double fp,fm,fgain,floss,fexpand,fcontract,fsurviving,ftruecopies,fpc,varp;
+			
+			for (int node=nodemin; node<nodemax; node++)
 			{
-				double[] pN = P.getNodeAncestor(node);
+				if (FAMILY_PRESENCE_BY_SURVIVAL)
+				{
+					double[] log_pn = P.getLogNodePosteriors(node);
+					double log_present = Double.NEGATIVE_INFINITY;
+					double log_mean = Double.NEGATIVE_INFINITY;
+					
+					int n=log_pn.length-1;
+					if (lineage_copies_distribution[node].length<=n) {
+						// got n=2 len=1 ? no worries 
+						int len = lineage_copies_distribution[node].length;
+						lineage_copies_distribution[node] = Arrays.copyOf(lineage_copies_distribution[node], n+1);
+						for (int c=len; c<=n; c++)
+							lineage_copies_distribution[node][c] = Double.NEGATIVE_INFINITY;
+					}
+					
+					while (1<n)
+					{
+						lineage_copies_distribution[node][n] = Logarithms.add(lineage_copies_distribution[node][n], log_pn[n]);
+						log_present = Logarithms.add(log_present, log_pn[n]);
+						log_mean = Logarithms.add(log_mean, log_pn[n]+Math.log(n));
+						--n;
+					}
+					double log_multi = log_present;
+					if (0<n) // == 1
+					{
+						lineage_copies_distribution[node][n] = Logarithms.add(lineage_copies_distribution[node][n], log_pn[n]);
+						log_present = Logarithms.add(log_present, log_pn[n]);
+						log_mean = Logarithms.add(log_mean, log_pn[n]);
+						--n;
+					}
+					
+					fp = Math.exp(log_present);
+					fm = Math.exp(log_multi);
+					fgain = Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.GAIN));
+					floss = Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.LOSS));
+					fexpand = Math.exp(P.getFamilyLogSurvivalEvent(node, FamilyEvent.EXPAND));
+					fcontract = Math.exp(P.getFamilyLogSurvivalEvent(node,  FamilyEvent.CONTRACT));
+					fsurviving =  Math.exp(log_mean);
+					ftruecopies = fsurviving+delta_copies_surviving[node];
+					
+					fpc = fp + delta_family_present[node];
+					
+					varp = Math.exp(log_present+log_pn[0]);
+					
+				} else
+				{
+					double[] pN = P.getNodeAncestor(node);
+					
+					double sum1;
+					double sum2=0.0;
+					for (int i=2; i<pN.length; i++)
+						sum2+=pN[i];
+					sum1 = sum2+pN[1];
+					
+					fp = Double.max(1.0-pN[0],sum1);
+					fm = Double.max(1.0-(pN[0]+pN[1]),sum2);
+					fgain = P.getFamilyEvent(node, FamilyEvent.GAIN);
+					floss = P.getFamilyEvent(node, FamilyEvent.LOSS);
+					fexpand = P.getFamilyEvent(node, FamilyEvent.EXPAND);
+					fcontract = P.getFamilyEvent(node,  FamilyEvent.CONTRACT);
+					fsurviving = P.getNodeMean(node);
+					double fcopies = mean(pN);
+					ftruecopies = fcopies +  delta_copies_true[node];
+					
+					fpc = fp + delta_family_present[node];
+					
+					varp = fp*pN[0];
+				} // whether counting families by surviving members 
 				
-				double sum1;
-				double sum2=0.0;
-				for (int i=2; i<pN.length; i++)
-					sum2+=pN[i];
-				sum1 = sum2+pN[1];
-				
-				double fp = Double.max(1.0-pN[0],sum1);
-				double fm = Double.max(1.0-(pN[0]+pN[1]),sum2);
-				double fgain = P.getFamilyEvent(node, FamilyEvent.GAIN);
-				double floss = P.getFamilyEvent(node, FamilyEvent.LOSS);
-				double fexpand = P.getFamilyEvent(node, FamilyEvent.EXPAND);
-				double fcontract = P.getFamilyEvent(node,  FamilyEvent.CONTRACT);
-				double fsurviving = P.getNodeMean(node);
-				double fcopies = mean(pN);
-				double ftruecopies = fcopies +  delta_copies_true[node];
-				
-				double fpc = fp + delta_family_present[node];
-				
-				double varp = fp*pN[0];
-				
+				double fbirth = P.getBirthMean(node)+delta_copies_birth[node];
+				double fdeath;
+				if (phylo.isRoot(node))
+				{
+					fdeath = 0.0;
+				} else 
+				{
+					fdeath = P.getDeathMean(node)+delta_copies_death[node];
+				}
 				if (want_families)
 				{
 					out.printf("%s\t%d\t%d", prefix_families, f, node);
-					out.printf("\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n" 
+//					out.printf("%s\t%s\t%d", prefix_families, table.getFamilyName(f), node);
+					out.printf("\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n" 
 								, fp, fm, fpc
 								, fgain, floss, fexpand, fcontract
-								, fsurviving, ftruecopies, varp);
+								, fsurviving, ftruecopies, varp, fbirth, fdeath);
 				}
-				
-				
 				lineage_family_present[node] += fp;
 				lineage_family_multi[node] += fm;
 				lineage_family_present_corrected[node] += fpc;
@@ -789,11 +1008,13 @@ public class MixedRatePosteriors
 				lineage_copies_surviving[node] += fsurviving;
 				lineage_copies_true[node] += ftruecopies;
 				var_family_present[node] += varp;
-			}
+				lineage_copies_birth[node] += fbirth;
+				lineage_copies_death[node] += fdeath;
+			} // for node 
 		}
 		
-		out.println(prefix_ancestral+"\tnode\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.\tsdevp:sdevp");
-		for (int node = 0; node<n; node++)
+		out.println(prefix_ancestral+"\tnode\tpresence:p\tmulti:m\tcorrected:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\ttcopies:n.\tsdevp:sdevp\tbirth:+.\tdeath:-.\tsharedfam:p^\tsharedcopy:n^");
+		for (int node = nodemin; node<nodemax; node++)
 		{
 			double fp = lineage_family_present[node];
 			double fm = lineage_family_multi[node];
@@ -807,14 +1028,172 @@ public class MixedRatePosteriors
 			double ftruecopies = lineage_copies_true[node];
 			
 			double varp = var_family_present[node];
-			double sdevp = Math.sqrt(varp);
+			double sdevp = Math.sqrt(varp/table.getFamilyCount());
+			
+			double fbirth = lineage_copies_birth[node];
+			double fdeath = lineage_copies_death[node];
+			
+			
+			
+			double fshared = fp;
+			double nshared = fsurviving;
+			
+			for (int c=0; c<phylo.getNumChildren(node); c++) {
+				int child = phylo.getChild(node, c);
+				nshared -= lineage_copies_death[child];
+				fshared -= lineage_family_loss[child];
+			}
 			
 			out.printf("%s\t%s", prefix_ancestral, phylo.getIdent(node));
-			out.printf("\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n" 
+			out.printf("\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n" 
 						, fp, fm, fpc
 						, fgain, floss, fexpand, fcontract
-						, fsurviving, ftruecopies, sdevp);
+						, fsurviving, ftruecopies, sdevp, fbirth, fdeath
+						, fshared, nshared);
 		}
+	}
+	
+	
+	private void printTransitions(PrintStream out, int node)
+	{
+		
+		computeClasses();
+		
+		
+		double[][] log_death = null;
+		double[][] log_birth = null;
+		
+		int nF = table.getFamilyCount();
+		for (int f = 0; f<nF; f++)
+		{
+			Profile P = getProfile(f);
+			double[][] fdeath = P.getLogEdgeTransitionPosteriors(node);
+			log_death = Logarithms.add(log_death, fdeath);
+			double[][] fbirth = P.getLogNodeTransitionPosteriors(node);
+			log_birth = Logarithms.add(log_birth, fbirth);
+		}
+		
+		String prefix_node = "#NODE\t";
+		out.print(prefix_node+"node\tident");
+		if (1<num_classes)
+			out.print("\tclass\tpclass");
+		out.println("\tp\tq\tr\tp~\tq~\tr~\t1-ext(parent)");
+		String node_ident=null; 
+		for (int ci=0; ci<num_classes; ci++)
+		{
+			assert (log_class_prob[ci]!=Double.NEGATIVE_INFINITY);
+			{
+				Posteriors P = class_posteriors[ci];
+				node_ident = P.factory.tree.getIdent(node);
+				out.print(prefix_node+node+"\t"+node_ident);
+				if (1<num_classes)
+					out.printf("\t%d\t%g", ci, Math.exp(log_class_prob[ci]));
+				double logp = P.factory.rates.getLogLossParameter(node);
+				double logq = P.factory.rates.getLogDuplicationParameter(node);
+				double r = P.factory.rates.getGainParameter(node);
+				if (logp!=Double.NEGATIVE_INFINITY) r*=Math.exp(logq);
+				double logps = P.factory.getLogLossParameter(node);
+				double logqs = P.factory.getLogDuplicationParameter(node);
+				double rs = P.factory.getGainParameter(node);
+				if (logqs != Double.NEGATIVE_INFINITY)
+					rs *= Math.exp(logqs);
+				double log_e1 ;
+				if (P.factory.tree.isRoot(node))
+				{
+					log_e1 = Double.NEGATIVE_INFINITY;
+				} else
+				{
+					int parent =  P.factory.tree.getParent(node);
+					log_e1 = P.factory.getLogExtinctionComplement(parent);
+				}
+				
+				out.printf("\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n"
+						, Math.exp(logp), Math.exp(logq), r
+						, Math.exp(logps), Math.exp(logqs), rs
+						, Math.exp(log_e1)
+						);
+			}
+		}
+		
+
+		
+		int nmax = log_birth.length; // filter out < ulp probabilities 
+		int smax = 0; // inclusive
+		while (0<nmax)
+		{
+			double max=0.0;
+			for (int s=0; s<log_birth[nmax-1].length; s++)
+			{
+				double lb = log_birth[nmax-1][s];
+				if (lb != Double.NEGATIVE_INFINITY) smax= Integer.max(smax, s);
+				max = Double.max(max, Math.exp(lb));
+			}
+			if (0.0<max) break;
+			--nmax;
+		}
+		String prefix_birth = "#BIRTH\t";
+		out.print(prefix_birth+"node\tident\ts /(n-s)=");
+		for (int t=0; t<nmax; t++)
+			out.print("\t"+t);
+		out.println();
+		
+		for (int s=0; s<=smax; s++)
+		{
+			out.print(prefix_birth+node+"\t"+node_ident+"\t"+s);
+			int t=0, n=s+t;
+			while (n<nmax)
+			{
+				double pbirth = Math.exp(log_birth[n][s]);
+				out.printf("\t%g", pbirth);
+				t++;
+				n++;
+			}
+			out.println();
+		}
+//		
+		nmax = log_death.length; // exclusive
+		smax = 0; // inclusive
+		while (0<nmax)
+		{
+			double max=0.0;
+			for (int s=0; s<log_death[nmax-1].length; s++)
+			{
+				double lb = log_death[nmax-1][s];
+				if (lb != Double.NEGATIVE_INFINITY) smax= Integer.max(smax, s);
+				max = Double.max(max, Math.exp(lb));
+			}
+			if (0.0<max) break;
+			--nmax;
+		}
+		
+		String prefix_death = "#DEATH\t";
+		out.print(prefix_death+"node\tident\tn /(n-s)=");
+		for (int t=0; t<=smax; t++)
+			out.print("\t"+t);
+		out.println();
+
+		for (int n=0; n<nmax; n++)
+		{
+			out.print(prefix_death+node+"\t"+node_ident+"\t"+n);
+			int t = 0, s=n;
+			while (log_death[n].length<=s)
+			{
+				out.printf("\t%g", 0.0);
+				++t; --s;
+			}
+			do 
+			{
+				out.printf("\t%g", Math.exp(log_death[n][s]));
+				++t; --s;
+			} while (0<=s);
+			out.println();
+		}
+	}
+	
+	
+	
+	private void printNodePosteriors(PrintStream out, int node) {
+		
 	}
 	
 	private static double mean(double[] p)
@@ -895,12 +1274,33 @@ public class MixedRatePosteriors
         int min_copies = Integer.min(2, input_table.minCopies());
         min_copies = cli.getOptionInt(CommandLine.OPT_MINCOPY, min_copies);
 		posteriors.setMinimumObserved(min_copies);
+		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+OPT_MINCOPY+" "+min_copies));
+		
+		
+		
+		int stats = cli.getOptionInt(CommandLine.OPT_STATISTICS, -1);
+		if (0<=stats)
+		{
+			posteriors.printTransitions(out, stats);
+		} else
+		{
+			boolean want_families = cli.getOptionBoolean(OPT_HISTORY, false);
+			out.println(CommandLine.getStandardHeader("Detailed family posteriors: -"+OPT_HISTORY+" "+want_families));
+			
+			boolean family_survival = cli.getOptionBoolean(CommandLine.OPT_SURVIVAL, FAMILY_PRESENCE_BY_SURVIVAL);
+			out.println(CommandLine.getStandardHeader("Family presence by survival: -"+CommandLine.OPT_SURVIVAL+" "+family_survival));
+			FAMILY_PRESENCE_BY_SURVIVAL = family_survival;
+			
+			int selected_node = cli.getOptionInt(CommandLine.OPT_NODE, -1);
+			if (selected_node != -1) {
+				out.println(CommandLine.getStandardHeader("Selected node: -"+CommandLine.OPT_NODE+" "+selected_node+"\t ("+tree.toString(selected_node)+")"));
+			}
 
-		// now calculate the posterior reconstruction
-		boolean want_families = cli.getOptionBoolean(OPT_HISTORY, false);
-		
-		posteriors.printPosteriors(out, want_families);
-		
+			
+			// now calculate the posterior reconstruction
+			posteriors.printPosteriors(out, want_families, selected_node);
+			
+		}
 //		
 //		
 //		int nF = input_table.getFamilyCount();

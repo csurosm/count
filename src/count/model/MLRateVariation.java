@@ -50,6 +50,7 @@ import count.io.CommandLine;
 import count.io.NewickParser;
 import count.io.RateVariationParser;
 import count.matek.FunctionMinimization;
+import count.matek.FunctionMinimization.CGVariant;
 import count.matek.Functions;
 import count.matek.Logarithms;
 
@@ -65,6 +66,7 @@ public class MLRateVariation extends ML
 	 * Verbosity for optimization steps; set to true if launched from command line 
 	 */
 	public static boolean PRINT_OPTIMIZATION_MESSAGES = false;
+	
 
 	/**
 	 * The model to be optimized
@@ -85,28 +87,28 @@ public class MLRateVariation extends ML
 	/**
 	 * Initialized for node parameters, then refitted by {@link #initDataStructures()}
 	 */
-	private boolean[] do_optimize_parameters;
+	protected boolean[] do_optimize_parameters;
 	
 	/**
 	 * Array for storing node parameter values
 	 * (logit-p, logit-lambda, log-gain) ; must be synchronized with model 
 	 */
-	private final double[][] node_parameters;
+	protected final double[][] node_parameters;
 	
 	/**
 	 * Array for storing category parameter values ; must be synchronized with model 
 	 */
-	private double[][] category_parameters;
+	protected double[][] category_parameters;
 
 	/**
 	 * List of all parameter instances 
 	 */
-	private final List<MinGradient> full_parameters;
-	
+	protected final List<MinGradient> full_parameters;
+		
 	/**
 	 * List of adjustable/optimizable parameter instances 
 	 */
-	private final List<MinGradient> adjustable_parameters;
+	protected final List<MinGradient> adjustable_parameters;
 	
 	
 	public MLRateVariation(RateVariationModel model, ProfileTable table)
@@ -125,7 +127,7 @@ public class MLRateVariation extends ML
 		this.node_parameters = new double[num_nodes][];
 		this.adjustable_parameters = new ArrayList<>();
 		this.full_parameters = new ArrayList<>();
-		this.initDataStructures();
+		this.initParameters();
 	}
 	
 	
@@ -142,25 +144,37 @@ public class MLRateVariation extends ML
 		gradient_factory.computeClasses();
 	}
 	
+	private static CGVariant USE_CONJUGATE_GRADIENT = null; // CGVariant.DY_HS; // CGVariant.DaiYuan;//CGVariant.HestenesStiefel;//  CGVariant.FR_PR; //   CGVariant.PolakRibiere;
 	
-	private double max_gain = 33.0; //Double.POSITIVE_INFINITY;
+	private static final double MAX_KAPPA = Double.POSITIVE_INFINITY; // 128.0; //99.0*Math.log(2.0);//   33.0; //Double.POSITIVE_INFINITY;
 	private double max_modifier = 33.0;
 	private static int DEFAULT_TRUNCATE_ABSOLUTE = 6;
 	private static double DEFAULT_TRUNCATE_RELATIVE = 1.0;
 	private boolean auto_truncate = true;
 	private static boolean DEBUG_GRADIENT = false; 
 	
-	public void setGainParameterBound(double max_gain)
-	{
-		this.max_gain = max_gain;
-		this.initDataStructures();
-	}
+	/**
+	 * Unbounded loss rate parameter (using log) is not numerically stable; so 
+	 * we bound it and optimize it as logit(scaled gain).
+	 */
+	private final static boolean ALWAYS_UNBOUNDED_GAIN_LOSS = false; // keep false - do not change	
+	private static double MAX_DUPLICATION_MARGIN = 0.0; //do not change
+	private static boolean USE_LOGISTIC_GAIN = true;
+	private static final boolean USE_BRACKETS = false;
+	private static final boolean REGULARIZE_GAIN = true;
 	
-	public void setModifierBound(double max_mod)
-	{
-		this.max_modifier = max_mod;
-		this.initDataStructures();
-	}
+	
+//	public void setGainParameterBound(double max_gain)
+//	{
+//		this.max_gain = max_gain;
+//		this.initParameters();
+//	}
+//	
+//	public void setModifierBound(double max_mod)
+//	{
+//		this.max_modifier = max_mod;
+//		this.initParameters();
+//	}
 	
 	public void setWantAutoTruncation(boolean auto_truncate)
 	{
@@ -170,6 +184,28 @@ public class MLRateVariation extends ML
 			this.setCalculationWidth(DEFAULT_TRUNCATE_ABSOLUTE, DEFAULT_TRUNCATE_RELATIVE);
 		}
 	}
+	
+	public int getCommonGainType() {
+		return variation_model.getCommonGainType();
+	}
+	
+	public boolean isDuplicationBounded() {return variation_model.isDuplicationBounded();}
+	
+	public void setDuplicationBounded(boolean isBounded) {
+		if (variation_model.isDuplicationBounded() != isBounded) {
+			variation_model.setBoundedDuplication(isBounded);
+		}
+		this.initParameters();
+	}
+	
+	public boolean isGainBounded() {return USE_LOGISTIC_GAIN;}
+	
+	public void setGainBounded(boolean isBounded) {
+		USE_LOGISTIC_GAIN = isBounded;
+		this.initParameters();
+	}
+	
+	
 	
 	
 	/*
@@ -181,120 +217,253 @@ public class MLRateVariation extends ML
 	/**
 	 * Called from instantiation, and must be called if the 
 	 * underlying {@link #variation_model} structure changes.
+	 * Checks the ranges of node parameters, populates 
+	 * the {@link #full_parameters} list and {@link #do_optimize_parameters} array, finally resets the 
+	 * gradient factory. Calls {@link #initOptimizableCategoryParameters()} and {@link #initCategoryParameters()} 
+	 * to add category parameters.
+	 * 
 	 */
-	private void initDataStructures()
+	protected void initParameters()
 	{
-		
-		
 		int num_nodes = node_parameters.length;
-		int ncat = variation_model.getNumClasses();
+//		// DEBUG
+//		System.out.println("#**MLRV.iP n "+num_nodes);
 		
 		TreeWithLogisticParameters lrates = variation_model.getBaseModel();
 		int common_gain = variation_model.getCommonGainType();
 
 		boolean have_adjusted_parameters = false;
-
+		boolean bounded_duplication = variation_model.isDuplicationBounded();
+		
 		for (int v=0; v<num_nodes; v++)
 		{
 			double logit_p = lrates.getLogitLossParameter(v);
-			double logit_lambda = lrates.getLogitRelativeRate(v);
 			double log_gain = lrates.getLogGainParameter(v, common_gain, !variation_model.isUniversalGain());
-
 			
-			// check large gain 
-			double log_max_gain = Math.log(max_gain);
-			if (log_max_gain<log_gain)
-			{
-				double new_log_gain = log_max_gain + Math.log(1023.0/1024.0);
-				if (common_gain == PARAMETER_LOSS) 
+			
+			if (bounded_duplication) {
+				// check duplication rate
+				double logit_q = lrates.getLogitDuplicationParameter(v);
+				if (logit_p<logit_q) { // thus q is not 0
+					double new_logit_q = Logarithms.mulLogit(logit_p, 0.0); // q=p/2
+					double log_q = lrates.getLogDuplicationParameter(v);
+					double new_log_q = Logarithms.logitToLogValue(new_logit_q);
+					if (common_gain == PARAMETER_DUPLICATION || common_gain == PARAMETER_GAIN) {
+						double new_log_gain = log_gain + log_q - new_log_q;
+						if (PRINT_OPTIMIZATION_MESSAGES) {
+							if (common_gain==PARAMETER_DUPLICATION)
+								System.out.println("#*MLRV.iP "+v+" reset q log="+log_q+"\tto "+new_log_q+"\tkappa log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
+							else
+								System.out.println("#*MLRV.iP "+v+" reset q log="+log_q+"\tto "+new_log_q+"\tr log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
+						}
+						lrates.setLogitLossDuplication(v, logit_p, new_logit_q, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						log_gain = new_log_gain;
+					} else {
+						if (PRINT_OPTIMIZATION_MESSAGES) 
+							System.out.println("#*MLRV.iP "+v+" reset q log="+log_q+"\tto "+new_log_q+"\tgamma log="+log_gain+"\tstays\t// "+lrates.toString(v));
+						lrates.setLogitLossDuplication(v, logit_p, new_logit_q, log_gain, common_gain, !variation_model.isUniversalGain());
+					}
+					logit_q = new_logit_q;
+					have_adjusted_parameters = true;
+				}
+				double logit_lambda = lrates.getLogitRelativeRate(v);
+				// check large gain 
+				double log_max_gain = Math.log(
+						common_gain == PARAMETER_DUPLICATION?
+						MAX_KAPPA:1.0);
+				if (log_max_gain<log_gain)
 				{
-					if (ALWAYS_UNBOUNDED_GAIN_LOSS)
+					double new_log_gain = log_max_gain + Math.log(1023.0/1024.0);
+					if (common_gain == PARAMETER_LOSS) 
 					{
-						// nothing to do: max_gain is ignored
+						if (!USE_LOGISTIC_GAIN && ALWAYS_UNBOUNDED_GAIN_LOSS)
+						{
+							// nothing to do: max_gain is ignored
+						} else
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset gamma log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
+							lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+							log_gain = new_log_gain;
+							have_adjusted_parameters = true;
+						}
+					} else if (common_gain == PARAMETER_DUPLICATION && logit_lambda != Double.NEGATIVE_INFINITY)
+					{
+						// try to adjust lambda so that we have same r=q*kappa and same gamma=lambda*kappa
+						double log_lambda = lrates.getLogRelativeRate(v);
+						double new_log_lambda = log_lambda + log_gain - new_log_gain;
+						if (new_log_lambda < 0.0)
+						{
+							logit_lambda = Logarithms.logToLogit(new_log_lambda);
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda log="+log_lambda+"\tto "+new_log_lambda+"\t// "+lrates.toString(v));
+							lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						} else
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+							lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+						}
+						log_gain = new_log_gain;
+						have_adjusted_parameters = true;
 					} else
 					{
-						if (PRINT_OPTIMIZATION_MESSAGES)
-							System.out.println("#*MLRV.iDS "+v+" reset gamma log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
-						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						double log_lambda = lrates.getLogRelativeRate(v);
+						if (common_gain == PARAMETER_GAIN || (common_gain==PARAMETER_DUPLICATION && logit_lambda==Double.NEGATIVE_INFINITY))
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset r log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+						} else 
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
+						}
+						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
 						log_gain = new_log_gain;
 						have_adjusted_parameters = true;
 					}
-				} else if (common_gain == PARAMETER_DUPLICATION && logit_lambda != Double.NEGATIVE_INFINITY)
+				}
+				
+				// check lambda == 1.0
+				double reset_lambda;
+				double small = 1.0/(1L<<20); // this will maybe decrease the likelihood
+				if (logit_lambda == Double.POSITIVE_INFINITY)
 				{
-					double log_lambda = lrates.getLogRelativeRate(v);
-					double new_log_lambda = log_lambda + log_gain - new_log_gain;
-					if (new_log_lambda < 0.0)
+					reset_lambda = -Logarithms.logToLogit(Math.log(small));
+				} else
+					reset_lambda = logit_lambda;
+				if (reset_lambda != logit_lambda)
+				{
+					String old_node_str = lrates.toString(v);
+					lrates.setLogitLossRelativeDuplication(v, logit_p, reset_lambda, log_gain, common_gain, !variation_model.isUniversalGain());
+					have_adjusted_parameters=true;
+					
+					// DEBUG
+					if (PRINT_OPTIMIZATION_MESSAGES)
+						System.out.println("#*MLRV.iP "+v+" reset lambda "+logit_lambda+"\tto "+reset_lambda+"\t// "+lrates.toString(v)+"\t// was "+old_node_str);
+					
+					logit_lambda = reset_lambda;
+				}			
+				
+				boolean first_init = node_parameters[v]==null;
+				
+				double[] params = new double[3];
+				params[PARAMETER_LOSS] 		  = logit_p;
+				params[PARAMETER_DUPLICATION] = logit_lambda;
+				
+				if (USE_LOGISTIC_GAIN)
+					params[PARAMETER_GAIN] = Logarithms.logToLogit(log_gain-log_max_gain);
+				else
+					params[PARAMETER_GAIN] = log_gain;
+				
+				this.node_parameters[v] = params;
+//				// DEBUG
+//				System.out.println("#**MLRV.iP "+v+"\t"+Arrays.toString(params)+"\t// "+lrates.toString(v));
+				
+				
+				if (first_init)
+				{
+					fixLoss(v, logit_p == Double.POSITIVE_INFINITY); // || lrates.getTree().isRoot(v)
+					fixDuplication(v, logit_lambda == Double.NEGATIVE_INFINITY);
+					fixGain(v, log_gain == Double.NEGATIVE_INFINITY);
+				}
+			} else {
+				double logit_q = lrates.getLogitDuplicationParameter(v);
+				// check large gain 
+				double log_max_gain = Math.log(MAX_KAPPA);
+				if (log_max_gain<log_gain)
+				{
+					double new_log_gain = log_max_gain + Math.log(1023.0/1024.0);
+					if (common_gain == PARAMETER_LOSS) 
 					{
-						logit_lambda = Logarithms.logToLogit(new_log_lambda);
-						if (PRINT_OPTIMIZATION_MESSAGES)
-							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda log="+log_lambda+"\tto "+new_log_lambda+"\t// "+lrates.toString(v));
-						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						if (ALWAYS_UNBOUNDED_GAIN_LOSS)
+						{
+							// nothing to do: max_gain is ignored
+						} else
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset gamma log="+log_gain+"\tto "+new_log_gain+"\t// "+lrates.toString(v));
+							lrates.setLogitLossDuplication(v, logit_p, logit_q, new_log_gain, common_gain, !variation_model.isUniversalGain());
+							log_gain = new_log_gain;
+							have_adjusted_parameters = true;
+						}
+					} else if (common_gain == PARAMETER_DUPLICATION && logit_q != Double.NEGATIVE_INFINITY)
+					{
+						double log_q = lrates.getLogDuplicationParameter(v);
+						double new_log_q = log_q + log_gain-new_log_gain;
+						
+						// q needs to grow to have same r=q*kappa and same gamma=lambda*kappa		
+						if (new_log_q<0.0) {
+							logit_q = Logarithms.logToLogit(new_log_q);
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tq log="+log_q+"\tto "+new_log_q+"\t// "+lrates.toString(v));
+							lrates.setLogitLossDuplication(v, logit_p, logit_q, new_log_gain, common_gain, !variation_model.isUniversalGain());
+						} else
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tq stays log="+log_q+"\t// "+lrates.toString(v));
+							lrates.setLogitLossDuplication(v, logit_p, logit_q, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+						}
+						log_gain = new_log_gain;
+						have_adjusted_parameters = true;
 					} else
 					{
-						if (PRINT_OPTIMIZATION_MESSAGES)
-							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
-						lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+						double log_q = lrates.getLogDuplicationParameter(v);
+						if (common_gain == PARAMETER_GAIN || (common_gain==PARAMETER_DUPLICATION && logit_q==Double.NEGATIVE_INFINITY))
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset r log="+log_gain+"\tto "+new_log_gain+"\tq stays log="+log_q+"\t// "+lrates.toString(v));
+						} else 
+						{
+							if (PRINT_OPTIMIZATION_MESSAGES)
+								System.out.println("#*MLRV.iP "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tq stays log="+log_q+"\t// "+lrates.toString(v));
+						}
+						lrates.setLogitLossDuplication(v, logit_p, logit_q, new_log_gain, common_gain, !variation_model.isUniversalGain());						
+						log_gain = new_log_gain;
+						have_adjusted_parameters = true;
 					}
-					log_gain = new_log_gain;
-					have_adjusted_parameters = true;
-				} else
+				}
+				boolean first_init = node_parameters[v]==null;
+				
+				double[] params = new double[3];
+				params[PARAMETER_LOSS] 		  = logit_p;
+				params[PARAMETER_DUPLICATION] = logit_q;
+				if (USE_LOGISTIC_GAIN)
+					params[PARAMETER_GAIN] = Logarithms.logToLogit(log_gain-log_max_gain);
+				else
+					params[PARAMETER_GAIN] = log_gain;
+				
+				this.node_parameters[v] = params;
+					
+				if (first_init)
 				{
-					double log_lambda = lrates.getLogRelativeRate(v);
-					if (common_gain == PARAMETER_GAIN || (common_gain==PARAMETER_DUPLICATION && logit_lambda==Double.NEGATIVE_INFINITY))
-					{
-						if (PRINT_OPTIMIZATION_MESSAGES)
-							System.out.println("#*MLRV.iDS "+v+" reset r log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
-					} else 
-					{
-						if (PRINT_OPTIMIZATION_MESSAGES)
-							System.out.println("#*MLRV.iDS "+v+" reset kappa log="+log_gain+"\tto "+new_log_gain+"\tlambda stays log="+log_lambda+"\t// "+lrates.toString(v));
-					}
-					lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, new_log_gain, common_gain, !variation_model.isUniversalGain());						
-					log_gain = new_log_gain;
-					have_adjusted_parameters = true;
+					fixLoss(v, logit_p == Double.POSITIVE_INFINITY); // lrates.getTree().isRoot(v) || 
+					fixDuplication(v, logit_q == Double.NEGATIVE_INFINITY);
+					fixGain(v, log_gain == Double.NEGATIVE_INFINITY);
 				}
 			}
-			
-			// check lambda == 1.0
-			double reset_lambda;
-			double small = 1.0/(1L<<20);
-			if (logit_lambda == Double.POSITIVE_INFINITY)
-			{
-				reset_lambda = Logarithms.logToLogit(Math.log1p(-small));
-			} else
-				reset_lambda = logit_lambda;
-			if (reset_lambda != logit_lambda)
-			{
-				String old_node_str = lrates.toString(v);
-				lrates.setLogitLossRelativeDuplication(v, logit_p, reset_lambda, log_gain, common_gain, !variation_model.isUniversalGain());
-				have_adjusted_parameters=true;
-				
-				// DEBUG
-				if (PRINT_OPTIMIZATION_MESSAGES)
-					System.out.println("#*MLRV.iDS "+v+" reset lambda "+logit_lambda+"\tto "+reset_lambda+"\t// "+lrates.toString(v)+"\t// was "+old_node_str);
-				
-				logit_lambda = reset_lambda;
-			}			
-			
-			boolean first_init = node_parameters[v]==null;
-			
-			double[] params = new double[3];
-			params[PARAMETER_LOSS] 		  = logit_p;
-			params[PARAMETER_DUPLICATION] = logit_lambda;
-			params[PARAMETER_GAIN] = log_gain;
-			this.node_parameters[v] = params;
+		} 
 
-			if (first_init)
-			{
-				fixLoss(v, lrates.getTree().isRoot(v) || logit_p == Double.POSITIVE_INFINITY);
-				fixDuplication(v, logit_lambda == Double.NEGATIVE_INFINITY);
-				fixGain(v, log_gain == Double.NEGATIVE_INFINITY);
-			}
-
+		this.full_parameters.clear();
+		for (int v=0; v<num_nodes; v++)
+		{
+			full_parameters.add(defaultNodeParameter(v,PARAMETER_GAIN));
+			full_parameters.add(defaultNodeParameter(v,PARAMETER_DUPLICATION));
+			full_parameters.add(defaultNodeParameter(v,PARAMETER_LOSS));
 		}
-
+		this.initCategoryParameters();
+		this.initOptimizableCategoryParameters();
+		gradient_factory.computeClasses();
+	}
+	
+	/**
+	 * Adds category parameters to the {@link #full_parameters} (2 parameters) and {@link #category_parameters}
+	 * list. 
+	 * 
+	 */
+	protected void initCategoryParameters() {
+		int ncat = variation_model.getNumClasses();
 		this.category_parameters = new double[ncat][];
-		initOptimizableCategoryParameters();
 		for (int k=0; k<ncat; k++)
 		{
 			RateVariationModel.Category C = variation_model.getCategory(k);
@@ -304,19 +473,12 @@ public class MLRateVariation extends ML
 			this.category_parameters[k] = mods;
 		}
 		
-		this.full_parameters.clear();
-		for (int v=0; v<num_nodes; v++)
-		{
-			full_parameters.add(defaultNodeParameter(v,PARAMETER_GAIN));
-			full_parameters.add(defaultNodeParameter(v,PARAMETER_DUPLICATION));
-			full_parameters.add(defaultNodeParameter(v,PARAMETER_LOSS));
-		}
 		for (int k=0; k<ncat; k++)
 		{
 			full_parameters.add(defaultCategoryParameter(k, PARAMETER_MOD_LENGTH));
 			full_parameters.add(defaultCategoryParameter(k, PARAMETER_MOD_DUPLICATION));
 		}
-		gradient_factory.computeClasses();		
+		//return 2*ncat;
 	}	
 
 //	private boolean initNodeParameters(int v)
@@ -340,9 +502,10 @@ public class MLRateVariation extends ML
 	
 	/**
 	 * Sets initial values for in {@link #do_optimize_parameters} 
-	 * for category mods.
+	 * for category mods. The first 3n cells are 
+	 * used for the parameters of n nodes.  
 	 */
-	private void initOptimizableCategoryParameters()
+	protected void initOptimizableCategoryParameters()
 	{
 		int num_nodes = node_parameters.length;
 		int ncat = variation_model.getNumClasses();
@@ -360,8 +523,10 @@ public class MLRateVariation extends ML
 				do_optimize_parameters[j_mod_dup] = false;		
 			} else
 			{
-				do_optimize_parameters[j_mod_len] = C.getModLength()!=0.0;
-				do_optimize_parameters[j_mod_dup] = C.getModDuplication()!=0.0;
+				do_optimize_parameters[j_mod_len] = C.getModLength()!=0.0
+						&& Double.isFinite(C.getModLength());
+				do_optimize_parameters[j_mod_dup] = C.getModDuplication()!=0.0
+						&& C.getModDuplication() != Double.NEGATIVE_INFINITY;
 			}
 		}
 	}
@@ -377,6 +542,7 @@ public class MLRateVariation extends ML
 	public void fixDuplication(int node, boolean not_optimized)
 	{
 		do_optimize_parameters[3*node+PARAMETER_DUPLICATION]=!not_optimized;
+		
 	}	
 
 	@Override
@@ -389,9 +555,10 @@ public class MLRateVariation extends ML
 	}
 	
 	/**
-	 * Updates {@link #node_parameters} and {@link #category_parameters}; fills in 
+	 * Fills in 
 	 * the adjustable parameters (in {@link #adjustable_parameters}.
-	 * 
+	 * Calls {@link #copyCategoryParametersFromModel()} for 
+	 * adding the adjustable category parameters. 
 	 * 	
 	 */
 	private void copyParametersFromModel()
@@ -399,7 +566,6 @@ public class MLRateVariation extends ML
 		gradient_factory.computeClasses();
 		
 		int num_nodes = node_parameters.length;
-		int ncat = variation_model.getNumClasses(); 
 		
 		// now collect adjustable parameters
 		adjustable_parameters.clear();
@@ -418,14 +584,29 @@ public class MLRateVariation extends ML
 					if (!Double.isInfinite(P.get()))
 						adjustable_parameters.add(P);
 				}
+				MinGradient dup_par = defaultNodeParameter(v, PARAMETER_DUPLICATION);  // new LogisticDuplicationRate(v);
 				if (want_dup)
 				{
-					MinGradient dup_par = defaultNodeParameter(v, PARAMETER_DUPLICATION);  // new LogisticDuplicationRate(v);
 					double logit_lm = dup_par.get();
 					
-					if (!Double.isInfinite(logit_lm))
+					if (!Double.isInfinite(logit_lm)) {
 						adjustable_parameters.add(dup_par);
+						
+//						if (v==num_nodes-1) { // DEBUG
+//							System.out.println("#**MLRVL.cPFM node "+v+"\tadd dup "+dup_par);
+//						}
+					} else {
+//						if (v==num_nodes-1) { // DEBUG
+//							System.out.println("#**MLRVL.cPFM node "+v+"\tnoadd dup "+dup_par);
+//						}
+					}
+				} else {
+//					if (v==num_nodes-1) { // DEBUG
+//						System.out.println("#**MLRVL.cPFM node "+v+"\tnoadd dup "+dup_par);
+//					}
 				}
+				
+				
 				if (want_loss)
 				{
 					MinGradient P = defaultNodeParameter(v, PARAMETER_LOSS);
@@ -434,6 +615,15 @@ public class MLRateVariation extends ML
 				}
 			}
 		}
+		this.copyCategoryParametersFromModel();
+	}
+		
+	/**
+	 * 	Adds adjustable category parameters.
+	 */
+	protected void copyCategoryParametersFromModel() {	
+		int num_nodes = node_parameters.length;
+		int ncat = variation_model.getNumClasses(); 
 		for (int k=0; k<ncat; k++)
 		{
 			double[] mods = category_parameters[k];
@@ -457,37 +647,73 @@ public class MLRateVariation extends ML
 	}
 	
 	/**
-	 * Copies the locally stored parameter values to the underlying {@link #variation_model}
+	 * Copies the locally stored parameter values to 
+	 * the underlying {@link #variation_model}.
+	 * Calls {@link #copyCategoryParametersToModel()} 
+	 * for setting category parameters, and 
+	 * resets the underlying gradient factory. 
 	 */
-	private void copyParametersToModel()
+	protected final void copyParametersToModel()
 	{
 		TreeWithLogisticParameters lrates = variation_model.getBaseModel();
 		int num_nodes = node_parameters.length;
+		boolean bounded_duplication = variation_model.isDuplicationBounded();
 		for (int v=0; v<num_nodes; v++)
 		{
 			double[] params = node_parameters[v];
 			if (params!=null)
 			{
-				double logit_lambda = params[PARAMETER_DUPLICATION];
 				double logit_p =  params[PARAMETER_LOSS];
-				double log_gain = params[PARAMETER_GAIN];
+				double log_gain;
+				if (USE_LOGISTIC_GAIN) {
+					double log_max_gain = Math.log(
+							getCommonGainType() == PARAMETER_DUPLICATION?
+									MAX_KAPPA:1.0);
+					if (log_max_gain == Double.POSITIVE_INFINITY)
+						log_gain = params[PARAMETER_GAIN];
+					else {
+						double logit_gn = params[PARAMETER_GAIN];
+						log_gain = Logarithms.logitToLogValue(logit_gn)
+								+log_max_gain;
+//						// DEBUG
+//						if ((log_gain==Double.NEGATIVE_INFINITY || log_gain == log_max_gain)) { //  && !Double.isInfinite(logit_gn)
+//							System.out.println("#**MLRV.cPTM node "+v+"/gain\tlogit "+logit_gn+"\tlog "+log_gain+"\tlmax "+log_max_gain+"+("+Logarithms.logitToLogValue(logit_gn)+")"
+//									+"\tlogitp "+logit_p
+//									+(bounded_duplication?"\tlogitq ":"\tlogitlm ")
+//										+params[PARAMETER_DUPLICATION]
+//									);
+//						}
+					}
+				} else 
+					log_gain = params[PARAMETER_GAIN];
 				
-				lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, log_gain, variation_model.getCommonGainType());
+				if (bounded_duplication) {
+					double logit_lambda = params[PARAMETER_DUPLICATION];
+					lrates.setLogitLossRelativeDuplication(v, logit_p, logit_lambda, log_gain, variation_model.getCommonGainType());
+				}
+				else {
+					double logit_q = params[PARAMETER_DUPLICATION];
+					lrates.setLogitLossDuplication(v, logit_p, logit_q, log_gain, variation_model.getCommonGainType());
+				}
 			}
 		}
+		this.copyCategoryParametersToModel();
+		gradient_factory.computeClasses();
+	}
+	
+	protected void copyCategoryParametersToModel() {
 		int ncat = category_parameters.length;
 		for (int k=0; k<ncat; k++)
 		{
 			double[] params = category_parameters[k];
 			RateVariationModel.Category C = variation_model.getCategory(k);
-			if (params != null)
-			{
+//			if (params != null)
+//			{
 				C.setModifiers(params[PARAMETER_MOD_LENGTH], params[PARAMETER_MOD_DUPLICATION]);
 				// parameters automatically recomputed
-			} else
-				C.computeParameters();
+//			} else
+//				C.computeParameters();
 		}
-		gradient_factory.computeClasses();
 	}	
 	
 	
@@ -497,14 +723,14 @@ public class MLRateVariation extends ML
 	 * 
 	 */
 	/**
-	 * Replaces 0.0 and 1.0 duplication rates to facilitate optimization
+	 * Replaces 1.0 duplication rates to facilitate optimization
 	 * in the base rates . 
 	 * 
-	 * The same functionality is assumed by {@link #initDataStructures()}.
+	 * The same functionality is assumed by {@link #initParameters()}.
 	 * 
 	 * @return true if at least one lambda was reset
 	 */
-	private boolean reduceInfiniteDuplicationRates()
+	private boolean reduceInfiniteDuplicationRates(double small)
 	{
 		boolean have_adjusted = false;
 		TreeWithLogisticParameters lrates = variation_model.getBaseModel();
@@ -517,7 +743,7 @@ public class MLRateVariation extends ML
 				double logit_lambda = lrates.getLogitRelativeRate(v);
 				
 				double reset_lambda;
-				double small = 1.0/(1L<<20);
+				
 				
 //					if (logit_lambda == Double.NEGATIVE_INFINITY)
 //					{
@@ -525,7 +751,7 @@ public class MLRateVariation extends ML
 //					} else 
 				if (logit_lambda == Double.POSITIVE_INFINITY)
 				{
-					reset_lambda = Logarithms.logToLogit(Math.log1p(-small));
+					reset_lambda = -Logarithms.logToLogit(Math.log(small));
 				} else
 					reset_lambda = logit_lambda;
 				if (reset_lambda != logit_lambda)
@@ -543,7 +769,7 @@ public class MLRateVariation extends ML
 					
 					// DEBUG
 					if (PRINT_OPTIMIZATION_MESSAGES)
-						System.out.println("#*MLRV.rIDR "+v+" lambda reset "+reset_lambda+"\t// "+lrates.toString(v)+"\t// was "+old_node_str);
+						System.out.println("#*MLRV.rIDR "+v+" lambda resets "+reset_lambda+"\t// "+lrates.toString(v)+"\t// was "+old_node_str);
 				}
 			}
 			
@@ -563,7 +789,7 @@ public class MLRateVariation extends ML
 	 * 
 	 * @return true if model structure changed (still same log-likelihood, but the gradients are different as parameters change)
 	 */
-	private boolean recenterBaseModel()
+	protected boolean recenterBaseModel()
 	{
 		boolean recenter = variation_model.recenterCategories();
 		if (recenter)
@@ -581,7 +807,7 @@ public class MLRateVariation extends ML
 					);
 			}
 			
-			this.initDataStructures();
+			this.initParameters();
 //			this.initOptimizableCategoryParameters();
 			this.copyParametersFromModel();
 			
@@ -601,6 +827,7 @@ public class MLRateVariation extends ML
 	}
 	
 	
+	
 	/*
 	 * 
 	 * Saving and restoring optimization states 
@@ -610,7 +837,7 @@ public class MLRateVariation extends ML
 	 * Stores a complete model setting with associated likelihood, posteriors and gradient 
 	 * 
 	 */
-	private class OptimizationState 
+	protected class OptimizationState 
 	{
 		final double[] allx;
 		final VariationGradientFactory.SampleGradient G;
@@ -621,8 +848,9 @@ public class MLRateVariation extends ML
 		{
 			this.allx = ML.getParameterValues(MLRateVariation.this.full_parameters);
 			long t0 = System.nanoTime();
-			this.G = gradient_factory.computeSampleGradient(false); // we want by lambda and not by dup parameter q 
-			G.correctForUnobserved(false);
+			boolean want_dup = !variation_model.isDuplicationBounded();
+			this.G = gradient_factory.computeSampleGradient(want_dup); // we want by lambda and not by dup parameter q 
+			G.correctForUnobserved(want_dup);
 			this.computing_time_nano = System.nanoTime()-t0;
 
 			int ncat = variation_model.getNumClasses();
@@ -652,9 +880,9 @@ public class MLRateVariation extends ML
 		 * @param that
 		 * @return
 		 */
-		double maxDelta(OptimizationState that)
+		double maxRelDelta(OptimizationState that)
 		{
-			double maxDelta = 0.0;
+			double maxRelDelta = 0.0;
 			assert (this.allx.length == that.allx.length);
 			
 			for (int j=0; j<this.allx.length;j++)
@@ -674,7 +902,7 @@ public class MLRateVariation extends ML
 						// both finite
 						dx = Math.abs(this.allx[j]-that.allx[j])/Double.max(1.0, Math.abs(this.allx[j]));
 					}
-					maxDelta = Double.max(dx, maxDelta);
+					maxRelDelta = Double.max(dx, maxRelDelta);
 				}
 			}
 			
@@ -685,26 +913,98 @@ public class MLRateVariation extends ML
 				double thisp = Math.exp(this.log_prior[k]);
 				double thatp = Math.exp(that.log_prior[k]);
 				double dx =  Math.abs(thisp-thatp);
-				maxDelta = Double.max(dx, maxDelta);
+				maxRelDelta = Double.max(dx, maxRelDelta);
+			}
+			return maxRelDelta;
+		}
+		
+		/**
+		 * Maximum absolute displacement (L-infinity norm for parameter change vector)
+		 * 
+		 * @param that
+		 * @return
+		 */
+		double maxDelta(OptimizationState that) {
+			double maxDelta = 0.0;
+			assert (this.allx.length == that.allx.length);
+			
+			for (int j=0; j<this.allx.length;j++)
+			{
+				if (this.allx[j]!=that.allx[j])
+				{
+					double dx;
+					if (Double.isFinite(this.allx[j]) && Double.isFinite(that.allx[j])){
+						maxDelta = Double.max(maxDelta, Math.abs(this.allx[j]-that.allx[j]));
+					}
+				}
+			}
+			assert (this.log_prior.length == that.log_prior.length);
+			
+			for (int k=0; k<log_prior.length; k++)
+			{
+				double thisp = Math.exp(this.log_prior[k]);
+				double thatp = Math.exp(that.log_prior[k]);
+				maxDelta = Double.max(maxDelta, Math.abs(thisp-thatp));
 			}
 			return maxDelta;
+			
 		}
 		
 		
-		double getGradientLength(boolean want_node_params, boolean want_category_params)
+		double getGradientL2(boolean want_node_params, boolean want_category_params)
 		{
 			double[] D = getAdjustableParameterGradient(G.get(), want_node_params, want_category_params);
 			return  FunctionMinimization.euclideanNorm(D);
 		}
+		
+		
+		double getGradientDiffL2(OptimizationState that, boolean want_node_params, boolean want_category_params)
+		{
+			double[] thisD = getAdjustableParameterGradient(this.G.get(), want_node_params, want_category_params);
+			double[] thatD = getAdjustableParameterGradient(that.G.get(), want_node_params, want_category_params);
+			double getGradientDiffL2 = FunctionMinimization.euclideanDistance(thisD, thatD);
+			return getGradientDiffL2;
+		}
+		
+		
+		
+		double getGradientLmax(boolean want_node_params, boolean want_category_params)
+		{
+			double[] D = getAdjustableParameterGradient(G.get(), want_node_params, want_category_params);
+			return  FunctionMinimization.maxNorm(D);
+		}
+		
 		
 		double getLL()
 		{
 			return G.getLogLikelihood();
 		}
 		
+		double[] getGradient() {
+			return G.get();
+		}
+		
 		long nanoTime()
 		{
 			return this.computing_time_nano;
+		}
+		
+		public boolean equals (OptimizationState that) {
+			return Arrays.equals(this.allx, that.allx)
+					&& Arrays.equals(this.log_prior, that.log_prior);
+		}
+		
+		@Override 
+		public boolean equals(Object o) {
+			if (o instanceof OptimizationState) {
+				OptimizationState that = (OptimizationState) o;
+				return this.equals(that);
+			} else return false;
+		}
+		
+		@Override 
+		public int hashCode() {
+			return (Arrays.hashCode(this.allx)*37)^Arrays.hashCode(this.log_prior);
 		}
 	
 		
@@ -723,7 +1023,7 @@ public class MLRateVariation extends ML
 				sb.append(Math.exp(log_prior[k]));
 			}
 			sb.append("}");
-			double Dlen = this.getGradientLength(true,true);
+			double Dlen = this.getGradientL2(true,true);
 			double rlen = Dlen/(-LL);
 			
 			sb.append("; |dL| ").append(Dlen)
@@ -741,151 +1041,197 @@ public class MLRateVariation extends ML
 	
 	private OptimizationState adjustCalculationWidth(OptimizationState current, double tol)
 	{
-		firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Adjusting truncation parameters");
 		
 		int absolute = gradient_factory.getCalculationWidthAbsolute();
 		double relative = gradient_factory.getCalculationWidthRelative();
+		if (absolute == Integer.MAX_VALUE || relative == Double.POSITIVE_INFINITY)
+			return current;
 		
+		firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Adjusting truncation parameters");
+
 		double current_LL = current.getLL();
-		double current_dL = current.getGradientLength(true, false);
+		double current_dL = current.getGradientL2(true, false);
 		
 		// need to increase?
 		double step_size = Math.log(2.0)/3.0;
 		
-		boolean adjustCalculationWidth;
 		
-		int num_adjustments = 0; // avoid infinite loops; the tests on log-likelihood and gradient change do not guarantee finiteness on their own
+		
 		
 		int dabs =0, drel = 0;
 		
 		double ftol = tol; // tolerance on function value
 		double dtol = tol; //Math.sqrt(tol); // tolerance on derivative
 		
+		// computing the true values 
+		this.setCalculationWidth(Integer.MAX_VALUE, Double.POSITIVE_INFINITY);
+		OptimizationState trueS = currentState();
+		double true_LL = trueS.getLL();
+		double true_dL = trueS.getGradientL2(true, false);
+		final double dLscale = Double.max(1.0,true_dL);
+		double current_delta = current_LL-true_LL;
+		double current_rdiff = Math.abs(current_delta/true_LL);
+		double current_dist = Math.abs(trueS.getGradientDiffL2(current, true,  false));
 		
-		do
+		double current_ddiff = current_dist/dLscale;
+		
+					
+					
+		
+		boolean have_approximation = current_rdiff<=ftol && current_ddiff <= dtol ;
+		if (PRINT_OPTIMIZATION_MESSAGES)
+			System.out.println("#**MLRV.aCW abs "+absolute+"\trel "+relative
+					+"\trdiff "+current_rdiff+"\tddiff "+current_ddiff
+					+"\tcur "+current_LL+"\tdL "+current_dL
+					+"\ttru "+true_LL+"/"+true_dL
+					+"\t(tol "+ftol+","+dtol+")"
+					+"\tapprox? "+have_approximation);
+		
+		boolean adjustCalculationWidth = true;
+		int num_adjustments = 0; // avoid too many loops; likely never attains 33
+		while (adjustCalculationWidth && num_adjustments < 33)
 		{
 			adjustCalculationWidth = false;
-
+			if (!have_approximation)
 			{ // try changing absolute
-				
-				
 				int next_absolute = Integer.max(absolute+1,(int)Math.ceil(Math.exp(Math.log(absolute)+step_size)));
 				this.setCalculationWidth(next_absolute, relative);
 				
 				OptimizationState nextS = currentState();
-				double next_dL = nextS.getGradientLength(true, false);
+				double next_dL = nextS.getGradientL2(true, false);
 				double next_LL = nextS.getLL();
 				
-				double next_delta = next_LL-current_LL;
-				double next_rdiff = Math.abs(next_delta/current_LL); 
-				
-				double next_ddiff = Math.abs(next_dL-current_dL)/Math.max(1.0,current_dL);
+				double next_delta = next_LL-true_LL;
+				double next_rdiff = Math.abs(next_delta/true_LL); 
+				double next_dist = Math.abs(trueS.getGradientDiffL2(nextS, true,  false));				
+				double next_ddiff = next_dist/dLscale;
 	
 				if (PRINT_OPTIMIZATION_MESSAGES)
 					System.out.println("#**MLRV.aCW ("+dabs+","+drel+") absolute "+absolute+"\tincrease "+next_absolute
 							+"\trdiff "+next_rdiff+"\tddiff "+next_ddiff
 							+"\twas "+current_LL+"\tnext "+next_LL
-							+"\tdL "+current_dL+"\tnextdL "+next_dL+"\t(tol "+ftol+","+dtol+")");
+							+"\tdL "+current_dL+"\tnextdL "+next_dL
+							+"\ttru "+true_LL+"/"+true_dL
+							+"\t(tol "+ftol+","+dtol+")");
 	
-				if (ftol < next_rdiff || dtol < next_ddiff)
-				{
 					absolute = next_absolute;
 					current_LL = next_LL;
 					current_dL = next_dL;
+					current = nextS;
 					adjustCalculationWidth = true;
 					++num_adjustments;
 					++dabs;
-	
-				} else if (DEFAULT_TRUNCATE_ABSOLUTE < absolute)
+					have_approximation = next_rdiff<=ftol && next_ddiff<=dtol;
+			} else if (DEFAULT_TRUNCATE_ABSOLUTE < absolute)
+			{
+				int prev_absolute = Integer.max(Integer.min((int)Math.ceil(Math.exp(Math.log(absolute)-step_size)), absolute-1), DEFAULT_TRUNCATE_ABSOLUTE);
+				this.setCalculationWidth(prev_absolute, relative);
+				
+				OptimizationState prevS = currentState();
+				double prev_LL = prevS.getLL();
+				double prev_dL = prevS.getGradientL2(true, false);
+				double prev_delta = prev_LL-true_LL;
+				double prev_rdiff = Math.abs(prev_delta/true_LL);
+				double prev_dist = Math.abs(trueS.getGradientDiffL2(prevS, true,  false));
+				double prev_ddiff = prev_dist/dLscale;
+				
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**MLRV.aCW ("+dabs+","+drel+") absolute "+absolute+"\tdecrease "+prev_absolute
+							+"\trdiff "+prev_rdiff+"\tddiff "+prev_ddiff
+							+"\twas "+current_LL+"\tprev "+prev_LL
+							+"\tdL "+current_dL+"\tprevdL "+prev_dL
+							+"\ttru "+true_LL+"/"+true_dL
+							+"\t(tol "+ftol+","+dtol+")");
+				if (prev_rdiff <= ftol && prev_ddiff <= dtol)
 				{
-					int prev_absolute = Integer.max(Integer.min((int)Math.ceil(Math.exp(Math.log(absolute)-step_size)), absolute-1), DEFAULT_TRUNCATE_ABSOLUTE);
-					this.setCalculationWidth(prev_absolute, relative);
-					
-					OptimizationState prevS = currentState();
-					double prev_LL = prevS.getLL();
-					double prev_dL = prevS.getGradientLength(true, false);
-					double prev_delta = prev_LL-current_LL;
-					double prev_rdiff = Math.abs(prev_delta/current_LL);
-					double prev_ddiff = Math.abs(prev_dL-current_dL)/Math.max(1.0,current_dL);
-					
-					if (PRINT_OPTIMIZATION_MESSAGES)
-						System.out.println("#**MLRV.aCW ("+dabs+","+drel+") absolute "+absolute+"\tdecrease "+prev_absolute
-								+"\trdiff "+prev_rdiff+"\tddiff "+prev_ddiff
-								+"\twas "+current_LL+"\tprev "+prev_LL
-								+"\tdL "+current_dL+"\tprevdL "+prev_dL+"\t(tol "+ftol+","+dtol+")");
-					if (prev_rdiff < ftol && prev_ddiff < dtol)
-					{
-						absolute = prev_absolute;
-						current_LL = prev_LL;
-						current_dL = prev_dL;
-						adjustCalculationWidth = true;
-						++num_adjustments;
-						--dabs;
-					}
+					absolute = prev_absolute;
+					current_LL = prev_LL;
+					current_dL = prev_dL;
+					current = prevS;
+					adjustCalculationWidth = true;
+					++num_adjustments;
+					--dabs;
+					have_approximation = true;
 				}
 			}
+			
+			if (!have_approximation)
 			{
 				// try changing relative
 				double next_rel = Math.exp(Math.log(relative)+step_size);
 				this.setCalculationWidth(absolute, next_rel);
 				
 				OptimizationState nextS = currentState();
-				double next_dL = nextS.getGradientLength(true, false);
+				double next_dL = nextS.getGradientL2(true, false);
 				double next_LL = nextS.getLL();
 				
-				double next_delta = next_LL-current_LL;
-				double next_rdiff = Math.abs(next_delta/current_LL); 
-				
-				double next_ddiff = Math.abs(next_dL-current_dL)/Math.max(1.0,current_dL);
+				double next_delta = next_LL-true_LL;
+				double next_rdiff = Math.abs(next_delta/true_LL); 
+				double next_dist = Math.abs(trueS.getGradientDiffL2(nextS, true,  false));
+				double next_ddiff = next_dist/dLscale;
 				
 				if (PRINT_OPTIMIZATION_MESSAGES)
 					System.out.println("#**MRLV.aCW ("+dabs+","+drel+") relative "+relative+"\tincrease "+next_rel
 							+"\trdiff "+next_rdiff+"\tddiff "+next_ddiff
 							+"\twas "+current_LL+"\tnext "+next_LL
-							+"\tdL "+current_dL+"\tnextdL "+next_dL+"\t(tol "+ftol+","+dtol+")");
+							+"\tdL "+current_dL+"\tnextdL "+next_dL
+							+"\ttru "+true_LL+"/"+true_dL
+							+"\t(tol "+ftol+","+dtol+")");
 	
-				if (ftol < next_rdiff || dtol < next_ddiff)
+				relative = next_rel;
+				current_LL = next_LL;
+				current_dL = next_dL;
+				current = nextS;
+				adjustCalculationWidth = true;
+				++num_adjustments;
+				++drel;
+				have_approximation = next_rdiff<=ftol && next_ddiff<=dtol;
+			} else if (DEFAULT_TRUNCATE_RELATIVE < relative)
+			{
+				double prev_rel = Double.max(DEFAULT_TRUNCATE_RELATIVE, Math.exp(Math.log(relative)-step_size));
+				this.setCalculationWidth(absolute, prev_rel);
+				
+				OptimizationState prevS = currentState();
+				double prev_LL = prevS.getLL();
+				double prev_dL = prevS.getGradientL2(true, false);
+				double prev_delta = prev_LL-true_LL;
+				double prev_rdiff = Math.abs(prev_delta/true_LL);
+				double prev_dist = Math.abs(trueS.getGradientDiffL2(prevS, true,  false));
+				double prev_ddiff = prev_dist/dLscale;
+				
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**MLRV.aCW ("+dabs+","+drel+") relative "+relative+"\tdecrease "+prev_rel
+							+"\trdiff "+prev_rdiff+"\tddiff "+prev_ddiff
+							+"\twas "+current_LL+"\tprev "+prev_LL
+							+"\tdL "+current_dL+"\tprevdL "+prev_dL
+							+"\ttru "+true_LL+"/"+true_dL
+							+"\t(tol "+ftol+","+dtol+")");								
+				if (prev_rdiff <= ftol && prev_ddiff <= dtol)
 				{
-					relative = next_rel;
-					current_LL = next_LL;
-					current_dL = next_dL;
+					relative = prev_rel;
+					current_LL = prev_LL;
+					current_dL = prev_dL;
+					current = prevS;
 					adjustCalculationWidth = true;
 					++num_adjustments;
-					++drel;
-				} else if (DEFAULT_TRUNCATE_RELATIVE < relative)
-				{
-					double prev_rel = Double.max(DEFAULT_TRUNCATE_RELATIVE, Math.exp(Math.log(relative)-step_size));
-					this.setCalculationWidth(absolute, prev_rel);
-					
-					OptimizationState prevS = currentState();
-					double prev_LL = prevS.getLL();
-					double prev_dL = prevS.getGradientLength(true, false);
-					double prev_delta = prev_LL-current_LL;
-					double prev_rdiff = Math.abs(prev_delta/current_LL);
-					double prev_ddiff = Math.abs(prev_dL-current_dL)/Math.max(1.0,current_dL);
-					
-					if (PRINT_OPTIMIZATION_MESSAGES)
-						System.out.println("#**MLRV.aCW ("+dabs+","+drel+") relative "+relative+"\tdecrease "+prev_rel
-								+"\trdiff "+prev_rdiff+"\tddiff "+prev_ddiff
-								+"\twas "+current_LL+"\tprev "+prev_LL
-								+"\tdL "+current_dL+"\tprevdL "+prev_dL+"\t(tol "+ftol+","+dtol+")");								
-					if (prev_rdiff < ftol && prev_ddiff < dtol)
-					{
-						relative = prev_rel;
-						current_LL = prev_LL;
-						current_dL = prev_dL;
-						adjustCalculationWidth = true;
-						++num_adjustments;
-						--drel;
-					}
+					--drel;
+					have_approximation = true;
 				}
-			} 
-		} while (adjustCalculationWidth && num_adjustments < 12);
+			}
+
+			firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Adjusting truncation: "+num_adjustments+"("+absolute+","+((int)(relative*10.0+0.5))/10.0+")");
+		} 
 		
 		if (PRINT_OPTIMIZATION_MESSAGES)
-			System.out.println("#**MLRV.aCW setting "+absolute+","+relative);		
-		this.setCalculationWidth(absolute, relative);
-		return currentState();
+			System.out.println("#**MLRV.aCW setting "+absolute+","+relative
+					+"\tapproxOK? "+have_approximation);	
+		if (absolute != gradient_factory.getCalculationWidthAbsolute()
+				|| relative != gradient_factory.getCalculationWidthRelative())
+		{
+			this.setCalculationWidth(absolute, relative);
+			current = currentState();
+		}
+		return current;
 	}
 	
 	
@@ -910,12 +1256,21 @@ public class MLRateVariation extends ML
 		{
 			if (!P.isCategoryParameter())
 			{
-				if (want_model_parameters)
-					P.set(x[j++]);
+				if (want_model_parameters) {
+					P.set(x[j]); 
+//					if (!Double.isFinite(P.get())) { // DEBUG
+//						System.out.println("#**MLRV.sAP "+P+"\tx "+x[j]+"\tg "+P.get());
+//					}
+//					assert (Double.isFinite(P.get()));
+					j++;
+				}
 			} else
 			{
-				if (want_category_parameters)
-					P.set(x[j++]);
+				if (want_category_parameters) {
+					P.set(x[j]);
+					assert (x[j]==P.get());
+					j++;
+				}
 			}
 		}
 		this.copyParametersToModel();
@@ -983,61 +1338,171 @@ public class MLRateVariation extends ML
 	 */
 	private int calls_optFunc=0;
 	
-	/**
-	 * Negative log-likelihood 
-	 * 
-	 * @param x
-	 * @param want_model_parameters
-	 * @param want_category_parameters
-	 * @return
-	 */
-	private double optFunc(double [] x, boolean want_model_parameters, boolean want_category_parameters)
-	{
-		setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
-		double LL = gradient_factory.getCorrectedLL();
-		
-//		if (PRINT_OPTIMIZATION_MESSAGES)
-//			System.out.println("#**MLRV.oF/"+want_model_parameters+","+want_category_parameters+"\t"+calls_optFunc+"\t"+LL);
-		this.calls_optFunc++;
-
-		return -LL;
-	}
+//	/**
+//	 * Negative log-likelihood 
+//	 * 
+//	 * @param x
+//	 * @param want_model_parameters
+//	 * @param want_category_parameters
+//	 * @return
+//	 */
+//	private double optFunc(double [] x, boolean want_model_parameters, boolean want_category_parameters)
+//	{
+//		setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
+//		double LL = gradient_factory.getCorrectedLL();
+//		
+////		if (PRINT_OPTIMIZATION_MESSAGES)
+////			System.out.println("#**MLRV.oF/"+want_model_parameters+","+want_category_parameters+"\t"+calls_optFunc+"\t"+LL);
+//		this.calls_optFunc++;
+//
+//		return -LL;
+//	}
 	
 	private int calls_optDiff = 0;
-	private double[] optDiff(double[] x, boolean want_model_parameters, boolean want_category_parameters)
-	{
-		setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
-		double[] dLL = gradient_factory.getCorrectedGradient(false);
-		double[] D = getAdjustableParameterGradient(dLL, want_model_parameters, want_category_parameters);
+//	private double[] optDiff(double[] x, boolean want_model_parameters, boolean want_category_parameters)
+//	{
+//		setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
+//		double[] dLL = gradient_factory.getCorrectedGradient(!variation_model.isDuplicationBounded());
+//		double[] D = getAdjustableParameterGradient(dLL, want_model_parameters, want_category_parameters);
+//		
+//		this.calls_optDiff++;
+//		if (PRINT_OPTIMIZATION_MESSAGES)
+//			System.out.println("#**MLRV.oD "+calls_optDiff+"\t"+gradient_factory.getCorrectedLL()
+//					+"\tfcalls "+calls_optFunc
+//					+"\t|dL| "+FunctionMinimization.euclideanNorm(D));
+//		return D;
+//		
+//	}
+	
+	/**
+	 * Evaluation for computing likelihood and gradient in
+	 * one passage with caching. 
+	 */
+	private class GradientEvaluation {
+		/**
+		 * Cached parameter values at last evaluation
+		 */
+		private double[] allx;
+		/**
+		 * Cached class probabilities at last evaluation
+		 */
+		private double[] logp;
+		/**
+		 * Cached sample gradient
+		 */
+		private VariationGradientFactory.SampleGradient sgrad; 
+
+		GradientEvaluation() {
+			this.allx=null;
+			this.logp=null; 
+			this.sgrad = null;
+		}
 		
-		this.calls_optDiff++;
-		if (PRINT_OPTIMIZATION_MESSAGES)
-			System.out.println("#**MLRV.oD "+calls_optDiff+"\t"+gradient_factory.getCorrectedLL()
-					+"\tfcalls "+calls_optFunc
-					+"\t|dL| "+FunctionMinimization.euclideanNorm(D));
-		return D;
+		private boolean isCached(boolean enforceCache) {
+			double[] x = ML.getParameterValues(MLRateVariation.this.full_parameters);
+			int ncat = variation_model.getNumClasses();
+			boolean samex = Arrays.equals(x, allx) && logp.length==ncat; // if x==allx, then logp is not null either
+			if (samex) {
+				int ci=0;
+				while (ci<ncat-1 && samex) {
+					samex = this.logp[ci] == variation_model.getCategory(ci).getLogCatProbability();
+					++ci;
+				}
+			}
+			if (!samex && enforceCache) {
+				this.allx = x;
+				this.logp=new double[ncat];
+				for (int ci=0; ci<ncat; ci++) {
+					this.logp[ci] = variation_model.getCategory(ci).getLogCatProbability();
+				}
+				this.sgrad = gradient_factory.computeSampleGradient(!variation_model.isDuplicationBounded());
+				sgrad.correctForUnobserved(!variation_model.isDuplicationBounded());
+	
+				calls_optDiff++;
+				samex=true;
+			}
+			return samex;
+		}
+		
+		/**
+		 * Function value at a point x; if called after {@link #gradient(double[], boolean, boolean)}
+		 * at the same x, then it is already computed, otherwise it computes 
+		 * the likelihood on the spot but not the gradient.
+		 * 
+		 * @param x
+		 * @param want_model_parameters
+		 * @param want_category_parameters
+		 * @return
+		 */
+		double apply(double[] x, boolean want_model_parameters, boolean want_category_parameters) {
+			setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
+			double LL;
+			if (!isCached(false)) {
+				LL = gradient_factory.getCorrectedLL(); // not calculating gradient 
+				MLRateVariation.this.calls_optFunc++;
+			} else {
+				LL = sgrad.getLogLikelihood();
+			}
+			return -LL;
+		}
+		
+		/**
+		 * Gradient of the log-likelihood at a given point x; call before {@link #apply(double[], boolean, boolean)}.
+		 * Subsequent calls with same point retrieve the cached value.
+		 * 
+		 * @param x
+		 * @param want_model_parameters
+		 * @param want_category_parameters
+		 * @return gradient vector
+		 */
+		double[] gradient(double[] x, boolean want_model_parameters, boolean want_category_parameters) {
+			setAdjustableParameterValues(x, want_model_parameters, want_category_parameters);
+			isCached(true); // fills cache if different x
+			double[] dLL = sgrad.get();
+			double[] D = getAdjustableParameterGradient(dLL, want_model_parameters, want_category_parameters);
+			if (PRINT_OPTIMIZATION_MESSAGES)
+				System.out.println("#**MLRV.oD "+calls_optDiff+"\t"+gradient_factory.getCorrectedLL()
+						+"\tfcalls "+calls_optFunc
+						+"\t|dL| "+FunctionMinimization.euclideanNorm(D));
+			return D;
+		}
 		
 	}
-		
-	private static boolean ALWAYS_UNBOUNDED_GAIN_LOSS = false;	
-	private static double MAX_DUPLICATION_MARGIN = 0.0; // 1.0-0.1; // 0.0 
+	
 	
 	
 	/*
 	 * Helper classes for manipulating model parameters 
 	 */
-	private MinGradient defaultNodeParameter(int node, int param_type)
+	protected MinGradient defaultNodeParameter(int node, int param_type)
 	{
 		final MinGradient P;
 		if (param_type == PARAMETER_GAIN)
 		{
-			MinGradient LG = new LogGain(node);
-			if (max_gain==Double.POSITIVE_INFINITY || (ALWAYS_UNBOUNDED_GAIN_LOSS && variation_model.getCommonGainType()==PARAMETER_LOSS))
-			{
+			if (USE_LOGISTIC_GAIN && (MAX_KAPPA!=Double.POSITIVE_INFINITY || getCommonGainType() != PARAMETER_DUPLICATION)) {
+				
+				//P = new LogisticGain(node);
+				MinGradient LG = new LogisticGain(node);
+				if (USE_BRACKETS)
+					P = new BracketedFromLogistic(LG);	
+				else
+					P=LG;
+			} else {
+				
+				MinGradient LG = new LogGain(node);
 				P = LG;
-			} else
-			{
-				P = new LogisticFromLogarithmic(LG, max_gain) ;
+//				if (MAX_KAPPA==Double.POSITIVE_INFINITY || (ALWAYS_UNBOUNDED_GAIN_LOSS && variation_model.getCommonGainType()==PARAMETER_LOSS))
+//				{
+//					P = LG;
+//				} else
+//				{
+//					// maximum set at 1.0 for loss- and gain-linked common gain 
+//					double max_gain = getCommonGainType() == PARAMETER_DUPLICATION
+//							?MAX_KAPPA:1.0;
+//					
+//					P = new LogisticFromLogarithmic(LG, 
+//							max_gain) ;
+//				}
 			}
 		} else if (param_type == PARAMETER_LOSS) 
 		{
@@ -1054,11 +1519,16 @@ public class MLRateVariation extends ML
 					P = new MarginsFromLogistic (LDR, MAX_DUPLICATION_MARGIN);
 				} else
 				{
-					P = new BracketedFromLogistic(LDR);
+					if (USE_BRACKETS)
+						P = new BracketedFromLogistic(LDR);
+					else
+						P = LDR;
 				}
 			} else
 				P = LDR;
 		} 
+		
+//		System.out.println("#**MLRV.dNP "+node+"/"+GLDParameters.paramName(param_type)+"\t"+P);
 		return P;
 	}
 	
@@ -1086,7 +1556,7 @@ public class MLRateVariation extends ML
 	}
 	
 	
-	private abstract class MinGradient implements ModelParameter
+	abstract class MinGradient implements ModelParameter
 	{
 		MinGradient(int par_idx, int emt_idx, boolean is_cat_param)
 		{
@@ -1147,6 +1617,12 @@ public class MLRateVariation extends ML
 		public void set(double logit_t)
 		{
 			double log_t = Logarithms.logitToLogValue(logit_t);
+			
+			assert (Double.isFinite(logit_t));
+			if (log_t==0.0 || !Double.isFinite(log_t)) {
+				System.out.println("#**MLRV.LFL.set log "+log_t+"\tlogit "+logit_t);
+			}
+			
 			double log_gn = log_t + log_max_value;
 			LG.set(log_gn);
 		}
@@ -1157,6 +1633,11 @@ public class MLRateVariation extends ML
 			double log_gn = LG.get();
 			double log_t = log_gn - log_max_value;
 			double logit_t = Logarithms.logToLogit(log_t);
+			
+			if (Double.isFinite(log_gn) && !Double.isFinite(logit_t)) { // DEBUG
+				System.out.println("#**MLRV.LFL.get "+LG+"\tloggn "+log_gn+"\tlogt "+log_t+"\tlogit "+logit_t+"\tcomp "+Logarithms.logitToLogLogComplement(log_t));
+			}
+			
 			return logit_t;
 		}
 		
@@ -1165,7 +1646,8 @@ public class MLRateVariation extends ML
 		{
 			double log_gn = LG.get();
 			double log_t = log_gn - log_max_value;
-			double one_minus_t = -Math.expm1(log_t);  // 1-exp(log_t)
+			//double one_minus_t = -Math.expm1(log_t);  // 1-exp(log_t)
+			double one_minus_t = Math.exp(Logarithms.logToLogComplement(log_t));
 			
 			double dL = LG.dL(gradient)*one_minus_t;
 			return dL;
@@ -1189,7 +1671,7 @@ public class MLRateVariation extends ML
 	 * to unbounded parameter <var>x</var>=ln(<var>p</var>-<var>ε</var>)-ln(1-<var>p</var>-<var>ε</var>) 
 	 * 
 	 */
-	private class BracketedFromLogistic extends MinGradient
+	class BracketedFromLogistic extends MinGradient
 	{
 		private final MinGradient MG;
 		private final double log_eps;
@@ -1241,6 +1723,10 @@ public class MLRateVariation extends ML
 			double log1_p = Logarithms.add(log_eps, log1_2eps+log1_t);
 			
 			double logit_p = log_p - log1_p; 
+			
+			//assert (Double.isFinite(logit_t)==);
+			
+			assert Double.isFinite(logit_p);
 			MG.set(logit_p);
 		}
 		
@@ -1255,7 +1741,15 @@ public class MLRateVariation extends ML
 			
 			double logit_t = Logarithms.ldiffLogValue(ld_numer)-Logarithms.ldiffLogValue(ld_denom);
 			
-//			System.out.println("#**MLRV.BFL.get "+logit_t+"\t// "+this.toString());
+//			// DEBUG
+//			if (Double.isFinite(logit_t)!=Double.isFinite(logit_p)) {
+//				System.out.println("#**MLRV.BFL.get/"+MG+"\tlt "+logit_t+"\tlp "+logit_p+"\tlogp "+log_p+"\tlog1p "+log1_p+"\tle "+log_eps
+//						+"\tld "+Logarithms.ldiffLogValue(ld_numer)+"-"+Logarithms.ldiffLogValue(ld_denom));
+//			}
+//			
+//			assert (Double.isFinite(logit_t)==Double.isFinite(logit_p));
+
+			//			System.out.println("#**MLRV.BFL.get "+logit_t+"\t// "+this.toString());
 			
 			return logit_t;
 		}
@@ -1266,6 +1760,8 @@ public class MLRateVariation extends ML
 		public double dL(double[] gradient)
 		{
 			double logit_p = MG.get();
+			
+			assert Double.isFinite(logit_p);
 			double log_p = Logarithms.logitToLogValue(logit_p);
 			double log1_p = Logarithms.logitToLogComplement(logit_p);
 			double[] ld_numer = Logarithms.ldiff(log_p, log_eps);
@@ -1434,7 +1930,24 @@ public class MLRateVariation extends ML
 		public void set(double logit_p)
 		{
 			node_parameters[node][PARAMETER_LOSS]=logit_p;
+			
+			// DEBUG
+			if (variation_model.getBaseModel().getTree().isRoot(node)) {
+				System.out.println("#**MLRV.LL.set root "+node+"\t"+this.toString()+"\t// "+variation_model.getBaseModel().toString(node));
+			}
 		}
+		@Override
+		public double dL(double[] dLarray)
+		{
+			double dL = super.dL(dLarray);
+			// DEBUG
+			if (variation_model.getBaseModel().getTree().isRoot(node)) {
+				System.out.println("#**MLRV.LL.dL root "+node+"\tdLLdlogitp "+(-dL)+"\t"+this.toString()); //+"\t// "+variation_model.getBaseModel().toString(node));
+			}
+			return dL;
+		
+		}
+		
 		@Override 
 		public String toString()
 		{
@@ -1446,6 +1959,10 @@ public class MLRateVariation extends ML
 		}
 	}
 	
+	/**
+	 * Logistic transformation for relative duplication
+	 * rate lambda = p/q, bounded at 1.0. 
+	 */
 	private class LogisticDuplicationRate extends MinGradient
 	{
 		LogisticDuplicationRate(int node)
@@ -1459,6 +1976,7 @@ public class MLRateVariation extends ML
 		public double get()
 		{
 			double logit_lm = node_parameters[node][PARAMETER_DUPLICATION];
+			
 			return logit_lm;
 		}
 		
@@ -1478,6 +1996,8 @@ public class MLRateVariation extends ML
 			+"]";			
 		}	
 	}	
+	
+	
 	
 	
 	private class LogGain extends MinGradient
@@ -1511,6 +2031,54 @@ public class MLRateVariation extends ML
 			+"/grate "+lrates.getGainRate(node)
 			+"]";			
 		}	
+		
+	}
+	
+	
+	private class LogisticGain extends MinGradient {
+		LogisticGain(int node)
+		{
+			super(3*node+PARAMETER_GAIN, node, false);
+			assert (USE_LOGISTIC_GAIN);
+			this.node = node;
+		}
+		private final int node;
+		
+		@Override
+		public double get()
+		{
+			double get = node_parameters[node][PARAMETER_GAIN];
+			return get;
+		}
+		
+		@Override
+		public void set(double logit_gn)
+		{
+			node_parameters[node][PARAMETER_GAIN]=logit_gn;
+		}
+		
+		@Override 
+		public double dL(double[] gradient)
+		{
+			double logit_gn = get();
+			double log_1g = Logarithms.logitToLogComplement(logit_gn);
+			
+			double dL = super.dL(gradient);
+			dL *= Math.exp(log_1g);
+			return dL;
+		}
+		
+		
+		@Override 
+		public String toString()
+		{
+			return "logitgn"+node+"["
+					+Math.exp(Logarithms.logitToLogValue(get()))
+					+"/1-"+Math.exp(Logarithms.logitToLogComplement(get()))
+					+"; get "+get()
+					+"]";			
+		}	
+		
 		
 	}
 
@@ -1574,6 +2142,11 @@ public class MLRateVariation extends ML
 	 * Optimization
 	 * 
 	 */
+	
+	/**
+	 * Model parameters: up to 3 node parameters per node, 
+	 * 	category parameters, and category probabilities
+	 */
 	@Override
 	public int getModelParameterCount()
 	{
@@ -1587,6 +2160,7 @@ public class MLRateVariation extends ML
 		}
 		
 		int num_prob_params = variation_model.getNumClasses()-1;
+		
 		getModelParameterCount += num_prob_params;
 		
 		return getModelParameterCount;
@@ -1600,7 +2174,7 @@ public class MLRateVariation extends ML
 	 * @param eps small change in probability that shortcuts the EM iterations
 	 * @return new optimization state 
 	 */
-	private OptimizationState optimizeCategoryProbabilities(OptimizationState current, double eps, List<Double> history)
+	protected OptimizationState optimizeCategoryProbabilities(OptimizationState current, double eps, List<Double> history)
 	{
 
 		final int EMiter = 96;
@@ -1657,7 +2231,7 @@ public class MLRateVariation extends ML
 	 * @param itmax
 	 * @param history
 	 */
-	private void optimizeCategoryParams(double delta, int itmax, List<Double> history)
+	protected void optimizeCategoryParams(double delta, int itmax, List<Double> history)
 	{
 		final List<MinGradient> cat_param_list = new ArrayList<>();
 		
@@ -1721,6 +2295,34 @@ public class MLRateVariation extends ML
 		OptimizationState current_state = currentState();
 		
 		double LL =  current_state.getLL(); //gradient.getCorrectedLL();
+
+		if (PRINT_OPTIMIZATION_MESSAGES)
+		{
+			System.out.println("#*MRLV.o model "+variation_model.getClass().getSimpleName()+"/"+variation_model.getNumClasses()+" classes"
+					+"; cgain "+GLDParameters.paramName(variation_model.getCommonGainType())+", dupbound "+variation_model.isDuplicationBounded()
+					+"; gainbound "+USE_LOGISTIC_GAIN+", bracketed "+USE_BRACKETS
+					+"; optimization "+(USE_CONJUGATE_GRADIENT==null?"BFGS":"CG."+USE_CONJUGATE_GRADIENT.toString()));
+			//FunctionMinimization.DEBUG_ZLNSRCH = true;
+		}
+		
+		
+		
+		if (REGULARIZE_GAIN) {
+			TreeWithLogisticParameters lrates = variation_model.getBaseModel();
+			boolean have_adjusted = lrates.regularizeGainRates();
+			this.initParameters();
+			this.copyParametersFromModel();
+			if (have_adjusted) {
+				OptimizationState adjusted_state = currentState();
+				double adjustedLL = adjusted_state.getLL();
+				if (PRINT_OPTIMIZATION_MESSAGES) {
+					System.out.println("#*MRLV.o regGain/init\tLL "+adjustedLL+"\twas "+LL);
+				}
+				LL = adjustedLL;
+				current_state = adjusted_state;
+			}
+		}
+		
 		
 //		if (PRINT_OPTIMIZATION_MESSAGES)
 //		{
@@ -1739,7 +2341,7 @@ public class MLRateVariation extends ML
 		int step_count = history.size()-h0;
 		int nepoch = 0;
 		
-		final double truncate_precision = Double.min(delta,1.0/(1L<<33));
+		final double truncate_precision = Double.min(delta/8.0,1.0/(1L<<33));
 		if (auto_truncate)
 		{
 			current_state = this.adjustCalculationWidth(current_state, truncate_precision);
@@ -1754,25 +2356,26 @@ public class MLRateVariation extends ML
 			double forgettable = gradient_factory.getCorrectedLL();
 			double time_eval = (System.nanoTime()-t0)*nano;
 			
-			System.out.printf("#*MRLV.o starting %s\tevaltime %.3fs\tgradienttime %.3fs\tnum.parameters %d\tadjustable %d\tfactoryLL %f\n",
-					current_state.toString(), time_eval, time_gradient, getModelParameterCount(), numAdjustableParameters(true,true), forgettable);
+			System.out.printf("#*MRLV.o starting %s\tevaltime %.3fs\tgradienttime %.3fs\tnum.parameters %d\tadjustable %d\tfactoryLL %f\tmodel %s\n",
+					current_state.toString(), time_eval, time_gradient, getModelParameterCount(), numAdjustableParameters(true,true), forgettable, variation_model.toString());
 		}
 		
 		OptimizationState best = current_state;
 		LL = current_state.getLL();
 		double LLbest = LL;
 		
-		if (step_count < itmax && 
-				this.reduceInfiniteDuplicationRates())
+		if (step_count < itmax && variation_model.isDuplicationBounded())
 		{
+			boolean have_adjusted = this.reduceInfiniteDuplicationRates(1.0/(1L<<40));
 			current_state = currentState();
-			if (PRINT_OPTIMIZATION_MESSAGES)
+			if (have_adjusted && PRINT_OPTIMIZATION_MESSAGES)
 			{
 				System.out.println("#*MLRV.o  adjusted ==1.0 duplication rates "+current_state);
 			}
 		}
 		OptimizationState prev_state = current_state;	
 		
+		final GradientEvaluation eval = new GradientEvaluation();
 		
 		while (step_count<itmax) // optimization loop until convergence or max iterations
 		{
@@ -1782,9 +2385,11 @@ public class MLRateVariation extends ML
 			/*
 			 *  I. adjust category parameters, if not constant rates 
 			 */
-			if (1<variation_model.getNumClasses())
+			
+			
+			if (1<variation_model.getNumClasses() ) 
 			{
-				//firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Setting rate categories");
+				firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Setting rate categories");
 
 				// adjust category parameters
 				int opti_cat = Integer.min((itmax-step_count)/2, 32);
@@ -1818,29 +2423,54 @@ public class MLRateVariation extends ML
 					}
 					current_state = centered;
 				}
+				
 			}
 			
 			/*
 			 * II. numerical optimization for base model parameters with fixed categories 
 			 */
-			//firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Epoch "+nepoch);
+			firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Epoch "+(1+nepoch)+" ("+this.getClass().getSimpleName()+")");
 
 			step_count = history.size()-h0;
 			double[] x0 = getAdjustableParameterValues(true,false);
-			int preferred_steps = 1+x0.length;
+			
+			for (int i=0; i<x0.length; i++) // DEBUG
+				assert Double.isFinite(x0[i]);
+			
+			// we want at least a few number times n iterations of bfgs to build up 
+			// and exploit a solid inverse Hessian approximation
+			// but we need to update class parameters, so not too many 
+			int muln = nepoch<2?2:Integer.min(nepoch,4);
+			
+			int preferred_steps = Integer.max(128,1+muln*x0.length);
+			//if (nepoch < 12) preferred_steps = (preferred_steps+2)/3;
 			
 			int opti_steps;
-			if (itmax-step_count<12)
+			if (itmax-step_count<100)
 				opti_steps = itmax-step_count;
-			else if (nepoch==0)
-				opti_steps =  Integer.min(preferred_steps,(itmax-step_count)/4);
-			else if (nepoch==1)
-				opti_steps = Integer.min(preferred_steps,(itmax-step_count)/3);
+			else if (nepoch==0 && (1<variation_model.getNumClasses() || auto_truncate))
+				opti_steps =  Integer.min((preferred_steps+2)/3,(itmax-step_count)/4);
+			else if (nepoch<=1)
+				opti_steps = Integer.min((preferred_steps+2)/3,(itmax-step_count)/2);
 			else
 				opti_steps = Integer.min(preferred_steps,(itmax-step_count));
 
-			double min = FunctionMinimization.dfpmin(x0, delta, opti_steps, x->optFunc(x, true, false), x->optDiff(x, true, false), history);
+			double min;
+			if (USE_CONJUGATE_GRADIENT==null) {
+				min = FunctionMinimization.quasiNewtonMin(x0, delta, opti_steps, x->eval.apply(x, true, false), x->eval.gradient(x, true, false), history);
+				// min = FunctionMinimization.dfpmin(x0, delta, opti_steps, x->eval.apply(x, true, false), x->eval.gradient(x, true, false), history);
+			} else {
+				min = FunctionMinimization.conjugateGradientMin(x0, delta, opti_steps, x->eval.apply(x,  true,  false), x->eval.gradient(x, true, false), history, USE_CONJUGATE_GRADIENT);
+			}
+			
+			if (Thread.interrupted()) break; // clear status
+			
+			for (int i=0; i<x0.length; i++) // DEBUG
+				assert Double.isFinite(x0[i]);
+			
 			setAdjustableParameterValues(x0,true,false);
+			x0 = getAdjustableParameterValues(true,false);
+			
 			current_state = currentState();
 			LL = current_state.getLL();
 
@@ -1853,12 +2483,12 @@ public class MLRateVariation extends ML
 			}
 			
 			// check convergence 
-			double max_dx = current_state.maxDelta(prev_state);
-			double gradient_length = current_state.getGradientLength(true,true);
+			double max_dx = current_state.maxRelDelta(prev_state);
+			double gradient_length = current_state.getGradientLmax(true,false); //current_state.getGradientL2(true,false);
 			double rel_gradient = gradient_length/(-LL);
 
 			boolean done_dx = (max_dx < FunctionMinimization.DFP_TOLX);
-			boolean done_gradient = rel_gradient<delta;
+			boolean done_gradient =  gradient_length<delta; //rel_gradient<delta; //
 			boolean done_converged = ( done_gradient|| done_dx);
 			
 			step_count = history.size()-h0;
@@ -1872,9 +2502,7 @@ public class MLRateVariation extends ML
 						+"\tLL "+LL+"\t(min "+min+")"
 						+"\tfcalls "+calls_optFunc+"\tdcalls "+calls_optDiff
 						+"\t|dL| "+gradient_length
-						+"\trgrad "+rel_gradient
-						+"\t|dLbase| "+current_state.getGradientLength(true, false)
-						+"\trgradp "+ rel_gradient+"/"+done_gradient
+						+"\trgrad "+rel_gradient+"/"+done_gradient
 						+"\tmax_dx "+max_dx+"/"+done_dx+"\t"+(done_converged?"DONE":"loop")
 						+"\tsteps "+step_count
 						+"\tdelta "+delta
@@ -1890,9 +2518,44 @@ public class MLRateVariation extends ML
 				if (done_gradient) break;
 			}
 			
+			boolean has_infty = false;
+			for (int i=0; i<x0.length && !has_infty; i++) // DEBUG
+				has_infty = Double.isInfinite(x0[i]);
+			
+			
+			if (REGULARIZE_GAIN) {
+				TreeWithLogisticParameters lrates = variation_model.getBaseModel();
+				boolean have_adjusted = lrates.regularizeGainRates();
+				if (have_adjusted) {
+					this.initParameters();
+					this.copyParametersFromModel();
+					OptimizationState adjusted_state = currentState();
+					double adjustedLL = adjusted_state.getLL();
+					if (PRINT_OPTIMIZATION_MESSAGES) {
+						System.out.println("#*MRLV.o regGain/loop\tLL "+adjustedLL+"\twas "+LL+"\t(epoch "+nepoch+")");
+					}
+					if (LL==LLbest) {// likely
+						LLbest = adjustedLL; // do not change it back later
+						best = adjusted_state;
+					}
+					LL = adjustedLL;
+					current_state = adjusted_state;
+				}
+			}				
+			
 			if (auto_truncate && step_count<itmax)
 			{
 				current_state = this.adjustCalculationWidth(current_state, truncate_precision);
+			}
+			
+			if (step_count < itmax && variation_model.isDuplicationBounded())
+			{
+				boolean have_adjusted = this.reduceInfiniteDuplicationRates(1.0/(1L<<20));
+				current_state = currentState();
+				if (have_adjusted && PRINT_OPTIMIZATION_MESSAGES)
+				{
+					System.out.println("#*MLRV.o  reboost ==1.0 duplication rates "+current_state);
+				}
 			}
 			
 			nepoch++;
@@ -1901,14 +2564,32 @@ public class MLRateVariation extends ML
 		} // end of optimization loop 
 		
 		
-		if (LL<LLbest)
+		if (LL<LLbest-1.0 || !Double.isFinite(LL))
 		{
 			if (PRINT_OPTIMIZATION_MESSAGES)
 				System.out.println("#*MLRV.o returning to previous optimum\t"+best+"\tinstead of "+current_state);
 			LL = LLbest;
 			current_state = best;
 			current_state.resetModel();
+		} else {
+			if (REGULARIZE_GAIN) {
+				TreeWithLogisticParameters lrates = variation_model.getBaseModel();
+				boolean have_adjusted = lrates.regularizeGainRates();
+				this.initParameters();
+				this.copyParametersFromModel();
+				if (have_adjusted) {
+					OptimizationState adjusted_state = currentState();
+					double adjustedLL = adjusted_state.getLL();
+					if (PRINT_OPTIMIZATION_MESSAGES) {
+						System.out.println("#*MRLV.o regGain/final\tLL "+adjustedLL+"\twas "+LL+"\t(final)");
+					}
+					LL = adjustedLL;
+					current_state = adjusted_state;
+				}
+			}					
 		}
+		
+		
 		return -LL;
 		
 		
@@ -1922,11 +2603,15 @@ public class MLRateVariation extends ML
 	 */
 	private void debugGradient(PrintStream out)
 	{
-		double[] x = getAdjustableParameterValues(true,true);
+		boolean wantCategories = false; // category gradients are not used 
 		
-		double[] df = optDiff(x,true,true);
+		double[] x = getAdjustableParameterValues(true,wantCategories);
 		
-		double[] df_est = FunctionMinimization.numericalGradientTwoPoint(θ->optFunc(θ,true,true), x);
+		final GradientEvaluation eval = new GradientEvaluation();
+		
+		double[] df = eval.gradient(x,true,wantCategories);
+		
+		double[] df_est = FunctionMinimization.numericalGradientTwoPoint(θ->eval.apply(θ, true, wantCategories), x); //  optFunc(θ,true,wantCategories), x);
 		
 //		double[] xafter = getAdjustableParameterValues(true,true);
 
@@ -2008,6 +2693,7 @@ public class MLRateVariation extends ML
 				+"\tlp "+logit_p0
 				+"\tllm "+logit_lambda0  
 				+"\tlgn " +log_gain0
+				+"\tnegLL0 "+negLL0
 				+"\t// "+lrates.toString(node));
 		// diff_cache stores difference in log-likelihood for x settings  
 		final Map<Double,Double> diff_cache = new HashMap<>();
@@ -2051,9 +2737,11 @@ public class MLRateVariation extends ML
 					{
 						log_gain = log_gain0;
 					}
-					lrates.setLogitLossRelativeDuplication(node, logit_p, logit_lambda, log_gain, variation_model.getCommonGainType());
-					copyParametersFromModel();
 					
+					lrates.setLogitLossRelativeDuplication(node, logit_p, logit_lambda, log_gain, variation_model.getCommonGainType());
+					
+					initParameters(); // bc we need to put the model parameters into our nodeparameters
+
 					if (PARAMETER_LOSS == param_type)
 					{
 						fixLoss(node,true);
@@ -2065,13 +2753,17 @@ public class MLRateVariation extends ML
 						fixGain(node, true);
 					}
 					
+					copyParametersFromModel(); // after fix
+					
+					
 					double negLL = optimize(delta, itmax);
 					diffLL = negLL-negLL0;
 					OptimizationState current = currentState();
 					diff_cache.put(x, diffLL);
 					param_cache.put(x, current);
 					
-					out.println("#**MLRV.fLI.dL put\t"+x+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL "+negLL+"\tLL0 "+negLL0
+					out.println("#**MLRV.fLI.dL put\t"+x
+							+"\tdiff "+diffLL+"\tx0 "+x0+"\tLL "+negLL+"\tLL0 "+negLL0
 							+"\tlp "+lrates.getLogitLossParameter(node)
 							+"\tllm "+lrates.getLogitRelativeRate(node)  
 							+"\tlgn " +lrates.getLogGainParameter(node, variation_model.getCommonGainType())
@@ -2263,6 +2955,109 @@ public class MLRateVariation extends ML
 		return -state_interval.getLL();
 	}	
 	
+	/**
+	 * Parses and sets truncation and min. observed copies 
+	 * 
+	 * @param out
+	 * @param cli
+	 */
+	protected void parseComputeParameters(PrintStream out, CommandLine cli) {
+		
+    	boolean dup_bounded = cli.getOptionBoolean(CommandLine.OPT_DUP_BOUNDED, isDuplicationBounded()) ;
+    	if (dup_bounded != isDuplicationBounded()) {
+    		this.setDuplicationBounded(dup_bounded);
+			out.println(CommandLine.getStandardHeader(
+					"Bounded duplication: -"
+					+CommandLine.OPT_DUP_BOUNDED+" "+dup_bounded
+					));
+    		
+    	}
+    	boolean gain_bounded = cli.getOptionBoolean(CommandLine.OPT_GAIN_BOUNDED, isGainBounded());
+    	if (gain_bounded != isGainBounded()) {
+    		this.setGainBounded(gain_bounded);
+			out.println(CommandLine.getStandardHeader(
+					"Bounded gain: -"
+					+CommandLine.OPT_GAIN_BOUNDED+" "+gain_bounded
+					));
+    		
+    	}
+    	
+
+		
+		int absolute = Integer.MAX_VALUE;
+		double relative = Double.POSITIVE_INFINITY;
+        if (cli.getOptionValue(OPT_TRUNCATE)!=null)
+        {
+        	String truncate_val = cli.getOptionValue(OPT_TRUNCATE);
+        	if (truncate_val.endsWith("auto"))
+        	{
+        		if ("auto".equals(truncate_val))
+        		{
+        			this.setWantAutoTruncation(true);
+        			absolute = DEFAULT_TRUNCATE_ABSOLUTE;
+        			relative = DEFAULT_TRUNCATE_RELATIVE;
+        		} else if ("noauto".equals(truncate_val))
+        		{
+        			this.setWantAutoTruncation(false);
+        			absolute = Integer.MAX_VALUE;
+        			relative= Double.POSITIVE_INFINITY;
+        		} else
+        		{
+        			throw new IllegalArgumentException("Use -"+OPT_TRUNCATE+" with auto or noauto [got "+truncate_val+"]");
+        		}
+        	} else
+        	{
+	        	absolute = cli.getOptionTruncateAbsolute();
+	        	relative = cli.getOptionTruncateRelative();
+	        	this.setWantAutoTruncation(false);
+        	}
+        } 
+        
+        if (!this.auto_truncate)
+        {
+        	this.setCalculationWidth(absolute, relative);
+        }
+        
+        out.println(CommandLine.getStandardHeader("Truncated computation: -"
+        		+OPT_TRUNCATE+" "+absolute+","+relative)
+        		+" ; auto-truncation "+(this.auto_truncate?"on":"off"));
+
+        int min_copies = Integer.min(2, cli.getTable().minCopies());
+        min_copies = cli.getOptionInt(OPT_MINCOPY, min_copies);
+		this.setMinimumObservedCopies(min_copies);
+		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+OPT_MINCOPY+" "+min_copies));
+		boolean gotalgo = setAlgorithm(cli.getOptionValue(CommandLine.OPT_ALGORITHM));
+		if (gotalgo)
+			out.println(CommandLine.getStandardHeader("Numerical optimization algorithm: -"+CommandLine.OPT_ALGORITHM+" "
+					+(USE_CONJUGATE_GRADIENT==null?"BFGS":USE_CONJUGATE_GRADIENT.toString())));
+	}
+	
+	
+    private static boolean setAlgorithm(String algo) {
+//    	System.out.println("#**MLRV.sA "+algo);
+    	boolean setAlgorithm=true;
+		if (algo != null) {
+			if ("BFGS".equalsIgnoreCase(algo)) {
+				USE_CONJUGATE_GRADIENT=null;
+			} else {
+				CGVariant requested = CGVariant.valueOf(algo);
+				if (requested == null) {
+					if ("FR".equalsIgnoreCase(algo))
+						requested = CGVariant.FletcherReeves;
+					else if ("PR".equalsIgnoreCase(algo))
+						requested = CGVariant.PolakRibiere;
+					else if ("HS".equalsIgnoreCase(algo))
+						requested = CGVariant.HestenesStiefel;
+					else if ("DY".equalsIgnoreCase(algo))
+						requested = CGVariant.DaiYuan;
+				}
+				if (setAlgorithm = (requested != null))
+					USE_CONJUGATE_GRADIENT = requested;
+			}
+		}    	
+		return setAlgorithm;
+    }
+	
 	
 	/**
 	 * Main entry 
@@ -2321,9 +3116,32 @@ public class MLRateVariation extends ML
     		if (RND!=null)
     		{
     			starting_rates.setRandom(RND);
+    		} else {
+    			boolean reinit = cli.getOptionBoolean(CommandLine.OPT_REINIT, false);
+    			if (reinit) {
+    				TreeWithLogisticParameters lrates = (TreeWithLogisticParameters) starting_rates;
+    				boolean adjusted = lrates.increaseZeroDuplicationRates();
+    				if (adjusted) {
+    					out.println(CommandLine.getStandardHeader("Zero-duplication edges reinitialized: -"+CommandLine.OPT_REINIT+" "+reinit));
+    				}
+    			}
     		}
     	}
-		String opt_common_gain = "opt.gainpar"; 
+    	
+    	
+		double proot = cli.getOptionDouble("opt.proot", 1.0);
+		if (proot<1.0) {
+			TreeWithLogisticParameters lrates = (TreeWithLogisticParameters) starting_rates;
+			int root = cli.getTree().getRoot();
+			double logitlm = lrates.getLogitRelativeRate(root);
+			double log_gamma = lrates.getLogGainParameter(root, PARAMETER_LOSS);
+			double logitp = Logarithms.toLogit(proot);
+			lrates.setLogitLossRelativeDuplication(root, logitp, logitlm, log_gamma, PARAMETER_LOSS);
+			
+			out.println(CommandLine.getStandardHeader("Loss at root: -opt.proot "+proot));
+		}
+    	
+		String opt_common_gain = CommandLine.OPT_COMMON_GAIN; 
 		String common_str = cli.getOptionValue(opt_common_gain);
 		int common_gain_by = CommandLine.parseOptionParameterType(common_str);
 		if (common_gain_by!=-1)
@@ -2341,15 +3159,15 @@ public class MLRateVariation extends ML
 		}
 		
 		// bounded duplication rate (away from 1.0)
-		String opt_max_dup = "opt.dupbound";
-		double max_dup = cli.getOptionDouble(opt_max_dup, 1.0-MAX_DUPLICATION_MARGIN);
-		if (max_dup != 1.0-MAX_DUPLICATION_MARGIN)
-		{
-			MAX_DUPLICATION_MARGIN = 1.0-max_dup;
-		}
-		out.println(CommandLine.getStandardHeader("Bound on relative duplication rate: -"+opt_max_dup+" "+max_dup+"\t; (margin "+MAX_DUPLICATION_MARGIN+")"));
+//		String opt_max_dup = "opt.dupbound";
+//		double max_dup = cli.getOptionDouble(opt_max_dup, 1.0-MAX_DUPLICATION_MARGIN);
+//		if (max_dup != 1.0-MAX_DUPLICATION_MARGIN)
+//		{
+//			MAX_DUPLICATION_MARGIN = 1.0-max_dup;
+//		}
+//		out.println(CommandLine.getStandardHeader("Bound on relative duplication rate: -"+opt_max_dup+" "+max_dup+"\t; (margin "+MAX_DUPLICATION_MARGIN+")"));
 			
-
+		
 		// debugging
 		String opt_debug_gradient = "debug.gradient";
 		if (cli.getOptionValue(opt_debug_gradient)!=null)
@@ -2358,9 +3176,6 @@ public class MLRateVariation extends ML
 			DEBUG_GRADIENT = want_debug;
 		}		
 		
-		
-		
-		
     	AnnotatedTable table = cli.getTable();
     	
 //    	double avg_copy_number = table.getMeanCopies(true);
@@ -2368,76 +3183,72 @@ public class MLRateVariation extends ML
     	
     	
     	MLRateVariation O = new MLRateVariation(model, table);
+    	O.parseComputeParameters(out, cli);
     	
-		int absolute = Integer.MAX_VALUE;
-		double relative = Double.POSITIVE_INFINITY;
-        if (cli.getOptionValue(OPT_TRUNCATE)!=null)
-        {
-        	String truncate_val = cli.getOptionValue(OPT_TRUNCATE);
-        	if (truncate_val.endsWith("auto"))
-        	{
-        		if ("auto".equals(truncate_val))
-        		{
-        			O.setWantAutoTruncation(true);
-        			absolute = DEFAULT_TRUNCATE_ABSOLUTE;
-        			relative = DEFAULT_TRUNCATE_RELATIVE;
-        		} else if ("noauto".equals(truncate_val))
-        		{
-        			O.setWantAutoTruncation(false);
-        			absolute = Integer.MAX_VALUE;
-        			relative= Double.POSITIVE_INFINITY;
-        		} else
-        		{
-        			throw new IllegalArgumentException("Use -"+OPT_TRUNCATE+" with auto or noauto [got "+truncate_val+"]");
-        		}
-        	} else
-        	{
-	        	absolute = cli.getOptionTruncateAbsolute();
-	        	relative = cli.getOptionTruncateRelative();
-	        	O.setWantAutoTruncation(false);
-        	}
-        } 
-        
-        if (!O.auto_truncate)
-        {
-        	O.setCalculationWidth(absolute, relative);
-        }
-        
-        out.println(CommandLine.getStandardHeader("Truncated computation: -"
-        		+OPT_TRUNCATE+" "+absolute+","+relative)
-        		+" ; auto-truncation "+(O.auto_truncate?"on":"off"));
-
-        int min_copies = Integer.min(2, cli.getTable().minCopies());
-        min_copies = cli.getOptionInt(OPT_MINCOPY, min_copies);
-		O.setMinimumObservedCopies(min_copies);
-		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+OPT_MINCOPY+" "+min_copies));
-		
+    	out.println(CommandLine.getStandardHeader("Unique profiles: "+O.utable.tableStatistics(starting_rates.getTree())));
+    			
 		int maxiter = cli.getOptionInt(OPT_ROUNDS, Integer.MAX_VALUE);
 		double eps = cli.getOptionDouble(OPT_EPS, 1.0/(1L<<26));
         
         out.println(CommandLine.getStandardHeader("Convergence: -"+OPT_ROUNDS+" "+maxiter+" -"+OPT_EPS+" "+eps));
-		
+
+		String opt_dup0 = "opt.dup0";
+		boolean has_poisson=cli.getOptionBoolean(opt_dup0, false);
+		out.println(CommandLine.getStandardHeader("No-duplication class: -"+opt_dup0+" "+has_poisson));
+        
+//    	boolean dup_bounded = cli.getOptionBoolean(CommandLine.OPT_DUP_BOUNDED, O.isDuplicationBounded()) ;
+//    	if (dup_bounded != O.isDuplicationBounded()) {
+//    		O.setDuplicationBounded(dup_bounded);
+//			out.println(CommandLine.getStandardHeader(
+//					"Bounded duplication: -"
+//					+CommandLine.OPT_DUP_BOUNDED+" "+dup_bounded
+//					));
+//    		
+//    	}
+        
 		/*
 		 * 
 		 * Start optimization
 		 */
-        
+    	int pretrain = cli.getOptionInt(CommandLine.OPT_PRETRAIN, 0);
+    	cold_start = cold_start && (0<pretrain);
+
 		if (cold_start 
 				&& (1<cat_k || 1<dup_k*length_k))
 		{
-			System.out.println("#**MLRV.main init 1-cat model\tcat_k "+cat_k+"\tdl "+dup_k*length_k);
-			O.optimize(1.0/(1L<<30), Integer.min(48, maxiter)); // just a little bit of adjustment for the base model before introducing multiple categories
+			out.println(CommandLine.getStandardHeader("Pretraining: -"+CommandLine.OPT_PRETRAIN+" "+pretrain));
+			O.optimize(1.0/(1L<<20), Integer.min(pretrain, maxiter)); // just a little bit of adjustment for the base model before introducing multiple categories
 		}
+		
+		String opt_ctype = "opt.ctype";
+		String optClass = cli.getOptionValue(opt_ctype);
+		if (optClass != null) {
+			if (optClass.equals(RateVariationModel.Multiplier.class.getSimpleName())) {
+				dup_k = 1;
+				model.setDefaultType(RateVariationModel.Multiplier.class);
+			} else if (optClass.equals(RateVariationModel.LogisticShift.class.getSimpleName())) {
+				model.setDefaultType(RateVariationModel.LogisticShift.class);
+			} else optClass = optClass+" (unrecognized: stay with default type)"; 
+			
+			out.println(CommandLine.getStandardHeader("Category type: -"+opt_ctype+" "+optClass));
+		}
+		
+		
+		
 		
 		// 
 		// rate variation?
 		// 
 		if (1<dup_k*length_k)
 		{
+			
+			
+			
 			out.println(CommandLine.getStandardHeader("Lattice init categories: -"+OPT_MODEL_LENGTH_CATEGORIES+" "+length_k+" -"+OPT_MODEL_DUPLICATION_CATEGORIES+" "+dup_k));			
 			
 			// 0.5 .. 2 
-			double mod_range = 2.0*Math.log(2.0);
+			double max_mod = 2.0;
+			double mod_range = 2.0*Math.log(max_mod);
 			
 			// mid = floor(nK/2)
 			// d = range / (nK-1)
@@ -2472,7 +3283,6 @@ public class MLRateVariation extends ML
 				cat_mod_dup[k] = mod_dup;
 				
 				// DEBUG
-				System.out.println("#**MLRV.main initcat "+k+"\t("+mod_len+","+mod_dup+")"); 
 				k++;
 				di = (di+1) % dup_k;
 				li = (li+1) % length_k;
@@ -2480,8 +3290,19 @@ public class MLRateVariation extends ML
 			double[] cat_p = new  double[ncat];
 			Arrays.fill(cat_p, 1.0/ncat);
 			
+			if (has_poisson) {
+				int pcat = ncat-1;
+				while (cat_mod_len[pcat]==0.0 && cat_mod_dup[pcat]==0.0) --pcat;
+				cat_mod_dup[pcat]=Double.NEGATIVE_INFINITY;
+				if (cat_mod_len[pcat]==0.0) cat_mod_len[pcat] = -delta_len;
+			}
+			
 			model.initCategories(cat_p, cat_mod_len, cat_mod_dup);
-			O.initDataStructures();
+			for (int k=0; k<ncat; k++)
+			{
+				System.out.println("#**MLRV.main initcat "+k+"\t"+model.getCategory(k)); 
+			}
+			O.initParameters();
 		} else if (1<cat_k)
 		{
 			int ncat = model.getNumClasses();
@@ -2495,17 +3316,17 @@ public class MLRateVariation extends ML
 				for (int k=ncat; k<cat_k; k++)
 					model.addRandomCategory(RateVariationModel.LogisticShift.class, RND);
 			}
-			O.initDataStructures();
+			O.initParameters();
 		}
 		
 		
         int testpnode = cli.getOptionInt("testp", -1);
         int testrnode = cli.getOptionInt("testr", -1);
         int testqnode = cli.getOptionInt("testq", -1);
-        
+        boolean  want_parameter_test = (testpnode!=-1 || testrnode != -1 ||  testqnode != -1);
         double score;
         
-        if (testpnode!=-1 || testrnode != -1 ||  testqnode != -1)
+        if (want_parameter_test)
         {
         	double pvalue = cli.getOptionDouble(OPT_PVALUE, 0.05);
         	int node, param_type;
@@ -2556,17 +3377,10 @@ public class MLRateVariation extends ML
         out.println("#AVGSCORE "+ascore);
         		
 		// save model
-		if (0<maxiter)
-		{
-			// DEBUG
-			
-			
-			
+		if (!want_parameter_test || out != System.out)
 			out.println(count.io.RateVariationParser.printRates(model));
-		}
 
-		if (out.checkError())
-			throw new java.io.IOException("Write failed.");
+		if (out.checkError()) throw new java.io.IOException("Write failed.");
 		out.close();
 	}
 	

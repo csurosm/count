@@ -35,7 +35,7 @@ import count.io.TableParser;
 import count.model.Posteriors.FamilyEvent;
 
 import static count.io.CommandLine.OPT_MINCOPY;
-import static count.io.CommandLine.OPT_ROWCOUNT;
+import static count.io.CommandLine.OPT_RND;
 
 import static count.io.CommandLine.OPT_ANCESTRAL;
 import static count.io.CommandLine.OPT_HISTORY;
@@ -53,6 +53,7 @@ public class SimulatedEvolution
 {
 //	private static long RND_SEED=0L;
 	
+	private static boolean FAMILY_PRESENCE_BY_SURVIVAL = true;
 	
 	
 	protected SimulatedEvolution(MixedRateModel rates_model, Random RND)
@@ -131,13 +132,21 @@ public class SimulatedEvolution
 				class_rates[num_classes] = rates;
 				class_indexes[num_classes] = c;
 				cdf = class_probs[num_classes] = cdf + pc;
-				class_root_cdfs[num_classes]=getRootCDF(rates, 2);
+				class_root_cdfs[num_classes]=getRootCDF(rates, 2); // initialized for 0,1 but will expand as necessary as random root copies are drawn 
 				num_classes++;
 			}
 		}
 		if (num_classes == 0)
 			throw new IllegalArgumentException("All classes have 0.0 probability");
 		class_probs[num_classes-1]=1.0; 
+	}
+	
+	private synchronized void expandRootCDF(int class_idx)
+	{
+		TreeWithRates rates = class_rates[class_idx];
+		double[] cdf = class_root_cdfs[class_idx];
+		
+		class_root_cdfs[class_idx] = getRootCDF(rates, 2*(cdf.length-1)); // doubling the maximum value		
 	}
 	
     private double[] getRootCDF(TreeWithRates rates, int max_value)
@@ -156,6 +165,11 @@ public class SimulatedEvolution
 		return -Math.log(RND.nextDouble())/lambda;        
 	}
 	
+	/**
+	 * Next random category 
+	 * 
+	 * @return
+	 */
 	private int nextRNDClass()
 	{
 		double p = RND.nextDouble();
@@ -264,7 +278,7 @@ public class SimulatedEvolution
 
         boolean isProgenitor()
         {
-        	return this.progenitor == progenitor;
+        	return this == progenitor;
         }
         
         Copy spawn()
@@ -395,13 +409,103 @@ public class SimulatedEvolution
 				this.family_idx = family_idx;
 				this.event_queue = new PriorityQueue<>();
 				simulateTree();
+				calculateStatistics();
+				profiles.clear();
+				event_queue.clear(); // should be empty though already
+				
+				// TODO
+				// compute statistics from the profiles 
+				// do not keep RandomProfile and Copy instances : too much memory
 			}
 			private final int family_idx;
 			private final List<RandomProfile> profiles;
 
 			private final PriorityQueue<Copy> event_queue;
 			
-			public int simulateTree()
+			/**
+			 * Precalculated statistics 
+			 */
+			private NodeStatistics[] unobs_node_statistics, obs_node_statistics;
+			private int unobs_history_event_count, obs_history_event_count;
+			private int[] unobs_family_class;
+			int obs_family_class;
+			private int num_unobserved_profiles;
+			
+			
+			private class NodeStatistics
+			{
+				NodeStatistics(List<RandomProfile> profiles, int node, boolean want_unobserved)
+				{
+					node_survival_count = sumProfiles(profiles, P->P.getMemberCount(node), want_unobserved);
+					node_true_count = sumProfiles(profiles, P->P.getTrueMemberCount(node), want_unobserved);
+					edge_survival_count = sumProfiles(profiles, P->P.getEdgeSurvival(node), want_unobserved);
+					boolean observed = !want_unobserved;
+					int[] family_events = new int[FamilyEvent.values().length];
+					int start = observed?profiles.size()-1:0;
+					for (int i=start; i<profiles.size(); i++)
+					{
+						RandomProfile P = profiles.get(i);
+						int[] events = P.getFamilyEvents(node);
+						for (int j=0; j<events.length; j++)
+							family_events[j]+=events[j];
+					}
+					family_events_gain = family_events[FamilyEvent.GAIN.ordinal()];
+					family_events_loss = family_events[FamilyEvent.LOSS.ordinal()];
+					family_events_expand = family_events[FamilyEvent.EXPAND.ordinal()];
+					family_events_contract = family_events[FamilyEvent.CONTRACT.ordinal()];
+					
+					if (FAMILY_PRESENCE_BY_SURVIVAL) {
+						family_present = sumProfiles(profiles, P->(P.getMemberCount(node)>0?1:0), want_unobserved);	
+						family_multi = sumProfiles(profiles, P->(P.getMemberCount(node)>1?1:0), want_unobserved);
+					} else {
+						family_present = sumProfiles(profiles, P->(P.getTrueMemberCount(node)>0?1:0), want_unobserved);	
+						family_multi = sumProfiles(profiles, P->(P.getTrueMemberCount(node)>1?1:0), want_unobserved);
+					}
+				}
+				
+				
+				int node_survival_count;
+				int node_true_count;
+				int edge_survival_count;
+				int family_events_gain;
+				int family_events_loss;
+				int family_events_expand;
+				int family_events_contract;
+				int family_present;
+				int family_multi;
+			}
+			
+			private void calculateStatistics()
+			{
+				num_unobserved_profiles = profiles.size()-1;
+				int num_nodes = getTree().getNumNodes();
+				unobs_node_statistics = new NodeStatistics[num_nodes];
+				obs_node_statistics = new NodeStatistics[num_nodes];
+				
+				for (int node=0; node<num_nodes; node++)
+				{
+					unobs_node_statistics[node] = new NodeStatistics(profiles, node, true);
+					obs_node_statistics[node] = new NodeStatistics(profiles, node, false);
+				}
+				
+				unobs_family_class=new int[num_classes];
+				obs_family_class=-1;
+				
+				for (int i=0;i<profiles.size(); i++)
+				{
+					RandomProfile P = profiles.get(i);
+					int c = P.class_idx;
+					unobs_family_class[c]++;
+					obs_family_class=c;
+				}
+
+				unobs_history_event_count = sum(P->P.getHistoryEventCount(), true);
+				obs_history_event_count = sum(P->P.getHistoryEventCount(), false);
+			}
+			
+			
+			
+			private int simulateTree()
 			{
 				profiles.clear();
 				RandomProfile last_profile;
@@ -425,9 +529,15 @@ public class SimulatedEvolution
 			}
 			
 			
+			
 			public int getNodeSurvivalCount(int node, boolean want_unobserved)
 			{
-				return sum(P->P.getMemberCount(node), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.node_survival_count;
+				} else
+					return sum(P->P.getMemberCount(node), want_unobserved);
 //				boolean observed = !want_unobserved;
 //				int member_count = 0;
 //				int start = observed?profiles.size()-1:0;
@@ -441,12 +551,22 @@ public class SimulatedEvolution
 			
 			public int getNodeTrueCount(int node, boolean want_unobserved)
 			{
-				return sum(P->P.getTrueMemberCount(node), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.node_true_count;
+				} else
+					return sum(P->P.getTrueMemberCount(node), want_unobserved);
 			}
 			
 			public int getEdgeSurvivalCount(int node,  boolean want_unobserved)
 			{
-				return sum(P->P.getEdgeSurvival(node), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.edge_survival_count;
+				} else
+					return sum(P->P.getEdgeSurvival(node), want_unobserved);
 //				boolean observed = !want_unobserved;
 //				int edge_count = 0;
 //				int start = observed?profiles.size()-1:0;
@@ -460,22 +580,36 @@ public class SimulatedEvolution
 			
 			public int[] getFamilyEvents(int node, boolean  want_unobserved)
 			{
-				boolean observed = !want_unobserved;
 				int[] family_events = new int[FamilyEvent.values().length];
-				int start = observed?profiles.size()-1:0;
-				for (int i=start; i<profiles.size(); i++)
+				if (profiles.isEmpty())
 				{
-					RandomProfile P = profiles.get(i);
-					int[] events = P.getFamilyEvents(node);
-					for (int j=0; j<events.length; j++)
-						family_events[j]+=events[j];
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					family_events[FamilyEvent.GAIN.ordinal()] = S.family_events_gain;
+					family_events[FamilyEvent.LOSS.ordinal()] = S.family_events_loss;
+					family_events[FamilyEvent.EXPAND.ordinal()] = S.family_events_expand;
+					family_events[FamilyEvent.CONTRACT.ordinal()] = S.family_events_contract;
+				} else
+				{
+					boolean observed = !want_unobserved;
+					int start = observed?profiles.size()-1:0;
+					for (int i=start; i<profiles.size(); i++)
+					{
+						RandomProfile P = profiles.get(i);
+						int[] events = P.getFamilyEvents(node);
+						for (int j=0; j<events.length; j++)
+							family_events[j]+=events[j];
+					}
 				}
 				return family_events;
 			}
 			
 			public int getHistoryEventCount(boolean  want_unobserved)
 			{
-				return sum(P->P.getHistoryEventCount(), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					return want_unobserved?unobs_history_event_count:obs_history_event_count;
+				} else
+					return sum(P->P.getHistoryEventCount(), want_unobserved);
 //				boolean observed = !want_unobserved;
 //				int event_count = 0;
 //				int start = observed?profiles.size()-1:0;
@@ -489,16 +623,54 @@ public class SimulatedEvolution
 			
 			public int getFamilyPresent(int node, boolean want_unobserved)
 			{
-				return sum(P->(P.getTrueMemberCount(node)>0?1:0), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.family_present;
+				} else
+					return sum(P->(P.getTrueMemberCount(node)>0?1:0), want_unobserved);
 			}
 			
 			public int getFamilyMulti(int node, boolean want_unobserved)
 			{
-				return sum(P->(P.getTrueMemberCount(node)>1?1:0), want_unobserved);
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.family_multi;
+				} else
+					return sum(P->(P.getTrueMemberCount(node)>1?1:0), want_unobserved);
 			}
+			
+			public int getFamilySurvivalPresent(int node, boolean want_unobserved)
+			{
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.family_present;
+				} else
+					return sum(P->(P.getMemberCount(node)>0?1:0), want_unobserved);
+			}
+			
+			public int getFamilySurvivalMulti(int node, boolean want_unobserved)
+			{
+				if (profiles.isEmpty())
+				{
+					NodeStatistics S = want_unobserved?unobs_node_statistics[node]:obs_node_statistics[node];
+					return S.family_multi;
+				} else
+					return sum(P->(P.getMemberCount(node)>1?1:0), want_unobserved);
+			}
+
 			
 			public int getFamilyClass(int class_idx, boolean want_unobserved)
 			{
+				if (profiles.isEmpty())
+				{
+					if (want_unobserved)
+						return unobs_family_class[class_idx];
+					else
+						return class_idx==obs_family_class?1:0;
+				} else
 				return sum(P->(P.class_idx==class_idx?1:0), want_unobserved);
 			}
 			
@@ -515,6 +687,20 @@ public class SimulatedEvolution
 				}
 				return sum;
 			}
+
+			private int sumProfiles(List<RandomProfile> profiles, ToIntFunction<RandomProfile> stats, boolean want_unobserved)
+			{
+				boolean observed = !want_unobserved;
+				int sum = 0;
+				int start = observed?profiles.size()-1:0;
+				for (int i=start; i<profiles.size(); i++)
+				{
+					RandomProfile P = profiles.get(i);
+					sum += stats.applyAsInt(P);
+				}
+				return sum;
+			}
+			
 			
 		}
 		
@@ -542,7 +728,7 @@ public class SimulatedEvolution
 			node_copies.clear();
 			for (int node=0; node<pre_order.length; node++)
 				node_copies.add(new HashSet<>());
-			history_event_count = simulateLineage(phylo.getRoot());
+			history_event_count = simulateLineage(phylo.getRoot()); // fills up the Copy sets at the nodes
 			
 			surviving_copies.clear();
 			for (int node=0; node<post_order.length; node++)
@@ -674,7 +860,8 @@ public class SimulatedEvolution
 		
 		
 		/**
-		 * Generates random copy history in a subtree.   
+		 * Generates random copy history in a subtree. Fills up the Copy sets at each node 
+		 * in preorder ({@link #node_copies}).  
 		 * 
 		 * @param node
 		 * @return number of events
@@ -697,10 +884,10 @@ public class SimulatedEvolution
 		        {
 		        	cdf = class_root_cdfs[class_idx];
 		            n=Arrays.binarySearch(cdf, p);
-		            if (n<0) // binarysearch does not find this value: very likely
+		            if (n<0) // binarysearch does not find this value exactly: very likely
 		                n = -(n+1);
-		            if (n==cdf.length)
-		            	class_root_cdfs[class_idx] = getRootCDF(rates, 2*(cdf.length-1));
+		            if (n==cdf.length) expandRootCDF(class_idx);
+		            	//class_root_cdfs[class_idx] = getRootCDF(rates, 2*(cdf.length-1));
 		        } while (n==cdf.length);
 //				System.out.println("#**SE.RP.sL root "+p+"\tn "+n+"\t// "+Arrays.toString(cdf));
 		        
@@ -730,7 +917,7 @@ public class SimulatedEvolution
 				{
 					gain_source = new Copy(node);
 					gain_source.setSpawnTime(nextRNDExponential(gain_rate));
-					event_queue.add(gain_source);
+					event_queue.add(gain_source); // immortal
 				}
 				Set<Copy> parent_copies = node_copies.get(parent);
 				for (Copy p: parent_copies)
@@ -750,13 +937,13 @@ public class SimulatedEvolution
 					if (copy.nextEventTime()>=edge_length)
 						break;
 					else
-						event_queue.poll();
+						event_queue.poll(); // remove from the event queue 
 					event_count++;
 					
 					if (copy.dies())
 					{
-						// ok, nothing to do 
-					} else 
+						// ok, nothing to do; do not refile this copy 
+					} else // a birth!
 					{
 						Copy newcomer = copy.spawn();
 						if (copy == gain_source) // gain event
@@ -770,15 +957,26 @@ public class SimulatedEvolution
 						newcomer.setSpawnTime(nextRNDExponential(duplication_rate));
 						newcomer.setDeathTime(nextRNDExponential(loss_rate));
 						event_queue.add(newcomer);
-						event_queue.add(copy);
+						event_queue.add(copy); // refile
 					}
 				}
 				Set<Copy> our_copies = node_copies.get(node);
+				// whichever Copy is still in the event queue stays in the history
 				for (Copy copy: event_queue)
 				{
 					if (copy != gain_source)
 						our_copies.add(copy);
 				}
+//				// 
+//				if (our_copies.isEmpty())
+//				{
+//					node_copies.set(node, Collections.EMPTY_SET);
+//				} else if (our_copies.size()==1)
+//				{
+//					node_copies.set(node, Collections.singleton(our_copies.toArray(new Copy[0])[0]));
+//				}
+				
+				
 //				System.out.println("#**SE.RP.sL "+node+"\tgot "+our_copies.size());
 				
 			}
@@ -787,13 +985,22 @@ public class SimulatedEvolution
 				int child = tree.getChild(node, ci);
 				event_count += simulateLineage(child);
 			}
+			
+			event_queue.clear(); // tidy up the events beyond the horizon @ edge_length
+			
 			return event_count;
 		}
 		
+		
+		/**
+		 * Computes the {@link #surviving_copies} at each node in postorder traversal.
+		 * 
+		 * @param node
+		 */
 		private void calculateSurvivors(int node)
 		{
-			Set<Copy> survivors = surviving_copies.get(node);
-			Set<Copy> members = node_copies.get(node);
+			Set<Copy> survivors = surviving_copies.get(node); // to be set 
+			Set<Copy> members = node_copies.get(node); // already known 
 			if (phylo.isLeaf(node))
 			{
 				survivors.addAll(members);
@@ -847,7 +1054,7 @@ public class SimulatedEvolution
 		PrintStream out = System.out;
 		
 		Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
-		CommandLine cli = new CommandLine(args, our_class, 1);
+		CommandLine cli = new CommandLine(args, our_class, 2);
 		if (cli.getMixedrateModel() == null)
 			throw new IllegalArgumentException("Specify the rates model");
 		int num_rows;
@@ -858,7 +1065,7 @@ public class SimulatedEvolution
 		{
 			num_rows = cli.getTable().getFamilyCount();
 		}
-		num_rows = cli.getOptionInt(OPT_ROWCOUNT, num_rows);
+		num_rows = cli.getOptionInt(CommandLine.OPT_N, num_rows);
 		int min_obs;
 		if (cli.getTable() == null)
 		{
@@ -869,7 +1076,7 @@ public class SimulatedEvolution
 		}
 		min_obs = cli.getOptionInt(OPT_MINCOPY, min_obs);
 		
-		out.println(CommandLine.getStandardHeader("Families: -"+OPT_ROWCOUNT+" "+num_rows));
+		out.println(CommandLine.getStandardHeader("Families: -"+CommandLine.OPT_N+" "+num_rows));
 		out.println(CommandLine.getStandardHeader("Minimum observed: -"+OPT_MINCOPY+" "+min_obs));
 		MixedRateModel input_model = cli.getMixedrateModel();
 //		if (cli.getFreeModel()!=null)
@@ -879,8 +1086,12 @@ public class SimulatedEvolution
 //		}
 		
 		
-		Random RND = cli.getOptionRND(out);
-		SimulatedEvolution S = new SimulatedEvolution(input_model, RND);
+		long rndSeed = cli.getOptionLong(OPT_RND, 0L);
+		out.println(CommandLine.getStandardHeader("Random initialization: -"+OPT_RND+" "+rndSeed
+				+(rndSeed==0L?" (chosen randomly)":"")));    			
+		
+//		Random RND = cli.getOptionRND(out);
+		SimulatedEvolution S = new SimulatedEvolution(input_model, rndSeed);
 		
 		Table table = S.table(num_rows, min_obs); //  SimulatedEvolution.table(input_model, num_rows, min_obs);
 		table.fillTable();
@@ -899,6 +1110,10 @@ public class SimulatedEvolution
 		
 		if (want_stats)
 		{
+			// by lineages 
+			AnnotatedTable input_table = cli.getTable();
+			double relative_sample_size = input_table == null?1.0:(num_rows+0.0)/(input_table.getFamilyCount()+0.0);
+			
 			int[] profile_distribution = new int[phylo.getNumLeaves()+1];
 			
 			for (int f=0; f<table.getFamilyCount(); f++)
@@ -908,11 +1123,12 @@ public class SimulatedEvolution
 				profile_distribution[profile_size]++;
 			}
 			int[] template_distribution;
+			
 			if (cli.getTable()==null)
 				template_distribution=null;
 			else
 			{
-				AnnotatedTable input_table = cli.getTable();
+				
 				template_distribution = new int[profile_distribution.length];
 				for (int f=0; f<input_table.getFamilyCount(); f++)
 				{
@@ -920,20 +1136,73 @@ public class SimulatedEvolution
 					template_distribution[size]++;
 				}
 			}
-			out.println("#DISTRIBUTION\tsize\tsim"+(template_distribution==null?"":"\tinput"));
+			out.println("#DISTRIBUTION\tsize\tsim"+(template_distribution==null?"":"\tinput")
+				+(relative_sample_size==1.0?"":"\textrapolation sim/"+relative_sample_size)
+					);
 			
 			for (int s=0; s<profile_distribution.length; s++)
 			{
-				out.print("#DISTRIBUTION\t"+s+"\t"+profile_distribution[s]);
+				out.print("#DISTRIBUTION\t"+s+"\t"
+						+(relative_sample_size==1.0?profile_distribution[s]:profile_distribution[s]/relative_sample_size));
 				if (template_distribution!=null)
 				{
-					double diff = profile_distribution[s]-template_distribution[s];
+					double diff = profile_distribution[s]/relative_sample_size-template_distribution[s];
 					if (template_distribution[s]!=0)
 						diff/=template_distribution[s];
-					out.printf("\t%d\t%.3f", template_distribution[s], diff);
+					out.printf("\t%d\t%6.3f", template_distribution[s], diff);
 				}
 				out.println();
 			}
+			
+			{
+				// by ncopies
+				int max_copies = 0;
+				if (input_table != null)
+					for (int f=0; f<input_table.getFamilyCount(); f++) {
+						int m = input_table.getMemberCount(f);
+						if (max_copies<m) max_copies= m;
+					}
+				for (int f=0; f<table.getFamilyCount(); f++) {
+					int m = table.getMemberCount(f);
+					if (max_copies<m) max_copies= m;
+				}
+				int[] profile_ncopies = new int[max_copies+1];
+				int[] template_ncopies;;
+				for (int f=0; f<table.getFamilyCount(); f++) {
+					int m = table.getMemberCount(f);
+					profile_ncopies[m]++;
+				}
+				if (input_table == null) {
+					template_ncopies = null;
+				} else {
+					template_ncopies = new int[profile_ncopies.length];
+					for (int f=0; f<input_table.getFamilyCount(); f++) {
+						int m = input_table.getMemberCount(f);
+						template_ncopies[m]++;
+					}
+				}
+				
+				out.println("#NCOPY\tncopy\tsim"+(template_ncopies==null?"":"\tinput")
+						+(relative_sample_size==1.0?"":"\textrapolation sim/"+relative_sample_size)
+							);
+					
+				for (int s=0; s<profile_ncopies.length; s++)
+				{
+					out.print("#NCOPY\t"+s+"\t"
+							+(relative_sample_size==1.0?profile_ncopies[s]:profile_ncopies[s]/relative_sample_size));
+					if (template_ncopies!=null)
+					{
+						double diff = profile_ncopies[s]/relative_sample_size-template_ncopies[s];
+						if (template_ncopies[s]!=0)
+							diff/=template_ncopies[s];
+						out.printf("\t%d\t%6.3f", template_ncopies[s], diff);
+					}
+					out.println();
+				}
+			}
+			
+			
+			
 			
 			
 			Arrays.fill(profile_distribution, 0);
@@ -952,7 +1221,6 @@ public class SimulatedEvolution
 			if (template_distribution!=null)
 			{
 				Arrays.fill(template_distribution, 0);
-				AnnotatedTable input_table = cli.getTable();
 				for (int f=0; f<input_table.getFamilyCount(); f++)
 				{
 					int[] copies = input_table.getFamilyProfile(f);
@@ -969,10 +1237,11 @@ public class SimulatedEvolution
 			
 			for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
 			{
-				out.print("#FAMILIES\t"+phylo.getIdent(leaf)+"\t"+profile_distribution[leaf]);
+				out.print("#FAMILIES\t"+phylo.getIdent(leaf)+"\t"
+						+(relative_sample_size==1.0?profile_distribution[leaf]:profile_distribution[leaf]/relative_sample_size));
 				if (template_distribution!=null)
 				{
-					double diff = profile_distribution[leaf]-template_distribution[leaf];
+					double diff = profile_distribution[leaf]/relative_sample_size-template_distribution[leaf];
 					if (template_distribution[leaf]!=0)
 						diff/=template_distribution[leaf];
 					out.printf("\t%d\t%.3f", template_distribution[leaf], diff);
@@ -1010,9 +1279,17 @@ public class SimulatedEvolution
 				Table.ObservedProfile obs = table.getObservedProfile(f);
 				for (int node=0; node<n; node++)
 				{
-					int fp = obs.getFamilyPresent(node, false);
-					int fpc = obs.getFamilyPresent(node, true);
-					int fm = obs.getFamilyMulti(node, false);
+					int fp, fpc, fm;
+					if (FAMILY_PRESENCE_BY_SURVIVAL) {
+						fp = obs.getFamilySurvivalPresent(node, false);
+						fpc = obs.getFamilySurvivalPresent(node, true);
+						fm = obs.getFamilySurvivalMulti(node, false);
+					} else {
+						fp = obs.getFamilyPresent(node, false);
+						fpc = obs.getFamilyPresent(node, true);
+						fm = obs.getFamilyMulti(node, false);
+					}
+					
 					int[] fevents = obs.getFamilyEvents(node, false);
 					int fgain = fevents[FamilyEvent.GAIN.ordinal()];
 					int floss = fevents[FamilyEvent.LOSS.ordinal()];
@@ -1020,7 +1297,11 @@ public class SimulatedEvolution
 					int fcontract = fevents[FamilyEvent.CONTRACT.ordinal()];
 					
 					int fsurviving = obs.getNodeSurvivalCount(node, false);
-					int ftruecopies = obs.getNodeTrueCount(node, true);
+					int ftruecopies;
+					if (FAMILY_PRESENCE_BY_SURVIVAL) 
+						ftruecopies = obs.getNodeSurvivalCount(node, true);
+					else 
+						ftruecopies = obs.getNodeTrueCount(node, true);
 					
 					if (want_families)
 					{

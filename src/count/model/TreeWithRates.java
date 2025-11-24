@@ -40,6 +40,7 @@ import count.matek.ShiftedGeometric;
  */
 public class TreeWithRates implements GLDParameters
 {
+	
 	/** 
 	 * Initialization with random rates.
 	 * 
@@ -50,50 +51,64 @@ public class TreeWithRates implements GLDParameters
 	{
 		this.tree = tree;
 		int num_nodes = tree.getNumNodes();
+		this.log_gamma = new double[num_nodes];
 		this.gain_rates = new double[num_nodes];
+		
 		this.loss_rates = new double[num_nodes]; 
 		this.duplication_rates = new double[num_nodes];
 		this.edge_lengths = new double[num_nodes];
 		this.rate_gap = new double[num_nodes];
-		
-		final boolean has_init_length = tree instanceof Phylogeny;
-		if (has_init_length)
-		{
-			scaleByPhylogeny();
-		}
-		if (random_init == null)
-		{
-			Arrays.fill(gain_rates, DEFAULT_GAIN_RATE);
-			Arrays.fill(loss_rates, DEFAULT_LOSS_RATE);
-			Arrays.fill(duplication_rates, DEFAULT_DUPLICATION_RATE);
-			Arrays.fill(rate_gap, DEFAULT_LOSS_RATE-DEFAULT_DUPLICATION_RATE);
-			if (! has_init_length)
-				Arrays.fill(edge_lengths,DEFAULT_EDGE_LENGTH);
-			edge_lengths[tree.getRoot()] = Double.POSITIVE_INFINITY;
-			RND = null;
-		} else
-		{
-			RND = new PseudoRandom(random_init);
-			for (int node=0; node<num_nodes; node++)
-			{
-				loss_rates[node]= DEFAULT_LOSS_RATE;
-				setGainRate(node, RND.nextExponential(1.0/DEFAULT_GAIN_RATE));
-				setDuplicationRate(node, RND.nextUniform()*DEFAULT_DUPLICATION_RATE); //  RND.nextUniform(); // less than 1.0
-				
-				if (tree.isRoot(node))
-				{
-					setEdgeLength(node, Double.POSITIVE_INFINITY);
-//					// DEBUG
-//					System.out.println("#**TWR.init rnd root "+toString(node));
-					
-				} else if (!has_init_length)
-				{
-					setEdgeLength(node, RND.nextExponential(1.0/DEFAULT_EDGE_LENGTH));
-				}
-				// DEBUG
-//				System.out.println("#**TWR.init rnd node "+toString(node));
-			}
-		}
+
+		// rates will be reset 
+		Arrays.fill(gain_rates, DEFAULT_GAIN_RATE);
+		Arrays.fill(log_gamma, Math.log(DEFAULT_GAIN_RATE));
+		Arrays.fill(loss_rates, DEFAULT_LOSS_RATE);
+		Arrays.fill(duplication_rates, DEFAULT_DUPLICATION_RATE);
+		Arrays.fill(rate_gap, DEFAULT_LOSS_RATE-DEFAULT_DUPLICATION_RATE);
+		edge_lengths[tree.getRoot()] = Double.POSITIVE_INFINITY;
+
+		setRandom(random_init);
+		initNodeParameters();
+//		final boolean has_init_length = tree instanceof Phylogeny;
+//		
+//		
+//		if (has_init_length)
+//		{
+//			scaleByPhylogeny();
+//		}
+//		if (random_init == null)
+//		{
+//			Arrays.fill(gain_rates, DEFAULT_GAIN_RATE);
+//			Arrays.fill(loss_rates, DEFAULT_LOSS_RATE);
+//			Arrays.fill(duplication_rates, DEFAULT_DUPLICATION_RATE);
+//			Arrays.fill(rate_gap, DEFAULT_LOSS_RATE-DEFAULT_DUPLICATION_RATE);
+//			if (! has_init_length)
+//				Arrays.fill(edge_lengths,DEFAULT_EDGE_LENGTH);
+//			edge_lengths[tree.getRoot()] = Double.POSITIVE_INFINITY;
+//			RND = null;
+//		} else
+//		{
+//			RND = new PseudoRandom(random_init);
+//			for (int node=0; node<num_nodes; node++)
+//			{
+//				loss_rates[node]= DEFAULT_LOSS_RATE;
+//				setGainRate(node, RND.nextExponential(1.0/DEFAULT_GAIN_RATE));
+//				setDuplicationRate(node, RND.nextUniform()*DEFAULT_DUPLICATION_RATE); //  RND.nextUniform(); // less than 1.0
+//				
+//				if (tree.isRoot(node))
+//				{
+//					setEdgeLength(node, Double.POSITIVE_INFINITY);
+////					// DEBUG
+////					System.out.println("#**TWR.init rnd root "+toString(node));
+//					
+//				} else if (!has_init_length)
+//				{
+//					setEdgeLength(node, RND.nextExponential(1.0/DEFAULT_EDGE_LENGTH));
+//				}
+//				// DEBUG
+////				System.out.println("#**TWR.init rnd node "+toString(node));
+//			}
+//		}
 	}
 	
 	public TreeWithRates(IndexedTree tree)
@@ -137,6 +152,7 @@ public class TreeWithRates implements GLDParameters
 		if (copy)
 		{
 			int num_nodes = tree.getNumNodes();
+			this.log_gamma = new double[num_nodes];
 			this.gain_rates = new double[num_nodes];
 			this.loss_rates = new double[num_nodes]; 
 			this.duplication_rates = new double[num_nodes];
@@ -144,6 +160,7 @@ public class TreeWithRates implements GLDParameters
 			this.rate_gap = new double[num_nodes];
 			for (int node=0; node<num_nodes; node++)
 			{
+				log_gamma[node] = same_phylogeny.getLogRelativeGainLoss(node);
 				gain_rates[node] = same_phylogeny.getGainRate(node);
 				loss_rates[node] = same_phylogeny.getLossRate(node);
 				duplication_rates[node] = same_phylogeny.getDuplicationRate(node);
@@ -153,6 +170,7 @@ public class TreeWithRates implements GLDParameters
 		} else
 		{
 			this.gain_rates = same_phylogeny.gain_rates;
+			this.log_gamma = same_phylogeny.log_gamma;
 			this.loss_rates = same_phylogeny.loss_rates;
 			this.duplication_rates = same_phylogeny.duplication_rates;
 			this.edge_lengths = same_phylogeny.edge_lengths;
@@ -166,10 +184,17 @@ public class TreeWithRates implements GLDParameters
 	
 	private final IndexedTree tree;
 	private final double[] gain_rates;
+	
+	private final double[] log_gamma;
+	
+	
 	private final double[] loss_rates;
 	private final double[] duplication_rates;
 	private final double[] edge_lengths;
+	
 	private final double[] rate_gap;
+	
+	
 	
     public static final double DEFAULT_GAIN_RATE = 0.2;
     public static final double DEFAULT_LOSS_RATE = 1.0;
@@ -193,6 +218,9 @@ public class TreeWithRates implements GLDParameters
      */
     private static final double[] POW10 = {1.,10.,100.,1000.,10000.,100000.,1e6,1e7,1e8,1e9,1e10,1e11,1e12,1e13,1e14,1e15,1e16,1e17,1e18,1e19,1e20,1e21,1e22,1e23,1e24,1e25,1e26,1e27,1e28,1e29,1e30,1e31};
 
+    /** 
+     * Sets edge lengths by the phylogeny's edge lengths
+     */
     private void scaleByPhylogeny()
 	{
     	Phylogeny phylo = (Phylogeny) tree;
@@ -253,26 +281,81 @@ public class TreeWithRates implements GLDParameters
 	 * @param node_idx any node 
 	 * @return non-negative gain rate 
 	 */
-	public double getGainRate(int node_idx)
+	public final double getGainRate(int node_idx)
 	{
 		return gain_rates[node_idx];
 	}
 	
 	/**
+	 * Natural logarithm of the relative gain-loss rate (<var>γ</var>). 
+	 * 
+	 * @param node
+	 * @return
+	 */
+	public final double getLogRelativeGainLoss(int node) {
+		return log_gamma[node];
+	}
+	
+	/**
+	 * Setter for the logarithm of the relative gain-loss rate (<var>γ</var>). 
+	 * 
+	 * @param node
+	 * @param ln_gama the desired value
+	 */
+	public final void setLogRelativeGainLoss(int node, double ln_gama) {
+		this.log_gamma[node] = ln_gama;
+		double log_q = this.getLogDuplicationParameter(node);
+		
+		double grate;
+		if (log_q==Double.NEGATIVE_INFINITY)
+			grate = Math.exp(ln_gama);
+		else {
+			double log_p = this.getLogLossParameter(node);
+			double log_kapa = log_gamma[node]+log_p-log_q;
+			grate = Math.exp(log_kapa);
+		}
+		this.gain_rates[node] = grate;
+	}
+	
+	/**
 	 * Logarithm of relative gain-duplication rate (<var>κ</var>) on the edge leading to a node, (or for root prior),
-	 * or  of relative loss-duplication rate (<var>γ</var>) if no-duplication.
+	 * or  of relative gain-loss rate (<var>γ</var>) if no-duplication.
 	 * 
 	 * @param node_idx any node 
-	 * @return non-negative logarithm of gain rate 
+	 * @return logarithm of gain rate 
 	 */
-	public double getLogGainRate(int node_idx)
+	public final double getLogGainRate(int node_idx)
 	{
-		return Math.log(getGainRate(node_idx));
+		double log_q = this.getLogDuplicationParameter(node_idx);
+		
+		if (log_q==Double.NEGATIVE_INFINITY)
+			return log_gamma[node_idx];
+		else { // q*kappa = gamma * p -> kappa = gamma/(q/p)
+			double log_p = this.getLogLossParameter(node_idx);
+			double log_kapa = log_gamma[node_idx]+log_p-log_q;
+			return log_kapa;
+		}
 	}
 
+	/**
+	 * Sets gain-duplication rate (<var>κ</var>) or gain-loss rate (<var> 
+	 * 
+	 * @param node_idx
+	 * @param gain_rate
+	 */
 	public void setGainRate(int node_idx, double gain_rate)
 	{
 		gain_rates[node_idx]=gain_rate;
+		double log_q = this.getLogDuplicationParameter(node_idx);
+		double log_gama ;
+		if (log_q==Double.NEGATIVE_INFINITY) {
+			log_gama = Math.log(gain_rate);
+		} else {
+			double log_p = this.getLogLossParameter(node_idx);
+			double log_kapa = Math.log(gain_rate);
+			log_gama = log_kapa + log_q - log_p;
+		}
+		log_gamma[node_idx]=log_gama;
 	}
 
 	/**
@@ -305,6 +388,8 @@ public class TreeWithRates implements GLDParameters
 	
 	public void setDuplicationRate(int node_idx, double dup_rate)
 	{
+		assert (Double.isFinite(dup_rate));
+		
 		duplication_rates[node_idx]=dup_rate;
 		
 		rate_gap[node_idx] = getLossRate(node_idx)-dup_rate;
@@ -377,6 +462,18 @@ public class TreeWithRates implements GLDParameters
 		edge_lengths[node_idx]=length;
 	}
 	
+	public void initNodeParameters() {
+		final boolean has_init_length = tree instanceof Phylogeny;
+		if (has_init_length)
+			scaleByPhylogeny();
+		
+		
+		int n = tree.getNumNodes();
+		for (int  node=0; node<n; node++) {
+			initNodeParameters(node);
+		}
+	}
+	
 	/**
 	 * (Random) reinitialization of node rate parameters. 
 	 * Duplication rate will be surely inferior to loss rate. 
@@ -385,26 +482,36 @@ public class TreeWithRates implements GLDParameters
 	 */
 	public void initNodeParameters(int node)
 	{
-		final boolean has_init_length = tree instanceof Phylogeny;
-		double mlen = medianLength();
+		boolean has_init_length = tree.hasLength(); // instanceof Phylogeny;
+		if (has_init_length) {
+			int n = tree.getNumNodes();
+			double common = Double.NaN;
+			boolean same= true;
+			for (int u=0; u<n && same; u++) 
+				if (!tree.isRoot(u)) {
+					if (Double.isNaN(common)) common = tree.getLength(u);
+					else same = (common == tree.getLength(u));
+			}
+			has_init_length= !same;
+		}
+		
+		
+//		double mlen = medianLength();
 		if (RND == null)
 		{
-			if (getGainRate(node)!=0.0)
-				setGainRate(node, DEFAULT_GAIN_RATE);
 			setLossRate(node, DEFAULT_LOSS_RATE);
 			if (getDuplicationRate(node)!=0.0)
 				setDuplicationRate(node,DEFAULT_DUPLICATION_RATE);
 			if (node == tree.getRoot())
 				setEdgeLength(node, Double.POSITIVE_INFINITY);
-			else if (has_init_length)
-				setEdgeLength(node, mlen);
-			else
+			else if (!has_init_length)
 				setEdgeLength(node, DEFAULT_EDGE_LENGTH);
+			if (getGainRate(node)!=0.0)
+				setGainRate(node, DEFAULT_GAIN_RATE);
 		} else
 		{
 			setLossRate(node, DEFAULT_LOSS_RATE);
-			if (getGainRate(node)!=0.0)
-				setGainRate(node, RND.nextExponential(1.0/DEFAULT_GAIN_RATE));
+			double g= RND.nextUniform()*DEFAULT_GAIN_RATE;
 			
 			if (getDuplicationRate(node)!=0.0)
 				setDuplicationRate(node, 
@@ -416,22 +523,22 @@ public class TreeWithRates implements GLDParameters
 				setEdgeLength(node, Double.POSITIVE_INFINITY);
 //					// DEBUG
 //					System.out.println("#**TWR.init rnd root "+toString(node));
-			} else if (has_init_length)
-			{
-				setEdgeLength(node, RND.nextExponential(1.0/mlen));
-			} else 
+			} else // if (!has_init_length)
 			{
 				setEdgeLength(node, RND.nextExponential(1.0/DEFAULT_EDGE_LENGTH));
 			}
+			if (getGainRate(node)!=0.0)
+				setGainRate(node, //RND.nextExponential(1.0/DEFAULT_GAIN_RATE));
+						g);
 		}		
 	}
 	
-	private double medianLength()
-	{
-		double[] l = edge_lengths.clone();
-		Arrays.sort(l);
-		return l[l.length/2];
-	}
+//	private double medianLength()
+//	{
+//		double[] l = edge_lengths.clone();
+//		Arrays.sort(l);
+//		return l[l.length/2];
+//	}
 	
 	
 	public boolean hasGain()
@@ -448,6 +555,22 @@ public class TreeWithRates implements GLDParameters
 			if (!tree.isRoot(node) && duplication_rates[node]>0.0 )
 				return true;
 		return false;
+	}
+	
+	/**
+	 * Whether all edges duplication rate lower or equal to loss rate 
+	 * @return
+	 */
+	public boolean isDuplicationBounded() {
+		boolean isDuplicationBounded = true;
+		for (int node=0; node<duplication_rates.length && isDuplicationBounded; node++) {
+			boolean isBounded = duplication_rates[node] <= loss_rates[node];
+			// DEBUG
+			if (!isBounded) System.out.println("#**TWR.iDB bigdup "+node+"\t"+this.toString(node));
+
+			isDuplicationBounded = isBounded;
+		}
+		return isDuplicationBounded;
 	}
 	
 	public DiscreteDistribution getRootDistribution()
@@ -512,56 +635,89 @@ public class TreeWithRates implements GLDParameters
 	public double getUniversalGainParameter(int node)
 	{
 		double r; // return value
-		double gain_rate = getGainRate(node);
-		double log1_q = getLogDuplicationComplement(node);
-		if (log1_q == 0.0)
-		{
-			// q==0.0; Poisson
-			r = gain_rate*getLossParameter(node);
-		} else
-		{
-			r = -gain_rate*log1_q;
+		
+		double logq = this.getLogDuplicationParameter(node);
+		double logr = this.getLogRelativeGainLoss(node)+this.getLogLossParameter(node);
+		if (logq==Double.NEGATIVE_INFINITY) {
+			r = Math.exp(logr);
+		} else {
+			double log1_q = this.getLogDuplicationComplement(node);
+			double loglog1_q = Math.log(-log1_q);
+			if (loglog1_q == Double.NEGATIVE_INFINITY) // very small q -> infinite kapa ...
+				loglog1_q = logq;
+			double logkapa = logr-logq;
+			r = Math.exp(logkapa + loglog1_q);
 		}
+		
+		
+//		double gain_rate = getGainRate(node);
+//		double log1_q = getLogDuplicationComplement(node);
+//		if (log1_q == 0.0)
+//		{
+//			// q==0.0; Poisson
+//			r = gain_rate*getLossParameter(node);
+//		} else
+//		{
+//			r = -gain_rate*log1_q;
+//		}
+		return r;
+	}
+	
+	public double getLinearGainParameter(int node) {
+		double r; // return value
+//		double log_q = getLogDuplicationParameter(node);
+//		double log_gn = this.getLogGainRate(node);
+//		if (log_q == Double.NEGATIVE_INFINITY) {
+//			r = Math.exp(log_gn + getLogLossParameter(node));
+//		} else {
+//			r = Math.exp(log_gn + log_q);
+//		}
+		double logr = this.log_gamma[node]+this.getLogLossParameter(node);
+		r = Math.exp(logr);
 		return r;
 	}
 
 	@Override
 	public double getGainParameter(int node_idx)
 	{
-		double gain_rate = getGainRate(node_idx);
 		double gainParameter;
-		if (getLossRate(node_idx)==0.0 || getDuplicationRate(node_idx)!=0.0 || gain_rate==0.0)
-			gainParameter = gain_rate;
-		else
-			gainParameter = gain_rate * getLossParameter(node_idx); // gain-loss-noduplication = Poisson
 		
-//		if (!Double.isFinite(gainParameter)) // DEBUG
-//		{
-//			String node_name = (tree.isLeaf(node_idx)?IndexedTree.LEAF_IDENT_PREFIX:IndexedTree.NODE_IDENT_PREFIX)+node_idx;
-//
-//			StringBuilder sb = new StringBuilder(node_name);
-//			double p = getLossParameter(node_idx);
-//			double q = getDuplicationParameter(node_idx);
-//			sb.append("[p ").append(p)
-//			.append("/1-").append(getLossParameterComplement(node_idx))
-//			.append(", q ").append(q)
-//			.append("/1-").append(getDuplicationParameterComplement(node_idx))
-//			.append(", r ").append(gainParameter);
-//			if (q<p)
-//			{
-//				double n = q*gainParameter/(p-q);
-//				sb.append("; n ").append(n);
-//			} else
-//			{
-//				sb.append("; n ").append(Double.POSITIVE_INFINITY);
-//			}
-//			sb.append("; gr ").append(getGainRate(node_idx))
-//			.append(", lr ").append(getLossRate(node_idx))
-//			.append(", dr ").append(getDuplicationRate(node_idx))
-//			.append(", len ").append(getEdgeLength(node_idx))
-//			.append("]");		
-//			System.out.println("#***TWR.gGP badgain "+sb.toString());
-//		}
+		
+//		double gain_rate = getGainRate(node_idx);
+//		if (getLossRate(node_idx)==0.0 || getDuplicationRate(node_idx)!=0.0 || gain_rate==0.0)
+//			gainParameter = gain_rate;
+//		else
+//			gainParameter = gain_rate * getLossParameter(node_idx); // gain-loss-noduplication = Poisson
+//		
+////		if (!Double.isFinite(gainParameter)) // DEBUG
+////		{
+////			String node_name = (tree.isLeaf(node_idx)?IndexedTree.LEAF_IDENT_PREFIX:IndexedTree.NODE_IDENT_PREFIX)+node_idx;
+////
+////			StringBuilder sb = new StringBuilder(node_name);
+////			double p = getLossParameter(node_idx);
+////			double q = getDuplicationParameter(node_idx);
+////			sb.append("[p ").append(p)
+////			.append("/1-").append(getLossParameterComplement(node_idx))
+////			.append(", q ").append(q)
+////			.append("/1-").append(getDuplicationParameterComplement(node_idx))
+////			.append(", r ").append(gainParameter);
+////			if (q<p)
+////			{
+////				double n = q*gainParameter/(p-q);
+////				sb.append("; n ").append(n);
+////			} else
+////			{
+////				sb.append("; n ").append(Double.POSITIVE_INFINITY);
+////			}
+////			sb.append("; gr ").append(getGainRate(node_idx))
+////			.append(", lr ").append(getLossRate(node_idx))
+////			.append(", dr ").append(getDuplicationRate(node_idx))
+////			.append(", len ").append(getEdgeLength(node_idx))
+////			.append("]");		
+////			System.out.println("#***TWR.gGP badgain "+sb.toString());
+////		}
+
+		gainParameter = Math.exp(getLogGainParameter(node_idx));
 		return gainParameter;
 	}
 	/**
@@ -572,9 +728,19 @@ public class TreeWithRates implements GLDParameters
 	 * @param node
 	 * @return
 	 */
-	public double getLogGainParameter(int node)
+	public final double getLogGainParameter(int node)
 	{
-		return Math.log(getGainParameter(node));
+		//return Math.log(getGainParameter(node));
+		final double getLogGainParameter;
+		double logq = this.getLogDuplicationParameter(node);
+		double logp  = this.getLogLossParameter(node);
+		double logr = logp + this.getLogRelativeGainLoss(node);
+		if (logq == Double.NEGATIVE_INFINITY) {
+			getLogGainParameter = logr;
+		} else {
+			getLogGainParameter = logr-logq;
+		}
+		return getLogGainParameter;
 	}
 	
 	
@@ -792,6 +958,10 @@ public class TreeWithRates implements GLDParameters
 //				assert (!Double.isNaN(duplicationParameter));
 			} else
 			{
+				if (!(loss_rate<dup_rate)) { // DEBUG
+					System.out.println("#****TWR.gDP numerr node "+node_idx+"\tlrate "+loss_rate+"\tdrate "+dup_rate);
+				}
+				
 				assert (loss_rate<dup_rate);
 				double gap = getRateGap(node_idx); // negative
 				double d =  -gap*t; //(dup_rate-loss_rate)*t; 

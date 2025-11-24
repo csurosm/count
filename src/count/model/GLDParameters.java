@@ -29,19 +29,20 @@ import count.matek.ShiftedGeometric;
  */
 public interface GLDParameters 
 {
-    public static final int PARAMETER_GAIN=0;
-    public static final int PARAMETER_LOSS=1;
-    public static final int PARAMETER_DUPLICATION=2;
-	public static final int PARAMETER_LENGTH=3;
+	public enum Type 
+	{
+		GAIN, LOSS, DUPLICATION, LENGTH
+	};
+
+	public static final int PARAMETER_GAIN=Type.GAIN.ordinal();
+    public static final int PARAMETER_LOSS=Type.LOSS.ordinal();
+    public static final int PARAMETER_DUPLICATION=Type.DUPLICATION.ordinal();
+	public static final int PARAMETER_LENGTH=Type.LENGTH.ordinal();
 	public static final int PARAMETER_DUPLICATION_COMPLEMENT = 3;
 	public static final int PARAMETER_LOSS_COMPLEMENT = 4;
 	public static final int PARAMETER_RELATIVE_DUPLICATION = PARAMETER_LENGTH;
 	
 	
-	public enum Type 
-	{
-		GAIN, LOSS, DUPLICATION, LENGTH
-	};
 	
 	
 	/**

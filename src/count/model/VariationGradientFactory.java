@@ -32,6 +32,7 @@ import count.ds.UniqueProfileTable;
 import count.io.CommandLine;
 import count.io.RateVariationParser;
 import count.matek.Logarithms;
+import count.matek.PseudoRandom;
 import count.model.LogGradient.PosteriorStatistics;
 
 import static count.io.CommandLine.OPT_MINCOPY;
@@ -139,8 +140,11 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 	 */
 	public void setMinimumObservedCopies(int min_copies)
 	{
-		if (min_copies<0 || min_copies>2)
-			throw new UnsupportedOperationException("Minimum copies must be 0,1 or 2.");
+//		if (min_copies<0 || min_copies>2)
+//			throw new UnsupportedOperationException("Minimum copies must be 0,1 or 2.");
+		if (utable.minCopies() < min_copies)
+			throw new IllegalArgumentException("Minimum copies "+min_copies+" asked but table has min "+utable.minCopies());
+		
 		this.min_copies = min_copies;
 	}
 	
@@ -355,6 +359,9 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 		final int unit_task = Count.unitTask(nF);
 		ForkJoinPool thread_pool = threadPool();
 		
+		// random order to mix easy and difficult profiles 
+		final int[] familyOrder = PseudoRandom.randomPermutation(nF);
+		
 		class PartialL extends RecursiveTask<Double>
 		{
 			/**
@@ -387,8 +394,9 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 					} else
 					{
 						double LL = 0.0;
-						for (int f =minF; f<maxF; f++)
+						for (int k =minF; k<maxF; k++)
 						{
+							int f = familyOrder[k];
 							MixedProfile P = new MixedProfile(f);
 							double mul = utable.getMultiplicity(f);
 							LL += mul*P.getLL();
@@ -432,6 +440,9 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 		final int unit_task = Count.unitTask(nF);
 		ForkJoinPool thread_pool = threadPool();
 		
+		// random order to mix easy and difficult profiles 
+		final int[] familyOrder = PseudoRandom.randomPermutation(nF);
+		
 		class PartialG extends RecursiveTask<SampleGradient>
 		{
 			/**
@@ -467,8 +478,10 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 					} else
 					{
 						G = new SampleGradient();
-						for (int f=minF; f<maxF; f++)
+						for (int k=minF; k<maxF; k++)
 						{
+							int f = familyOrder[k];
+							
 							double log_mul = Math.log(utable.getMultiplicity(f));
 							G.addUniq(f, log_mul, want_duplication);
 						}
@@ -603,7 +616,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 					final double logit_λ = main_rates.getLogitRelativeRate(v);
 					if (RateVariationModel.Multiplier.class.equals(C.getClass()))
 					{
-						if (true) throw new UnsupportedOperationException("Not tested yet");
+						//if (true) throw new UnsupportedOperationException("Not tested yet");
 						if (logit_λ==Double.POSITIVE_INFINITY) // lambda == 1 
 						{
 							// we go directly 
@@ -698,7 +711,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 //									assert Double.isFinite(log_λcat);
 //								}
 								
-								if (!tree.isRoot(v) && log1_p != Double.NEGATIVE_INFINITY)
+								if (log1_p != Double.NEGATIVE_INFINITY) // && !tree.isRoot(v) 
 								{
 									dmod_dup = Logarithms.ldiffAddMultiply(dmod_dup, log_λcat, dlp, dmod_dup);
 									
@@ -721,7 +734,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 						}
 						if (mod_length != 0.0)
 						{
-							if (!tree.isRoot(v) && log1_p != Double.NEGATIVE_INFINITY)
+							if (log1_p != Double.NEGATIVE_INFINITY) // & !tree.isRoot(v) 
 							{
 								dmod_len = Logarithms.ldiffAddMultiply(dmod_len, 0.0, dlp, dmod_len);
 							}
@@ -742,7 +755,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 		 * 
 		 * Default implementation just adds the last two cells with 0 gradient.
 		 * 
-		 * @param logCatGradient category gradient from {@link #convertToLogCatGradient(double[][])}; unaffected
+		 * @param logCatGradient category gradient from ; unaffected
 		 * 	
 		 * @return array of length 3<var>n</var>+2 for <var>n</var> nodes in the tree		 
 		 */
@@ -828,7 +841,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 					Posteriors.Profile P = G.getPosteriors(uniq_f);
 					PosteriorStatistics S = G.getProfileStatistics(P);
 					
-					double cLL = P.inside.getLogLikelihood();
+					double cLL = P.getLogLikelihood();
 					if (log_pclass != Double.NEGATIVE_INFINITY)
 						LLf = Logarithms.add(LLf, cLL+log_pclass);
 	
@@ -1047,6 +1060,8 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 				for (int j=0; j<3*num_nodes; j++)
 				{
 					log_D[j] = Logarithms.ldiffAddMultiply(log_D[j], log_pc, log_Dcat[j], log_D[j]);
+					assert !Double.isNaN(log_D[j][0])
+						&& !Double.isNaN(log_D[j][1]);
 				}
 				int j_modlen = 3*num_nodes + PARAMETER_MOD_LENGTH;
 				int j_moddup = 3*num_nodes + PARAMETER_MOD_DUPLICATION;
@@ -1105,6 +1120,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 		}
 	}
 	
+	
 	/**
 	 * Class for summing the log-likelihood gradients across the sample
 	 * and for storing intermediate results.  
@@ -1121,6 +1137,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 			int ncat = getNumCategories();
 			this.G = new double[3*num_nodes+2*ncat];
 			this.log_post = new double[ncat];
+			
 			
 			this.init();
 		}
@@ -1160,6 +1177,7 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 			return this.profile_count;
 		}
 		
+		
 		/**
 		 * Adds a family with given multiplicity to the sample; log-likelihood 
 		 * is updated to log-product of family likelihoods
@@ -1180,7 +1198,9 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 			double LLf = MP.getLL();
 			
 			this.profile_count += mul;
-			this.LL += mul*LLf; 
+			
+			double mLLf = mul*LLf; 
+			this.LL += mLLf;
 			
 			for (int k=0; k<log_post.length; k++)
 			{
@@ -1225,6 +1245,10 @@ public class VariationGradientFactory implements Count.UsesThreadpool
 				G0.addUniq(-1, 0.0, want_duplication); // unobserved
 				
 				double LL0 = G0.LL;
+				if (!(LL0<0.0)) { // DEBUG
+ 					System.out.println("#**VGF.SG.cFU LL0 "+LL0+"\tmincopies "+min_copies);
+				}
+				
 				double logitL0 = Logarithms.logToLogit(LL0);
 				
 				double LLuncorr = this.LL;

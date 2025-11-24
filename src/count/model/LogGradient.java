@@ -37,7 +37,7 @@ import static count.model.GLDParameters.PARAMETER_LOSS;
  * High-precision gradient computations.
  * <ol>
  * <li> collect the posteriors statistics with {@link #getSampleStatistics()}</li>
- * <li> calculate the survival gradient with {@link #getLogSurvivalGradient(PosteriorStatistics)}</li>
+ * <li> calculate the survival gradient with {@link PosteriorStatistics#getLogSurvivalGradient()}</li>
  * <li> convert to distribution gradient with {@link #convertToLogDistributionGradient(double[][])}</li>
  * </ol>
  *
@@ -47,6 +47,10 @@ import static count.model.GLDParameters.PARAMETER_LOSS;
 public class LogGradient extends Posteriors implements Count.UsesThreadpool
 {
 	private static final boolean LOGIT_TO_LOGIT = true;
+	/**
+	 * Minimum observation for generic correction 
+	 */
+	private static final int USE_FAMILY_SIZE_LIKELIHOOD = 3;
 	
 	/**
 	 * Thread pool used across different calls 
@@ -125,8 +129,8 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 	 */
 	public void setMinimumObservedCopies(int min_copies)
 	{
-		if (min_copies<0 || min_copies>2)
-			throw new UnsupportedOperationException("Minimum copies must be 0,1 or 2.");
+//		if (min_copies<0 || min_copies>2)
+//			throw new UnsupportedOperationException("Minimum copies must be 0,1 or 2.");
 		this.min_copies = min_copies;
 	}
 	
@@ -281,7 +285,8 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 	}
 	
 	/**
-	 * Collects the posterior statistics across the entire sample.
+	 * Collects the posterior statistics across the entire sample;
+	 * used in testing.
 	 * 
 	 * 
 	 * @return
@@ -371,52 +376,60 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 	 */
 	public PosteriorStatistics getUnobservedStatistics()
 	{
-		PosteriorStatistics Sunobs = new PosteriorStatistics();
-		Sunobs.LL = Double.NEGATIVE_INFINITY;
+		PosteriorStatistics Sunobs;
+		
 		
 		int min_copies = this.getMinimumObservedCopies();
-		if (0<min_copies)
-		{
-			int num_unobs ; // unobserved profiles
-			if (min_copies == 1)
+		if (Integer.min(3,USE_FAMILY_SIZE_LIKELIHOOD)<=min_copies) {
+			Posteriors.Profile unobsProfile = FamilySizeLikelihood.getUnobservedProfile(factory.rates, min_copies-1);
+			Sunobs = new PosteriorStatistics(unobsProfile);
+		} else {
+			assert (min_copies <= 2);
+			// constructing by collecting the possible profiles
+			Sunobs = new PosteriorStatistics();
+			Sunobs.LL = Double.NEGATIVE_INFINITY;
+			if (0<min_copies)
 			{
-				num_unobs  = 1; // empty profile
-			} else
-			{
-				assert (min_copies == 2);
-				if (this.singletons == null)	
-					this.singletons = ProfileTable.singletonTable(factory.tree);
-				num_unobs = 1 + singletons.getFamilyCount();
-			}
-			Profile[] SP = new Profile[num_unobs];
-			LogGradient SG0 = new LogGradient(new LikelihoodParametrized(log_factory.rates, ProfileTable.emptyProfile(factory.tree)));
-			// SG0.setCalculationWidthThresholds(this.getCalculationWidthAbsolute(), this.getCalculationWidthAbsolute());
-			int ui = 0;
-			SP[ui++] = SG0.getPosteriors(0);
-			if (min_copies==2)
-			{
-				LogGradient SG1 = new LogGradient(new LikelihoodParametrized(log_factory.rates, singletons));
-				// SG1.setCalculationWidthThresholds(this.getCalculationWidthAbsolute(), this.getCalculationWidthAbsolute());
-				for (int f=0; f<singletons.getFamilyCount(); f++)
-					SP[ui++] = SG1.getPosteriors(f);
-			}
-			double Lunobs = Double.NEGATIVE_INFINITY;
-			double[] Pll = new double[SP.length];
-			while (0<ui)
-			{
-				--ui;
-				Profile P = SP[ui];
-				Pll[ui]  = P.inside.getLogLikelihood();
-				Lunobs = Logarithms.add(Lunobs, Pll[ui]);
-			}
-			while (ui<SP.length)
-			{
-				Sunobs.add(SP[ui], Pll[ui]-Lunobs);
-				++ui;
-			}
-			Sunobs.LL = Lunobs;
-		} 
-		
+				int num_unobs ; // unobserved profiles
+				if (min_copies == 1)
+				{
+					num_unobs  = 1; // empty profile
+				} else
+				{
+					assert (min_copies == 2);
+					if (this.singletons == null)	
+						this.singletons = ProfileTable.singletonTable(factory.tree);
+					num_unobs = 1 + singletons.getFamilyCount();
+				}
+				Profile[] SP = new Profile[num_unobs];
+				LogGradient SG0 = new LogGradient(new LikelihoodParametrized(log_factory.rates, ProfileTable.emptyProfile(factory.tree)));
+				// SG0.setCalculationWidthThresholds(this.getCalculationWidthAbsolute(), this.getCalculationWidthAbsolute());
+				int ui = 0;
+				SP[ui++] = SG0.getPosteriors(0);
+				if (min_copies==2)
+				{
+					LogGradient SG1 = new LogGradient(new LikelihoodParametrized(log_factory.rates, singletons));
+					// SG1.setCalculationWidthThresholds(this.getCalculationWidthAbsolute(), this.getCalculationWidthAbsolute());
+					for (int f=0; f<singletons.getFamilyCount(); f++)
+						SP[ui++] = SG1.getPosteriors(f);
+				}
+				double Lunobs = Double.NEGATIVE_INFINITY;
+				double[] Pll = new double[SP.length];
+				while (0<ui)
+				{
+					--ui;
+					Profile P = SP[ui];
+					Pll[ui]  = P.getLogLikelihood();
+					Lunobs = Logarithms.add(Lunobs, Pll[ui]);
+				}
+				while (ui<SP.length)
+				{
+					Sunobs.add(SP[ui], Pll[ui]-Lunobs);
+					++ui;
+				}
+				Sunobs.LL = Lunobs;
+			} 
+		}
 		return Sunobs;
 	}
 	
@@ -457,19 +470,49 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			this.log_birth_tails = new double[num_nodes][];
 			this.log_death_tails = new double[num_nodes][];
 			this.profile_count = 1.0;
-			this.LL = P.inside.getLogLikelihood();
+			this.LL = P.getLogLikelihood();
 			for (int node=0; node<log_edge_posteriors.length; node++)
 			{
 				log_edge_posteriors[node] = P.getLogEdgePosteriors(node);
 				log_birth_tails[node] = P.getLogNodePosteriorIncrease(node);
 				log_death_tails[node] = P.getLogEdgePosteriorDecrease(node);
+				
+//				// DEBUG
+//				if (hasNaN(log_death_tails[node])) {
+//					System.out.println("#**LG.PS(Profile#"+P.inside.family_idx+")"
+//							+"\tnode "+node
+//							+"\tld "+Arrays.toString(log_death_tails[node])
+//							+"\t// "+P.inside.getOwner().toString(node)
+//							+"\t// "+P.inside.getOwner().getRates().toString(node)
+//							);
+//				}
+				
+				
 			}			
 		}
 		
-		public double getLogLikelihood()
-		{
+		/*
+		 * Access methods 
+		 */
+		public double getLogLikelihood(){
 			return this.LL;
 		}
+		
+		public double[] getLogEdgePosteriors(int node) {
+			return this.log_edge_posteriors[node];
+		}
+		
+		public double[] getLogBirthTails(int node) {
+			return this.log_birth_tails[node];
+		}
+		
+		public double[] getLogDeathTails(int node) {
+			return this.log_death_tails[node];
+		}
+		
+		/*
+		 * Adding data
+		 */
 		
 		public void add(Profile P, double log_multiplier)
 		{
@@ -481,10 +524,29 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				double[] pS = P.getLogEdgePosteriors(node);
 				double[] pNv_Sv = P.getLogNodePosteriorIncrease(node);
 				double[] pNu_Sv = P.getLogEdgePosteriorDecrease(node);
+				
+//				// DEBUG
+//				if (hasNaN(pNu_Sv)) {
+//					System.out.println("#**LG.PS.add "+P.inside.family_idx
+//							+"*"+Math.exp(log_multiplier)+"\tnode "+node+"\tpNuSv "+Arrays.toString(pNu_Sv)
+//							+"\t// ");
+//				}
+				
+				
+				
 				//log_node_posteriors[node] = addCells(log_node_posteriors[node], pN, log_multiplier);
 				log_edge_posteriors[node] = addCells(log_edge_posteriors[node], pS, log_multiplier);
 				log_birth_tails[node] = addCells(log_birth_tails[node], pNv_Sv, log_multiplier);
 				log_death_tails[node] = addCells(log_death_tails[node], pNu_Sv, log_multiplier);
+
+//				// DEBUG
+//				if (hasNaN(log_death_tails[node])) {
+//					System.out.println("#**LG.PS.add "+P.inside.family_idx
+//							+"*"+Math.exp(log_multiplier)+"\tnode "+node+"\tpNuSv "+Arrays.toString(pNu_Sv)
+//							+"\tld "+Arrays.toString(log_death_tails[node])
+//							);
+//				}
+				
 				
 //				if (Psize==0)// DEBUG
 //				{
@@ -497,7 +559,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			double mul = Math.exp(log_multiplier);
 			
 			profile_count += mul;
-			LL = Math.fma(mul, P.inside.getLogLikelihood(), LL); // fma(a,b,c)=a*b+c
+			LL = Math.fma(mul, P.getLogLikelihood(), LL); // fma(a,b,c)=a*b+c
 		}
 		
 		public void add(PosteriorStatistics that, double multiplier)
@@ -510,16 +572,31 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				this.log_edge_posteriors[node] = addCells(this.log_edge_posteriors[node],that.log_edge_posteriors[node],logm);
 				this.log_birth_tails[node] = addCells(this.log_birth_tails[node],that.log_birth_tails[node],logm);
 				this.log_death_tails[node] = addCells(this.log_death_tails[node],that.log_death_tails[node],logm);
+
+//				// DEBUG
+//				if (hasNaN(log_death_tails[node])) {
+//					System.out.println("#**LG.PS.add this("+this.profile_count+")+that("+that.profile_count+")*"+multiplier 
+//							+"\tnode "+node
+//							+"\tld "+Arrays.toString(log_death_tails[node])
+//							);
+//				}
+			
+			
 			}
 			this.profile_count = Math.fma(multiplier, that.profile_count, this.profile_count); // += that.profile_count * multiplier;
 			this.LL = Math.fma(multiplier, that.LL, this.LL); //  += that.LL*multiplier;
 		}
 		
+		
+		
+		/*
+		 * Gradient computation
+		 */
+		
 		/**
 		 * Log-gradient 
 		 * by logit(p~), logit(q~), log(kappa)/log(r~)
 		 * 
-		 * @param S
 		 * @return
 		 */
 		public double[][] getLogSurvivalGradient()
@@ -551,7 +628,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				double logp = log_factory.getLogLossParameter(v);
 				double log1_p = log_factory.getLogLossComplement(v);
 				
-				if (factory.tree.isRoot(v) || logp==0.0)
+				if (log1_p==Double.NEGATIVE_INFINITY) //  logp==0.0) // || factory.tree.isRoot(v) || 
 				{
 					logSD[3*v + PARAMETER_LOSS] = Logarithms.ldiff(); 
 				} else
@@ -559,19 +636,58 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 					double[] tNu_Sv = log_death_tails[v];
 					double logNu_Sv = Logarithms.sum(tNu_Sv, tNu_Sv.length);
 					
-					int u = factory.tree.getParent(v);
+					double dpos, dneg;
 					double log1_e;
-					if (factory.tree.getNumChildren(u)==2)
-					{
-						log1_e = factory.getLogLossComplement(factory.tree.getSibling(v));
-					} else
-					{
-						log1_e = Logarithms.logToLogComplement(log_factory.getLogExtinction(u)-logp);
+					
+					if (factory.tree.isRoot(v) ) {
+						// experimental ROOTLOSS  
+						// root with loss from N=1
+						dpos = logNu_Sv + log1_p;
+						dneg = logSv + logp;
+						log1_e = 0.0; // e==0.0. log(1-pe) = 0
+						
+//						double[] ldiff = Logarithms.ldiff(dpos, dneg);
+//						
+//						// DEBUG // prints for each profile ...
+//						System.out.println("#**LG.PS.gLSG root "+v
+//								+"\tnfam "+profile_count
+//								+"\tNuSv "+Math.exp(logNu_Sv)
+//								+"\tSv "+Math.exp(logSv)
+//								+"\t1_p "+Math.exp(log1_p)
+//								+"\tdLLdp  "+Logarithms.ldiffValue(ldiff)
+//								);
+						
+					} else {
+						int u = factory.tree.getParent(v);
+						if (factory.tree.getNumChildren(u)==2)
+						{
+							log1_e = factory.getLogLossComplement(factory.tree.getSibling(v));
+						} else
+						{
+							log1_e = Logarithms.logToLogComplement(log_factory.getLogExtinction(u)-logp);
+						}
+						double log1_pe = Logarithms.add(log1_p, logp+log1_e);
+						dpos = logNu_Sv+log1_p-log1_pe;
+						dneg = logSv+logp+log1_e-log1_pe;
 					}
-					double log1_pe = Logarithms.add(log1_p, logp+log1_e);
-					double dpos = logNu_Sv+log1_p-log1_pe;
-					double dneg = logSv+logp+log1_e-log1_pe;
+					
+//					if (Double.isNaN(dpos)||Double.isNaN(dneg)) {
+//						// DEBUG
+//						System.out.println("#**LG.gLSG\t"+v+"\tSv "+logSv+"\tNuSv "+logNu_Sv+"\tl1e "+log1_e
+//							+"\ttNuSv "+Arrays.toString(tNu_Sv)
+//								+"\t// "+log_factory.toString(v)+"\t// "+factory.rates.toString(v)
+//						);
+//					}
+					
 					logSD[3*v + PARAMETER_LOSS] = Logarithms.ldiff(dpos,dneg); 
+					if (!Logarithms.ldiffIsFinite(logSD[3*v+PARAMETER_LOSS])) {
+						// DEBUG
+						System.out.println("#**LG.gLSG\t"+v+"\tSv "+logSv+"\tNuSv "+logNu_Sv+"\tl1e "+log1_e+"\t// "+log_factory.toString(v)+"\t// "+factory.rates.toString(v));
+						// code dies here with 	Sv -Infinity	NuSv NaN
+					}
+					
+					assert (Logarithms.ldiffIsFinite(logSD[3*v+PARAMETER_LOSS]));
+					
 				}
 				
 				
@@ -587,21 +703,23 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				{
 					// Poisson
 					double r = factory.getGainParameter(v);
-					if (r==0.0)
+					double log_r = factory.getLogGainParameter(v);
+					if (log_r==Double.NEGATIVE_INFINITY)
 					{
 						logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiff();
 					} else
 					{
-						double log_r = Math.log(r);
 						logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiff(logNv_Sv, log_r+logF);
 						logSD[3*v+PARAMETER_DUPLICATION] = Logarithms.ldiff();
+						
+						assert (Logarithms.ldiffIsFinite(logSD[3*v+PARAMETER_GAIN]));
 					}
 				} else
 				{
 					// Polya
 					double κ = factory.getGainParameter(v);
-					double log_kappa = Math.log(κ);
-					if (κ==0.0)
+					double log_kappa = factory.getLogGainParameter(v);
+					if (log_kappa==Double.NEGATIVE_INFINITY)
 					{
 						logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiff();
 					} else
@@ -622,8 +740,17 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 							}
 							dpos = Logarithms.add(dpos, tNv_Sv[i]+log_k_ki);
 						}
-						double dneg = (Math.log(-log1_q)+log_kappa)+logF; // +F*kappa*ln(1-q)
+						double loglog1_q = Math.log(-log1_q);
+						if (loglog1_q==Double.NEGATIVE_INFINITY) 
+							loglog1_q = log_q;
+						double log_kappa_log1_q = log_kappa+loglog1_q;
+						
+						double dneg = log_kappa_log1_q+logF;
+						
+						//dneg = (Math.log(-log1_q)+log_kappa)+logF; // +F*kappa*ln(1-q)
+
 						logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiff(dpos,dneg);
+						assert (Logarithms.ldiffIsFinite(logSD[3*v+PARAMETER_GAIN]));
 						
 						
 //						// DEBUG
@@ -641,7 +768,9 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 					// now for duplication
 					double dpos = logNv_Sv+log1_q;
 					double dneg = Logarithms.add(logSv, log_kappa+logF) + log_q;
+
 					logSD[3*v+PARAMETER_DUPLICATION] = Logarithms.ldiff(dpos,dneg);
+					assert (Logarithms.ldiffIsFinite(logSD[3*v+PARAMETER_DUPLICATION]));
 				}
 			}		
 			return logSD;
@@ -835,13 +964,13 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			double log_p = log_factory.getLogLossParameter(v);
 			double log_e = log_factory.getLogExtinction(v);
 			double log_q = log_factory.getLogDuplicationParameter(v);
-			if (factory.tree.isRoot(v) || log_factory.rates.getLogLossComplement(v) ==Double.NEGATIVE_INFINITY)
+			if (log_factory.rates.getLogLossComplement(v) ==Double.NEGATIVE_INFINITY) // || factory.tree.isRoot(v)  
 			{
 				if (log_factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) // (q==0.0)
 				{
 					// Poisson
-					double r = factory.rates.getGainParameter(v);
-					if (r==0.0)
+					double logr = factory.rates.getLogGainParameter(v); // .getGainParameter(v);
+					if (logr==Double.NEGATIVE_INFINITY)
 					{
 						dde[v] = Logarithms.ldiff();
 						logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiff();
@@ -866,15 +995,23 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			{
 				int u=factory.tree.getParent(v);
 				
+				// TODO: how to deal with the root? 
+				
 				if (LOGIT_TO_LOGIT)
 				{ // logit-to-logit: faster calculations
 					double log1_p = log_factory.getLogLossComplement(v);
 					
-					double dedp = log1_p-log_factory.getLogExtinctionComplement(u); 
 					
 					double[] dLdp = logSD[3*v+PARAMETER_LOSS];
-					double[] dLdpe = Logarithms.ldiffAddMultiply(dLdp, dedp, dde[u], null);
-	
+
+					
+					double[] dLdpe;
+					if (factory.tree.isRoot(v)) { // ROOTLOSS 
+						dLdpe = dLdp;
+					} else {
+						double dedp = log1_p-log_factory.getLogExtinctionComplement(u); 
+						dLdpe = Logarithms.ldiffAddMultiply(dLdp, dedp, dde[u], null);
+					}
 					double dpdp = log_factory.rates.getLogLossParameter(v)-log_p; 
 					
 					logSD[3*v+PARAMETER_LOSS] = Logarithms.ldiffMultiply(dLdpe, dpdp, null);
@@ -927,18 +1064,22 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 					if (log_factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) // (q==0.0)
 					{
 						// Poisson
-						double r = log_factory.rates.getGainParameter(v);
-						double[] dLdr = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -Math.log(log_factory.getGainParameter(v)), null);
+						double logr = log_factory.rates.getLogGainParameter(v);// .getGainParameter(v);
+						double[] dLdr = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -log_factory.getLogGainParameter(v), null);
+
+//						double[] dLdr = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -Math.log(log_factory.getGainParameter(v)), null);
+						
 						dLdg = Logarithms.ldiffMultiply(dLdr, log1_e, null);
 						dLdp = Logarithms.ldiffMultiply(dLdpe, log1_e, null);
 						dLdq = logSD[3*v+PARAMETER_DUPLICATION];
 						assert (Logarithms.ldiffIsZero(dLdq));
-						dLde = Logarithms.ldiffSubtractMultiply(log_factory.rates.getLogLossComplement(v), dLdpe, Math.log(r), dLdr, null);
+						dLde = Logarithms.ldiffSubtractMultiply(log_factory.rates.getLogLossComplement(v), dLdpe, logr, dLdr, null);
 					} else
 					{
 						double log1_q = log_factory.getLogDuplicationComplement(v);
 
-						dLdg = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -Math.log(log_factory.getGainParameter(v)), null);
+						dLdg = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -log_factory.getLogGainParameter(v), null);
+//						dLdg = Logarithms.ldiffMultiply(logSD[3*v+PARAMETER_GAIN], -Math.log(log_factory.getGainParameter(v)), null);
 
 						double dp_dp = log_factory.getLogLossComplement(v)-log_factory.rates.getLogLossComplement(v);						
 						dLdp = Logarithms.ldiffMultiply(dLdpe, dp_dp, null);
@@ -969,7 +1110,8 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 //								+"\tdLdq "+Logarithms.ldiffValue(dLdqd));
 						dLdq = dLdqd;
 					}
-					logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiffMultiply(dLdg, Math.log(log_factory.rates.getGainParameter(v)), null); 
+					logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiffMultiply(dLdg, log_factory.rates.getLogGainParameter(v), null); 
+//					logSD[3*v+PARAMETER_GAIN] = Logarithms.ldiffMultiply(dLdg, Math.log(log_factory.rates.getGainParameter(v)), null); 
 					logSD[3*v+PARAMETER_LOSS] = Logarithms.ldiffMultiply(dLdp, log_factory.rates.getLogLossParameter(v)+log_factory.rates.getLogLossComplement(v), null); 
 					if (log_factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY)
 					{
@@ -1044,6 +1186,8 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 		
 		for (int v=0; v<num_nodes; v++)
 		{
+			final int j_loss = 3*v + PARAMETER_LOSS;
+			final int j_dup  = 3*v + PARAMETER_DUPLICATION;
 			final double log1_λ = lrates.getLogRelativeComplement(v);
 			
 			if (lrates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) //  (log1_λ==0.0) // Poisson
@@ -1052,8 +1196,6 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			} else 
 			{
 				// indexes for parameters
-				final int j_loss = 3*v + PARAMETER_LOSS;
-				final int j_dup  = 3*v + PARAMETER_DUPLICATION;
 				
 				// distribution gradient 
 				double[] dlp = log_Dpq[j_loss];
@@ -1063,7 +1205,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				final double log1_q = lrates.getLogDuplicationComplement(v);
 
 				
-				if (!tree.isRoot(v) && log1_p != Double.NEGATIVE_INFINITY)
+				if (log1_p != Double.NEGATIVE_INFINITY) // && !tree.isRoot(v) 
 				{
 					log_Dpq[j_loss] = Logarithms.ldiffAddMultiply(dlp, log1_p-log1_q, dlq, dlp);
 				}
@@ -1076,6 +1218,15 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 					log_Dpq[j_dup] = Logarithms.ldiffMultiply(dlq, log1_λ-log1_q, dlq);
 				}
 			}
+			
+			if (!Logarithms.ldiffIsFinite(log_Dpq[j_dup]) || !Logarithms.ldiffIsFinite(log_Dpq[j_loss])) {
+				// DEBUG
+				System.out.println("#**LG.cTLRRG node "+v+"\tloss "+Arrays.toString(log_Dpq[j_dup])+"\tdup "+Arrays.toString(log_Dpq[j_dup])
+						+"\t// "+lrates.toString(v));
+			}
+			
+			assert (!Logarithms.ldiffIsNaN(log_Dpq[j_dup]) && !Logarithms.ldiffIsNaN(log_Dpq[j_loss]));
+			
 		}
 		return log_Dpq;
 	}
@@ -1123,7 +1274,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				{
 					if (gain_parameter_by == PARAMETER_LOSS)
 					{
-						if (!tree.isRoot(v) && log1_p!=Double.NEGATIVE_INFINITY)
+						if (log1_p!=Double.NEGATIVE_INFINITY) // && !tree.isRoot(v)  
 						{
 							log_Dpλ[j_loss]  = Logarithms.ldiffAddMultiply(dlp, log1_p, dlgn, dlp);
 						}
@@ -1138,7 +1289,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 						final double log_b = log_q-Math.log(-log1_q);							
 
 						// adjust derivative by logit(p)
-						if (tree.isRoot(v) || log1_p == Double.NEGATIVE_INFINITY)
+						if (log1_p == Double.NEGATIVE_INFINITY) // || (tree.isRoot(v) 
 						{
 							// nothing to do 
 						} else
@@ -1173,7 +1324,8 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 					{
 						// adjust derivative by logit(p)
 						if (gain_parameter_by == PARAMETER_LOSS 
-								|| tree.isRoot(v) || log1_p == Double.NEGATIVE_INFINITY )
+								// || tree.isRoot(v) 
+								|| log1_p == Double.NEGATIVE_INFINITY )
 						{					
 							// nothing to do 
 						} else
@@ -1236,7 +1388,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				
 				
 				// adjust derivative by logit(p)
-				if (tree.isRoot(v) || log1_p == Double.NEGATIVE_INFINITY)
+				if (log1_p == Double.NEGATIVE_INFINITY) // ||tree.isRoot(v) 
 				{
 					// nothing to do 
 				} else
@@ -1334,7 +1486,7 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 				double[] dlp = log_Dpλ[j_loss];
 				
 				final double log1_p = lrates.getLogLossComplement(v);
-				if (!tree.isRoot(v) && log1_p!=Double.NEGATIVE_INFINITY)
+				if (log1_p!=Double.NEGATIVE_INFINITY) // && !tree.isRoot(v) 
 				{
 					log_Dpλ[j_loss]  = Logarithms.ldiffAddMultiply(dlp, log1_p, dlgn, dlp);
 				}
@@ -1441,12 +1593,14 @@ public class LogGradient extends Posteriors implements Count.UsesThreadpool
 			{
 				xp = -log_factory.getLogLossParameter(node)-log_factory.getLogLossComplement(node);
 				xq = -log_factory.getLogDuplicationParameter(node)-log_factory.getLogDuplicationComplement(node);				
-				xr = -Math.log(log_factory.getGainParameter(node));
+				xr = log_factory.getLogGainParameter(node);
+//				xr = -Math.log(log_factory.getGainParameter(node));
 			} else
 			{
 				xp = -factory.rates.getLogLossParameter(node)-factory.rates.getLogLossComplement(node);
 				xq = -factory.rates.getLogDuplicationParameter(node)-factory.rates.getLogDuplicationComplement(node);				
-				xr = -Math.log(factory.rates.getGainParameter(node));
+				xr = -factory.rates.getLogGainParameter(node);
+//				xr = -Math.log(factory.rates.getGainParameter(node));
 			}
 			int j = 3*node+PARAMETER_LOSS;
 			

@@ -821,6 +821,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 		 * 
 		 * Derivative by p is not correct. 
 		 * 
+		 * @deprecated
 		 * @return gradient array
 		 */
 		double[] oldSurvivalGradient()
@@ -1087,7 +1088,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 			int jgain = 3*v+PARAMETER_GAIN;
 			
 			double log_e = factory.getLogExtinction(v);
-			if (factory.tree.isRoot(v) || factory.rates.getLogLossComplement(v) ==Double.NEGATIVE_INFINITY)
+			if (factory.rates.getLogLossComplement(v) ==Double.NEGATIVE_INFINITY) // || factory.tree.isRoot(v) 
 			{
 				if (factory.rates.getLogDuplicationParameter(v)==Double.NEGATIVE_INFINITY) // (q==0.0)			
 				{
@@ -1882,7 +1883,7 @@ public class Gradient extends Posteriors implements Count.UsesThreadpool
 				death_tails[node] = ArraySum.addCells(death_tails[node], pNu_Sv, multiplier);
 			}
 			profile_count += multiplier;
-			LL = Math.fma(multiplier, P.post.inside.getLogLikelihood(), LL);
+			LL = Math.fma(multiplier, P.post.getLogLikelihood(), LL);
 		}
 		
 		void add(PosteriorStatistics that)

@@ -197,10 +197,10 @@ public class MixedRateGradient implements Count.UsesThreadpool
 			double[] getClassLikelihoods = new double[num_classes];
 			for (int c=0; c<num_classes; c++)
 			{
-				Likelihood.Profile cLik = dLL[c].post.inside;
+				//Likelihood.Profile cLik = dLL[c].post.inside;
 				
 				
-				double ll = cLik.getLogLikelihood();
+				double ll = dLL[c].post.getLogLikelihood();
 				if (!Double.isFinite(ll) )
 				{
 //					synchronized(System.out)
@@ -845,11 +845,13 @@ public class MixedRateGradient implements Count.UsesThreadpool
 	
 	/**
 	 * Inverts 4-parameter rate gradients into 3-parameter distribution gradients.
+	 * Low-precision calculations prone to numerical error for extreme values of the parameters.
 	 * 
 	 * @param node
 	 * @param param_type {@link GLDParameters#PARAMETER_GAIN}, {@link GLDParameters#PARAMETER_LOSS} or {@link GLDParameters#PARAMETER_DUPLICATION}
 	 * @param gradient 4-parameter per node 
 	 * @return partial derivative by the base model's distribution parameter for the given node
+	 * @deprecated
 	 */
 	public double inferDistributionGradient(int node, int param_type, double[] gradient)
 	{
@@ -1044,67 +1046,67 @@ public class MixedRateGradient implements Count.UsesThreadpool
 	
 	}
 	
-	public static void main(String[] args) throws Exception
-	{
-		CommandLine cli = new CommandLine(args, MixedRateGradient.class);
-//        if (args.length!=3)
+//	public static void main(String[] args) throws Exception
+//	{
+//		CommandLine cli = new CommandLine(args, MixedRateGradient.class);
+////        if (args.length!=3)
+////        {
+////            System.err.println("Call as $0 phylogeny table rates");
+////            System.exit(2008);
+////        }
+////        String tree_file = args[0];
+////        String table_file = args[1];
+////        String rates_file = args[2];
+////        count.ds.Phylogeny tree = NewickParser.readTree(
+////        		GeneralizedFileReader.guessReaderForInput(tree_file));
+////        count.ds.AnnotatedTable table = TableParser.readTable(tree.getLeafNames(),
+////        		GeneralizedFileReader.guessReaderForInput(table_file),true);
+////        GammaInvariant input_model = RateVariationParser.readRates(
+////        		GeneralizedFileReader.guessReaderForInput(rates_file)
+////        		, tree);
+//		count.ds.Phylogeny tree = cli.getTree();
+//		count.ds.AnnotatedTable table = cli.getTable();
+//		GammaInvariant input_model = cli.getGammaModel();
+//        MixedRateGradient mixedG = new MixedRateGradient(input_model, table);
+//        if (cli.getOptionValue(CommandLine.OPT_TRUNCATE)!=null)
 //        {
-//            System.err.println("Call as $0 phylogeny table rates");
-//            System.exit(2008);
+//        	int absolute = cli.getOptionTruncateAbsolute();
+//        	double relative = cli.getOptionTruncateRelative();
+//        	mixedG.setCalculationWidthThresholds(absolute, relative);
+//        	System.out.println(CommandLine.getStandardHeader("Truncated computation (absolute,relative)="
+//        				+absolute+","+relative));
 //        }
-//        String tree_file = args[0];
-//        String table_file = args[1];
-//        String rates_file = args[2];
-//        count.ds.Phylogeny tree = NewickParser.readTree(
-//        		GeneralizedFileReader.guessReaderForInput(tree_file));
-//        count.ds.AnnotatedTable table = TableParser.readTable(tree.getLeafNames(),
-//        		GeneralizedFileReader.guessReaderForInput(table_file),true);
-//        GammaInvariant input_model = RateVariationParser.readRates(
-//        		GeneralizedFileReader.guessReaderForInput(rates_file)
-//        		, tree);
-		count.ds.Phylogeny tree = cli.getTree();
-		count.ds.AnnotatedTable table = cli.getTable();
-		GammaInvariant input_model = cli.getGammaModel();
-        MixedRateGradient mixedG = new MixedRateGradient(input_model, table);
-        if (cli.getOptionValue(CommandLine.OPT_TRUNCATE)!=null)
-        {
-        	int absolute = cli.getOptionTruncateAbsolute();
-        	double relative = cli.getOptionTruncateRelative();
-        	mixedG.setCalculationWidthThresholds(absolute, relative);
-        	System.out.println(CommandLine.getStandardHeader("Truncated computation (absolute,relative)="
-        				+absolute+","+relative));
-        }
-        System.out.println(RateVariationParser.printRates(input_model));
-        
-        
-        
-        double LL = mixedG.getLL();
-        double L0 = mixedG.getEmptyLL();
-        double p0 = Math.exp(L0);
-        double p_not0 = -Math.expm1(L0);
-        double corrL = LL-table.getFamilyCount()*Math.log(p_not0);
-        System.out.println("log-likelihood "+LL+"\tL0 "+L0+"\tp0 "+p0+"\tcorr "+corrL);
-        mixedG.printSingletons(System.out);
-        
-        double[] D = mixedG.getCorrectedGradient();
-        
-        int num_nodes = tree.getNumNodes();
-    	System.out.println("#GRADIENT\tidx\tnode\tgain\tloss\tdup\tlength");
-        for (int node=0; node<num_nodes; node++)
-        {
-        	double dκ = D[4*node + PARAMETER_GAIN];
-        	double dμ = D[4*node + PARAMETER_LOSS];
-        	double dλ = D[4*node + PARAMETER_DUPLICATION];
-        	double dt = D[4*node + PARAMETER_LENGTH];
-			//sb.append(len+"\t"+drate+"\t"+lrate+"\t"+grate+"// "+tree.toString(node)+"\n");
-        	
-        	double dr = mixedG.inferDistributionGradient(node, PARAMETER_GAIN, D);
-        	double dp = mixedG.inferDistributionGradient(node, PARAMETER_LOSS, D);
-        	double dq = mixedG.inferDistributionGradient(node, PARAMETER_DUPLICATION, D);
-        	
-        	System.out.printf("#GRADIENT\t%d\t%s\t%g\t%g\t%g\t%g\t// dp %g\tdq %g\tdr %g\n", node, 
-        			tree.getNode(node).getFullName(), dκ, dμ, dλ, dt, dp, dq, dr);
-        }
-		
-	}
+//        System.out.println(RateVariationParser.printRates(input_model));
+//        
+//        
+//        
+//        double LL = mixedG.getLL();
+//        double L0 = mixedG.getEmptyLL();
+//        double p0 = Math.exp(L0);
+//        double p_not0 = -Math.expm1(L0);
+//        double corrL = LL-table.getFamilyCount()*Math.log(p_not0);
+//        System.out.println("log-likelihood "+LL+"\tL0 "+L0+"\tp0 "+p0+"\tcorr "+corrL);
+//        mixedG.printSingletons(System.out);
+//        
+//        double[] D = mixedG.getCorrectedGradient();
+//        
+//        int num_nodes = tree.getNumNodes();
+//    	System.out.println("#GRADIENT\tidx\tnode\tgain\tloss\tdup\tlength");
+//        for (int node=0; node<num_nodes; node++)
+//        {
+//        	double dκ = D[4*node + PARAMETER_GAIN];
+//        	double dμ = D[4*node + PARAMETER_LOSS];
+//        	double dλ = D[4*node + PARAMETER_DUPLICATION];
+//        	double dt = D[4*node + PARAMETER_LENGTH];
+//			//sb.append(len+"\t"+drate+"\t"+lrate+"\t"+grate+"// "+tree.toString(node)+"\n");
+//        	
+//        	double dr = mixedG.inferDistributionGradient(node, PARAMETER_GAIN, D);
+//        	double dp = mixedG.inferDistributionGradient(node, PARAMETER_LOSS, D);
+//        	double dq = mixedG.inferDistributionGradient(node, PARAMETER_DUPLICATION, D);
+//        	
+//        	System.out.printf("#GRADIENT\t%d\t%s\t%g\t%g\t%g\t%g\t// dp %g\tdq %g\tdr %g\n", node, 
+//        			tree.getNode(node).getFullName(), dκ, dμ, dλ, dt, dp, dq, dr);
+//        }
+//		
+//	}
 }

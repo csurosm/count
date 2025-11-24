@@ -30,6 +30,7 @@ import java.util.function.DoubleFunction;
 import count.Count;
 import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;
+import count.ds.Phylogeny;
 import count.ds.ProfileTable;
 import count.ds.UniqueProfileTable;
 import count.io.CommandLine;
@@ -38,6 +39,7 @@ import count.io.RateVariationParser;
 import count.matek.FunctionMinimization;
 import count.matek.Functions;
 import count.matek.Logarithms;
+import count.model.MLRateVariation.OptimizationState;
 import count.model.StraightLikelihood.Profile;
 
 import static count.io.CommandLine.OPT_EPS;
@@ -56,8 +58,6 @@ import static count.io.CommandLine.OPT_TRUNCATE;
 public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpool
 {
 	private static boolean PRINT_OPTIMIZATION_MESSAGES = false;
-	private static final double MAX_GAIN_RATE = 33.0; 
-	private static final double MIN_GAIN_PARAMETER = 1.0/(1L<<40);
 	
 	/**
 	 * Does not work well with universal gain param
@@ -120,6 +120,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	 
 	private boolean is_duprate_bounded = true; // if bounded, <1.0 is enforced
 	
+	private boolean auto_truncate = false;
+	
 	/* ========================= */
 	/* Setter and getter methods */ 
 	/* ========================= */
@@ -155,7 +157,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	
 	public void fixGain(int node, boolean not_optimized)
 	{
-		this.fixNodeParameter(node,PARAMETER_GAIN,not_optimized);
+		this.fixNodeParameter(node,PARAMETER_GAIN,not_optimized);		
+		
 	}
 	public void fixLoss(int node, boolean not_optimized)
 	{
@@ -170,6 +173,9 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	@Override
 	public int getModelParameterCount()
 	{
+		
+		boolean hasduplication = factory.rates.hasDuplication();
+		boolean hasgain = factory.rates.hasGain();
 		IndexedTree tree = factory.tree;
 		int np = 0;
 		int u=tree.getNumNodes();
@@ -178,11 +184,19 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			--u;
 			if (optimize_node[u])
 			{
-				if (factory.getLogitDuplicationParameter(u)!=Double.NEGATIVE_INFINITY)//   rates.getDuplicationRate(u)!=0.0)
-					np++; // dup
-				if (!tree.isRoot(u)) np++; // loss
-				if (factory.getGainParameter(u)!=0.0) //    rates.getGainRate(u)!=0.0)
-					np++; // gain
+				if (tree.isRoot(u)) {
+					if (factory.getGainParameter(u)!=0.0) //    rates.getGainRate(u)!=0.0)
+						np++; // gain
+					// loss parameters is fixed infty
+					if (factory.getLogitDuplicationParameter(u)!=Double.NEGATIVE_INFINITY)//   rates.getDuplicationRate(u)!=0.0)
+						np++; // dup
+				} else {
+					if (hasgain) np++;
+					if (factory.getLogitLossParameter(u)!=Double.POSITIVE_INFINITY)
+						np++;
+					if (hasduplication)
+						np++;
+				}
 			}
 		}
 		return np;
@@ -192,6 +206,15 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	public void setCalculationWidth(int absolute, double relative)
 	{
 		factory.setCalculationWidthThresholds(absolute, relative);
+	}
+	
+	public void setWantAutoTruncation(boolean auto_truncate)
+	{
+		this.auto_truncate = auto_truncate;
+		if (auto_truncate)
+		{
+			this.setCalculationWidth(DEFAULT_TRUNCATE_ABSOLUTE, DEFAULT_TRUNCATE_RELATIVE);
+		}
 	}
 	
 	@Override
@@ -290,11 +313,20 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		
 		return S;
 	}	
+	/**
+	 * Maximum gain rates is used only if {@link #MSTEP_POISSON_AT_BIG_KAPPA} is true
+	 * (ignored by default).
+	 */
+	private static final double MAX_GAIN_RATE = 33.0; 
+	private static final double MIN_GAIN_PARAMETER = 1.0/(1L<<40);
 	
 	private static final boolean MSTEP_POISSON_AT_SMALL_DUP = true;
+	/**
+	 * Switching to Poisson may decrease the log-likelihood; this is better to be left at false
+	 */
 	private static final boolean MSTEP_POISSON_AT_BIG_KAPPA = false;
 	private static final boolean MSTEP_ENFORCE_MIN_GAIN = false;
-	private static final boolean MSTEP_KEEP_POISSON = true;
+	private static final boolean MSTEP_KEEP_POISSON = false; // true;
 
 	/**
 	 * M-step: parameter estimation from posterior statistics. Resets {@link #factory} 
@@ -312,6 +344,8 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 //		int maxiter = 60; 
 		final double small_dL =  kappa_tol; //1.0/(1L<<26); //1.0/(1L<<48); //  1.0/(1L<<40); // 0.0; //1e-12;
 		final double bracketing_factor = 2.0;
+		
+		final int MAXIT = 60;
 		
 		for (int v = num_nodes-1; v>=0; v--) // in preorder
 		{
@@ -590,18 +624,19 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 								{
 									kappa1 = kappa2;
 									d1 = d2;
-									if (60< ++iter)
+									if (MAXIT< ++iter)
 									{
 										// throw new RuntimeException("Bracketing failed "+kappa1+"\td1 "+d1);
 										
-										System.out.println("#**SEM.M max-bracketing failed at node "+v
-													+ "\tkappa "+kappa2+"\tdL "+d2
-													+"\tbestk "+kappamin+"\tdlmin "+dLmin
-													+"\t//" //+" kappa0 "+kappa0
-													+"\ty "+logit_q
-													+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
-													+"\tx "+logit_p
-													);
+										if (PRINT_OPTIMIZATION_MESSAGES)
+											System.out.println("#**SEM.M max-bracketing failed at node "+v
+														+ "\tkappa "+kappa2+"\tdL "+d2
+														+"\tbestk "+kappamin+"\tdlmin "+dLmin
+														+"\t//" //+" kappa0 "+kappa0
+														+"\ty "+logit_q
+														+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
+														+"\tx "+logit_p
+														);
 										break;
 									}
 									if (Math.abs(d1)<Math.abs(dLmin))
@@ -723,14 +758,16 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 							
 							if (!fixed_dup)
 							{
-								double rmin=Math.exp(tNv_Sv[0]-logF);
+								double rmin=Math.exp(tNv_Sv[0]-logF); 
 								if (rmax<=r 
 										|| (MSTEP_POISSON_AT_SMALL_DUP && Math.exp(Logarithms.logitToLogComplement(logit_q))==1.0) 
 										|| (MSTEP_POISSON_AT_BIG_KAPPA && MAX_GAIN_RATE<=kappa) // disallow very large kappa 
 									)
 								{
-									System.out.println("#**SEM.M "+v+"\tbigkappa/smalldup "+kappa+"\ty "+logit_q+"\tr "+r+"\trmax "+rmax+"\tx "+logit_p+"\t(free "+free_logit_p+")"
-											+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q)));
+									if (PRINT_OPTIMIZATION_MESSAGES)
+										System.out.println("#**SEM.M "+v+"\tbigkappa/smalldup "+kappa+"\ty "+logit_q+"\tr "+r+"\trmax "+rmax+"\tx "+logit_p+"\t(free "+free_logit_p+")"
+												+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
+												+"\t// switching to Poisson with q=0.0");
 									
 									// should be Poisson instead
 									
@@ -741,17 +778,20 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 								{
 									if (MSTEP_ENFORCE_MIN_GAIN)
 									{
-										System.out.println("#**SEM.M "+v+"\tsmallr/mingain "+r+"\tkappa "+kappa+"\ty "+logit_q+"\trmax "+rmax+"\trmin "+rmin+"\tx "+logit_p+"\t(free "+free_logit_p+")"
-												+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
-												);
+										if (PRINT_OPTIMIZATION_MESSAGES)
+											System.out.println("#**SEM.M "+v+"\tsmallr/mingain "+r+"\tkappa "+kappa+"\ty "+logit_q+"\trmax "+rmax+"\trmin "+rmin+"\tx "+logit_p+"\t(free "+free_logit_p+")"
+													+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
+													+"\t// switching to Poisson w/min.gain "+MIN_GAIN_PARAMETER);
 										r = MIN_GAIN_PARAMETER;
 										logit_p = free_logit_p;
 										logit_q = Double.NEGATIVE_INFINITY;
 									}
 								} else if (r<=rmin)
 								{
-									System.out.println("#**SEM.M "+v+"\tsmallr/rmin "+r+"\tkappa "+kappa+"\ty "+logit_q+"\trmax "+rmax+"\trmin "+rmin+"\tx "+logit_p+"\t(free "+free_logit_p+")"
-											+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q)));
+									if (PRINT_OPTIMIZATION_MESSAGES)
+										System.out.println("#**SEM.M "+v+"\tsmallr/rmin "+r+"\tkappa "+kappa+"\ty "+logit_q+"\trmax "+rmax+"\trmin "+rmin+"\tx "+logit_p+"\t(free "+free_logit_p+")"
+												+"\topt_y "+logit_q+"\tq "+Math.exp(Logarithms.logitToLogValue(logit_q))+"/1-"+Math.exp(Logarithms.logitToLogComplement(logit_q))
+												+"\t// keeping it");
 //									r = rmin;
 //									logit_p = free_logit_p;
 //									logit_q = Double.NEGATIVE_INFINITY;
@@ -766,6 +806,330 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		factory.copyParametersToModel();
 		timeM += System.nanoTime()-time0; // TIMING
 	}	
+	
+	
+	/**
+	 * M-step: parameter estimation from posterior statistics. Resets {@link #factory} 
+	 * parameters and copies them to the underlying rate model. 
+	 * 
+	 * @param E
+	 */
+	public void MstepWithLogGain(PosteriorStatistics E)
+	{
+		long time0 = System.nanoTime(); // TIMING
+		int num_nodes = factory.tree.getNumNodes();
+
+		final double F = E.profile_count; // already corrected for unobserved profiles
+//		int maxiter = 60; 
+		final double bracketing_factor = 2.0;
+		
+		for (int v = num_nodes-1; v>=0; v--) // in preorder
+			if (optimize_node[v]){		
+				final boolean fixed_loss =  isFixedParameter(v, PARAMETER_LOSS);
+
+				double[] pSv = E.log_edge_posteriors[v].clone();
+				{ // calculating tails and then summing to get the mean 
+					double log_tail = Double.NEGATIVE_INFINITY;
+					int j=pSv.length;
+					while (0<j)
+					{
+						--j;
+						double x = pSv[j];
+						pSv[j] = log_tail;
+						log_tail = Logarithms.add(log_tail, x);
+					}
+				}
+				double logSv = Logarithms.sum(pSv, pSv.length); 
+				
+				
+				// set loss
+				double logit_p;
+				double logNu_Sv;
+				if (factory.tree.isRoot(v) || factory.getLogitLossParameter(v)==Double.POSITIVE_INFINITY)
+				{
+					logit_p = Double.POSITIVE_INFINITY; // p=1.0
+					logNu_Sv = Double.NEGATIVE_INFINITY; // not needed
+				} else 
+				{ // non-root node 
+					double[] tNu_Sv = E.log_death_tails[v].clone();
+					logNu_Sv = Logarithms.sum(tNu_Sv, tNu_Sv.length);
+					logit_p = logNu_Sv-logSv;
+				}
+				if (fixed_loss) {
+					logit_p = factory.getLogitLossParameter(v);
+				}
+				// set duplication and gain
+				final boolean fixed_gain = this.isFixedParameter(v, PARAMETER_GAIN);
+				final boolean fixed_dup = this.isFixedParameter(v, PARAMETER_DUPLICATION);
+					
+				
+//				// DEBUG FIX
+//				if (!fixed_loss || !fixed_gain || !fixed_dup) {
+//					System.out.println("#**SEM.MWLG "+v+"\tfix p"+fixed_loss+" q"+fixed_dup+" r"+fixed_dup
+//							+"\t// "+factory.tree.toString(v));
+//				}
+				
+				
+				double[] tNv_Sv = E.log_birth_tails[v];
+				double logNv_Sv = Logarithms.sum(tNv_Sv, tNv_Sv.length);
+				
+				final double logF = Math.log(F);
+				
+				double logit_q;
+				double log_runiv; // == ln(-kappa*ln(1-q))
+				
+				logit_q = factory.getLogitDuplicationParameter(v);
+
+				if (logit_q==Double.NEGATIVE_INFINITY  && (fixed_dup || MSTEP_KEEP_POISSON)) // q==0.0
+				{
+					// Poisson 
+					// logit_q = Double.NEGATIVE_INFINITY;
+					
+					if (fixed_gain) {
+						log_runiv = Math.log(factory.getUniversalGainParameter(v));
+					} else 
+						log_runiv = logNv_Sv-logF;
+					
+//					System.out.println("#**SEM.M Poisson "+v+"\ty "+logit_q+"\tr "+r+"\t"+Arrays.toString(tNv_Sv));
+				} else
+				{ // Polya
+					DoubleFunction<Double> optLogitq = logκ-> logNv_Sv-Logarithms.add(logSv, logF+logκ);
+					// to be used when p=q
+					DoubleFunction<Double> optLogitp = logκ-> Logarithms.add(logNu_Sv, logNv_Sv)-Logarithms.add(Math.log(2.0)+logSv, logF+logκ);
+					log_runiv = Math.log(factory.getUniversalGainParameter(v));
+					if (fixed_gain)
+					{
+//						log_runiv = Math.log(factory.getUniversalGainParameter(v));
+						if (!fixed_dup)
+						{
+							// we set q 
+							//current rate kappa is fixed 
+							double logκ = log_runiv - Logarithms.logitToLogLogComplement(logit_q);
+							logit_q = optLogitq.apply(logκ);
+							if (is_duprate_bounded && logit_p < logit_q)
+							{
+								if (fixed_loss)
+									logit_q = logit_p;
+								else
+								{
+									logit_p = logit_q = optLogitp.apply(logκ);
+								}
+							}
+							log_runiv = logκ + Logarithms.logitToLogLogComplement(logit_q);
+						}
+					} else // gain is not fixed
+					{						
+						double logNu = Logarithms.add(logSv, logNu_Sv);
+						
+						final int node = v;
+						DoubleFunction<Double> dlogκ
+						= new DoubleFunction<>()
+						{
+							@Override
+							public Double apply(double logκ)
+							{
+								double log1_q;
+								double logit_q;
+								if (fixed_dup)
+								{
+									final double log1_q0 = factory.getLogDuplicationComplement(node);
+									final double logit_q0 = factory.getLogitDuplicationParameter(node);
+									log1_q = log1_q0;
+									logit_q = logit_q0;
+								} else
+								{
+									double q1term = Logarithms.add(logSv, logF+logκ);
+									double qdenom = Logarithms.add(q1term, logNv_Sv);
+									log1_q = q1term-qdenom;
+									logit_q = logNv_Sv-q1term;
+									double log1_p = fixed_loss?factory.getLogLossComplement(node):(logSv-logNu);
+									if (is_duprate_bounded && log1_q<log1_p)
+									{
+										if (fixed_loss)
+										{
+											log1_q = log1_p;
+											logit_q = factory.getLogitLossParameter(node);
+										}
+										else
+										{
+											// work with q=p
+											qdenom = Logarithms.add(logNu,qdenom);
+											q1term = Logarithms.add(logSv,q1term);
+											log1_q = q1term-qdenom;
+											logit_q = Logarithms.add(logNv_Sv,logNu_Sv)-q1term;
+										}
+									}
+								}
+								int i=0;
+								double log_sum=tNv_Sv[i++];
+								
+								if (0.0<=logκ){
+									while (i<tNv_Sv.length) {
+										// k/(k+i) = 1/(1+i/k)
+										double logt = tNv_Sv[i]-Math.log1p(Math.exp(Math.log(i)-logκ)); 
+										log_sum = Logarithms.add(log_sum, logt);
+										i++;
+									}
+								} else {
+									while (i<tNv_Sv.length)
+									{
+										// k/(k+i) = (k/i) / (1+k/i)
+										double log_ratio = logκ-Math.log(i); // surely negative
+										double logt = tNv_Sv[i] + log_ratio -Math.log1p(Math.exp(log_ratio));
+										log_sum = Logarithms.add(log_sum, logt);
+										i++;
+									}
+								}
+								
+								double log_Fru = logF + logκ + Logarithms.logitToLogLogComplement(logit_q);
+								
+								double[] log_df = Logarithms.ldiff(log_sum, log_Fru);
+								double df = Logarithms.ldiffValue(log_df);
+								if (Double.isInfinite(df)) // DEBUG
+								{
+									System.out.println("#**SEM.MLG.df? node "+node+"\tlogkappa "+logκ+"\tlsum "+log_sum+"\tlFru "+log_Fru);
+								}
+								return df;
+							}
+						};				
+						// bracketing 
+						
+						// find left endpoint with positive derivative
+						double xlo = Math.log(1.0/256.0);
+						double dxlo = dlogκ.apply(xlo);
+						
+						double dxmin = Math.abs(dxlo);
+						double xmin = xlo;
+						
+						// find right bracket
+						double small_dx = 1.0/(1L<<40);
+						double xhi, dxhi;
+						
+						double delta = Math.log(bracketing_factor);
+						int iter = 0;
+						final int MAXIT = 80;						
+						
+						if (small_dx < dxlo) {
+							// find right endpoint
+							while (small_dx<(dxhi = dlogκ.apply(xhi=xlo+delta))  
+									&& small_dx<dxmin
+									&& iter<MAXIT)
+							{
+								if (Math.abs(dxhi)< dxmin) {dxmin= Math.abs(dxhi);xmin=xhi;}
+								xlo = xhi; dxlo = dxhi;
+								iter++;
+							}
+							if (Math.abs(dxhi)< dxmin) {dxmin= Math.abs(dxhi);xmin=xhi;}
+						} else if (dxlo < -small_dx) {
+							xhi = xlo;
+							dxhi = dxlo;
+
+							while ((dxlo = dlogκ.apply(xlo=xhi-delta))<-small_dx 
+									&& small_dx<dxmin
+									&& iter<MAXIT)
+							{
+								if (Math.abs(dxlo)<dxmin){ dxmin = Math.abs(dxlo); xmin=xlo;}
+								xhi = xlo; dxhi = dxlo;
+								iter++;
+							}							
+							if (Math.abs(dxlo)<dxmin){ dxmin = Math.abs(dxlo); xmin=xlo;}
+						} else { // got a very small gradient already
+							xhi=xlo; dxhi=dxlo;
+						}
+						
+						double eps = 4.0*Math.ulp(1.0);
+						double xlen = xhi-xlo;
+						
+						if (0.0<xlen && 0.0<dxlo && dxhi<0.0) {
+							// bisection
+							while (eps<xlen && small_dx<dxmin
+									&& 0.0< dxlo && dxhi<0.0) 
+							{
+								double xmid = xlo + 0.5*xlen;
+								double dxmid = dlogκ.apply(xmid);
+								if (Math.abs(dxmid)<dxmin){ dxmin = Math.abs(dxmid); xmin=xmid;}
+								if (0.0<=dxmid) {
+									xlo = xmid; dxlo = dxmid;
+								} else {
+									xhi = xmid; dxhi = dxmid;
+								}
+								xlen *= 0.5;
+							}
+						}
+						
+						// arriving here:
+						// with big x bc it keeps increasing 
+						// with small x bc it keeps decreasing
+						// have a near-zero value
+						double logκ;
+						if (dxmin <= small_dx || xlen <= eps) {
+							if (dxmin<=small_dx)
+								// we are happy
+								logκ = xmin;
+							else // best we can do 
+								logκ = xlo + 0.5*xlen;
+						} else {
+							if (dxlo<0.0) {
+								// should be small 
+								// keep it 
+								logκ = xlo;
+								if (PRINT_OPTIMIZATION_MESSAGES)
+									System.out.println("#**SEM.MLG node "+v+"\tdecreasing logk "+xlo+"\tdx "+dxlo+"\tkeeping it");
+							} else if (0.0<dxhi) {
+								// 
+								if (PRINT_OPTIMIZATION_MESSAGES)
+									System.out.println("#**SEM.MLG node "+v+"\tincreasing logk "+xhi+"\tdx "+dxhi+"\tswitching to Poisson");
+								logκ = Double.POSITIVE_INFINITY;
+								log_runiv = logNv_Sv-logF;
+								logit_q = Double.NEGATIVE_INFINITY;
+							} else {
+								logκ = Double.POSITIVE_INFINITY;
+								System.out.println("#**SEM.MLG node "+v+"\tweird xlo "+xlo+"\tdx "+dxlo+"\txhi "+xhi+"\tdx" +dxhi);
+								log_runiv = Math.log(factory.getUniversalGainParameter(v));
+							}
+						}
+						if (Double.isFinite(logκ)) {
+//							System.out.println("#**SEM.MLG node "+v+"\tset logk "+logκ+"\tdf "+dlogκ.apply(logκ));
+							
+							if (!fixed_dup)
+							{
+								logit_q = optLogitq.apply(logκ);
+								
+								if (Math.exp(Logarithms.logitToLogComplement(logit_q))==1.0) {
+									// 
+									if (PRINT_OPTIMIZATION_MESSAGES)
+										System.out.println("#**SEM.MLG node "+v+"\tsmall logitq "+logit_q+"\tlogk "+logκ+"\tswitching to Poisson");
+									log_runiv = logNv_Sv-logF;
+									logit_q = Double.NEGATIVE_INFINITY;
+								} else {
+									if (is_duprate_bounded && logit_p<logit_q)
+									{
+										if (fixed_loss)
+										{
+											logit_q = logit_p;
+										} else
+										{
+											logit_p = logit_q = optLogitp.apply(logκ);
+										}
+									}
+								}
+							}
+							if (logit_q != Double.NEGATIVE_INFINITY)
+								log_runiv = logκ + Logarithms.logitToLogLogComplement(logit_q);
+						} else {
+							// log_runiv already set
+						}
+					} // optimizing gain
+					double r = Math.exp(log_runiv);
+					factory.setUniversalNodeParameters(v, logit_p, logit_q, r);
+				}
+				
+				
+				
+			} // for all optimized nodes 
+		factory.copyParametersToModel();
+		timeM += System.nanoTime()-time0; // TIMING
+	}
 	
 	/**
 	 * Whether start with an adjustment of the input model in {@link #findLikelihoodInterval(int, int, double, double, int)}
@@ -1631,6 +1995,176 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		}
 	}
 	
+	
+	private static final int DEFAULT_TRUNCATE_ABSOLUTE = 1;
+	private static final double DEFAULT_TRUNCATE_RELATIVE = 1.0;
+	
+	private PosteriorStatistics adjustCalculationWidth(PosteriorStatistics current, double tol) {
+		long T0 = timeE;
+		
+		int absolute = factory.getCalculationWidthAbsolute();
+		double relative = factory.getCalculationWidthRelative();
+//		if (absolute == Integer.MAX_VALUE || relative == Double.POSITIVE_INFINITY)
+//			return current_LL;
+			
+		firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Adjusting truncation parameters");
+
+		// need to increase?
+		double step_size = Math.log(2.0)/3.0;
+			
+			
+
+		RateVariationModel rvm = new RateVariationModel(factory.rates);
+		rvm.initConstantRates();
+		VariationGradientFactory G = new VariationGradientFactory(rvm,factory.table);
+        
+        long gT0 = System.nanoTime();
+        G.setMinimumObservedCopies(min_copies);
+        G.setCalculationWidthThresholds(Integer.MAX_VALUE, Double.POSITIVE_INFINITY);
+        double true_LL = G.getCorrectedLL();
+        timeAdjust += System.nanoTime()-gT0;
+       
+        
+		double current_LL = current.LL;
+		double current_delta = current_LL-true_LL;
+		double current_rdiff = Math.abs(current_delta/true_LL);
+		
+		double ftol = tol; // tolerance on function value
+		boolean have_approximation = current_rdiff<=ftol;
+		
+		boolean adjustCalculationWidth=true;
+		int num_adjustments = 0; // avoid infinite loops; the tests on log-likelihood and gradient change do not guarantee finiteness on their own
+		int dabs =0, drel = 0;
+		while (adjustCalculationWidth && num_adjustments < 33)
+		{
+			adjustCalculationWidth = false;
+			if (!have_approximation)
+			{ // try changing absolute
+				int next_absolute = Integer.max(absolute+1,(int)Math.ceil(Math.exp(Math.log(absolute)+step_size)));
+				this.setCalculationWidth(next_absolute, relative);
+				PosteriorStatistics nextS = Estep();
+				double next_LL = nextS.LL;
+				double next_delta = next_LL-true_LL;
+				double next_rdiff = Math.abs(next_delta/true_LL); 
+				
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**SEM.aCW ("+dabs+","+drel+") absolute "+absolute+"\tincrease "+next_absolute
+							+"\trdiff "+next_rdiff
+							+"\twas "+current_LL+"\tnext "+next_LL
+							+"\ttru "+true_LL
+							+"\t(tol "+ftol+")");
+	
+				absolute = next_absolute;
+				current = nextS;
+				current_LL = next_LL;
+				current_rdiff = next_rdiff;
+				adjustCalculationWidth = true;
+				have_approximation = current_rdiff<=ftol;
+				++num_adjustments;
+				++dabs;
+			} else if (DEFAULT_TRUNCATE_ABSOLUTE < absolute)
+			{
+				int prev_absolute = Integer.max(Integer.min((int)Math.ceil(Math.exp(Math.log(absolute)-step_size)), absolute-1), DEFAULT_TRUNCATE_ABSOLUTE);
+				this.setCalculationWidth(prev_absolute, relative);
+				
+				PosteriorStatistics prevS = Estep();
+				double prev_LL = prevS.LL;
+				double prev_delta = prev_LL-true_LL;
+				double prev_rdiff = Math.abs(prev_delta/true_LL);
+				
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**SEM.aCW ("+dabs+","+drel+") absolute "+absolute+"\tdecrease "+prev_absolute
+							+"\trdiff "+prev_rdiff
+							+"\twas "+current_LL+"\tprev "+prev_LL
+							+"\ttru "+true_LL
+							+"\t(tol "+ftol+")");
+				if (prev_rdiff <= ftol )
+				{
+					absolute = prev_absolute;
+					current = prevS;
+					current_LL = prev_LL;
+					current_rdiff = prev_rdiff;
+					adjustCalculationWidth = true;
+					have_approximation = true;
+					++num_adjustments;
+					--dabs;
+				}
+			}
+			
+			
+			if (!have_approximation)
+			{
+				// try changing relative
+				double next_rel = Math.exp(Math.log(relative)+step_size);
+				this.setCalculationWidth(absolute, next_rel);
+					
+				PosteriorStatistics nextS = Estep();
+				double next_LL = nextS.LL;
+					
+				double next_delta = next_LL-true_LL;
+				double next_rdiff = Math.abs(next_delta/true_LL); 
+					
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**SEM.aCW ("+dabs+","+drel+") relative "+relative+"\tincrease "+next_rel
+							+"\trdiff "+next_rdiff
+							+"\twas "+current_LL+"\tnext "+next_LL
+							+"\ttru "+true_LL
+							+"\t(tol "+ftol+")");
+	
+				relative = next_rel;
+				current_LL = next_LL;
+				current_rdiff = next_rdiff;
+				current = nextS;
+				adjustCalculationWidth = true;
+				have_approximation = current_rdiff<=ftol;				
+				++num_adjustments;
+				++drel;
+			} else if (DEFAULT_TRUNCATE_RELATIVE < relative)
+			{
+				double prev_rel = Double.max(DEFAULT_TRUNCATE_RELATIVE, Math.exp(Math.log(relative)-step_size));
+				this.setCalculationWidth(absolute, prev_rel);
+					
+				PosteriorStatistics prevS = Estep();
+				double prev_LL = prevS.LL;
+				double prev_delta = prev_LL-true_LL;
+				double prev_rdiff = Math.abs(prev_delta/true_LL);
+					
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					System.out.println("#**SEM.aCW ("+dabs+","+drel+") relative "+relative+"\tdecrease "+prev_rel
+							+"\trdiff "+prev_rdiff
+							+"\twas "+current_LL+"\tprev "+prev_LL
+							+"\ttru "+true_LL
+							+"\t(tol "+ftol+")");								
+				if (prev_rdiff <= ftol)
+				{
+					relative = prev_rel;
+					current = prevS;
+					current_LL = prev_LL;
+					current_rdiff = prev_rdiff;
+					adjustCalculationWidth = true;
+					have_approximation = true;
+					++num_adjustments;
+					--drel;
+				}
+			}
+			firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "Adjusting truncation: "+num_adjustments+"("+absolute+","+((int)(relative*1000.0+0.5))/1000.0+")");
+		} 
+			
+		if (PRINT_OPTIMIZATION_MESSAGES)
+			System.out.println("#**MLRV.aCW setting "+absolute+","+relative);		
+		if (absolute != factory.getCalculationWidthAbsolute() || relative != factory.getCalculationWidthRelative()) {
+			this.setCalculationWidth(absolute, relative);
+			current = Estep();
+			current_LL = current.LL;
+			
+		}
+		double dT = timeE-T0;
+		this.timeAdjust += dT;
+		this.timeE -= dT;
+		
+		return current;
+	}
+	
 	@Override
 	public double optimize(double eps)
 	{
@@ -1639,11 +2173,12 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	
 	private long timeM; // TIMING
 	private long timeE; // TIMING
+	private long timeAdjust;
 	final static double nano = 1e-9; // TIMING
 
 	public double optimize(double eps, int maxiter)
 	{
-		timeM = timeE = 0L; // TIMING
+		timeM = timeE = timeAdjust = 0L; // TIMING
 		
 		List<Double> history = getOptimizationHistory();
 		if (history == null)
@@ -1663,10 +2198,32 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		double LLprev = LLstart;
 		double[] xprev = factory.getParameters();
 		int iter = 0;
-		while (iter<maxiter)
+		final double truncate_precision = Double.min(eps/4.0,1.0/(1L<<28));
+		
+		int nepoch = 0;
+		int epoch_length = 12;
+		int epoch_end = 0; 
+		
+		double[] max_xdiff = new double[maxiter];
+		
+		while (iter<maxiter )
 		{
+			if (iter==epoch_end) {
+				nepoch++;
+				if (nepoch % 2==0) {
+					epoch_length = Integer.min(xprev.length/3, epoch_length*2);
+				}
+				epoch_end += epoch_length;
+				if (this.auto_truncate) {
+					E = this.adjustCalculationWidth(E, truncate_precision);
+					LLprev = E.LL;
+				}
+				firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE,"Epoch "+nepoch);
+			}
+			
 			//firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "M-step");
-			Mstep(E);
+			//Mstep(E);
+			MstepWithLogGain(E);
 			//firePropertyChange​(PROPERTY_OPTIMIZATION_PHASE, "E-step");
 			E = Estep();
 			
@@ -1677,6 +2234,9 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			double[] x = factory.getParameters();
 			// test convergence on x 
 			double max_xd = 0.0;
+			max_xdiff[iter]=0.0;
+			
+			//double max_x=0.0;
 			for (int i=0; i<x.length; i++)
 			{
 				double xd;
@@ -1705,28 +2265,47 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 				{
 					double xdiff =x[i]-xprev[i];  
 					xd = xdiff/Double.max(Math.abs(xprev[i]),1.0);
+					if (i%3 == PARAMETER_GAIN) {
+						xdiff = Math.log(x[i])-Math.log(xprev[i]);
+					}
+					max_xdiff[iter] = Double.max(max_xdiff[iter], Math.abs(xdiff));
 				}
 				max_xd = Double.max(max_xd, Math.abs(xd));
 //				System.out.println("#**SEM.o xd "+i+"\t"+xd+"\tx "+x[i]+"\txp "+xprev[i]);
+				
 			}
-			String timing_info = "\ttiming\tavgE "+(nano*timeE/(iter+1.0))+"\ttotE "+(nano*timeE)
-					+"\tavgM "+(nano*timeM/(iter+0.0))+"\ttotM "+(nano*timeM);
+			String timing_info = "\ttiming\tavgE "+(nano*timeE/(iter+2.0))+"\ttotE "+(nano*timeE)
+					+"\tavgM "+(nano*timeM/(iter+1.0))+"\ttotM "+(nano*timeM)
+					+"\tavgAdj "+(nano*timeAdjust/(iter+1.0))+"\ttotAadj "+(nano*timeAdjust);
 			if (PRINT_OPTIMIZATION_MESSAGES)
 			{
+				double max_xd_ratio = 0<iter?max_xdiff[iter]/max_xdiff[iter-1]:1.0;
+				double rate = 0<iter?Math.log(max_xdiff[iter])/Math.log(max_xdiff[iter-1]):1.0;
 				Count.out.println("#*SEM.o "+iter+"\tLL "+LLnow+"\tincrease "+(-diff)+"\trdiff "+(-delta)
 						+"\tmaxxd "+max_xd
+						+"\tlogmxdelta "+Math.log(max_xdiff[iter])
+						//+"\tmdratio "+Math.log(max_xd_ratio)
+						+"\tconvrate "+rate
 						);				
 			}
-			if (LLnow<LLprev) // dubious M step
+			
+			
+			 
+			
+			if (LLnow<LLprev) // stopgap for dubious M step
 			{
-				Count.out.println("#*SEM.o done/decrease ("+(-diff)+")"+"\t LL "+LLnow+"\ttotincrease "+(LLprev-LLstart)+timing_info);
+				if (PRINT_OPTIMIZATION_MESSAGES)				
+					Count.out.println("#*SEM.o done/decrease ("+(-diff)+")"+"\t LL "+LLnow+"\ttotincrease "+(LLprev-LLstart)+timing_info);
 				factory.setParametersAndCopy(xprev);
 				iter++;
 				break;
 			}
+			history.add(-LLnow);
 			LLprev = LLnow;
-			history.add(-LLprev);
 			xprev = x;
+			
+			
+			if (Thread.interrupted()) break; // clear status 
 			
 			// check convergence
 			boolean done_dx = max_xd<=FunctionMinimization.DFP_TOLX;
@@ -1735,14 +2314,16 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 			if ( done_dx || done_dL)
 			{
 				String reason = (done_dx?"dx.":"") + (done_dL?"dL.":"");
-				Count.out.println("#*SEM.o done/converged ("+reason+"@"+iter+")"+"\t LL "+LLprev+"\tdiff "+(LLstart-LLprev)+"\tdrop "+diff+"\trdiff "+delta+timing_info);
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					Count.out.println("#*SEM.o done/converged ("+reason+"@"+iter+")"+"\t LL "+LLprev+"\tdiff "+(LLstart-LLprev)+"\tdrop "+diff+"\trdiff "+delta+timing_info);
 				iter++;
 				break;
 			}
 			++iter;
 			if (iter==maxiter)
 			{
-				Count.out.println("#*SEM.o done/iterations ("+iter+")"+"\t LL "+LLprev+"\tdiff "+(LLstart-LLprev)+"\tdrop "+diff+"\trdiff "+(-delta)+timing_info);
+				if (PRINT_OPTIMIZATION_MESSAGES)
+					Count.out.println("#*SEM.o done/iterations ("+iter+")"+"\t LL "+LLprev+"\tdiff "+(LLstart-LLprev)+"\tdrop "+diff+"\trdiff "+(-delta)+timing_info);
 			}
 		}
 		
@@ -1753,6 +2334,46 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	
 	
 	
+	private double complexityE()
+	{
+		int num_nodes = factory.tree.getNumNodes();
+		int num_leaves = factory.tree.getNumLeaves();
+		//double[] node_avg = new double[num_nodes];
+
+		int node_max[] = new int[num_nodes]; // reused
+		int uF = utable.getFamilyCount();
+		double complexityE = 0.0;
+		double per_family_per_node = (1.0/uF)/num_nodes;
+		for (int uf=0; uf<uF; uf++)
+		{
+			Arrays.fill(node_max, 0);
+			int[] profile = utable.getFamilyProfile(uf);
+			int node=0;
+			while (node<num_leaves)
+			{
+				node_max[node]= profile[node];
+				double w = profile[node];
+				complexityE += 0.5*w*(w+1.0)*per_family_per_node;
+				
+				++node;
+			}
+			while (node<num_nodes)
+			{
+				int m = node_max[node] = 0;
+				for (int ci=0; ci<factory.tree.getNumChildren(node); ci++)
+				{
+					int child = factory.tree.getChild(node, ci);
+					m = Integer.max(m, node_max[child]);
+				}
+				node_max[node] = m;
+				double w = m;//factory.getCalculationWidth(m);
+				complexityE += 0.5*w*(w+1.0)*per_family_per_node;
+				++node;
+			}
+		}
+		
+		return complexityE;
+	}
 	
 	
 	
@@ -1771,6 +2392,7 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
     	    out.println(CommandLine.getStandardHeader(our_class));
     	    out.println(CommandLine.getStandardRuntimeInfo(our_class, args));
     	}
+    	Phylogeny tree = cli.getTree();
         AnnotatedTable table = cli.getTable();
     	MixedRateModel model = null; 
     	TreeWithRates rates;
@@ -1824,16 +2446,26 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+OPT_MINCOPY+" "+min_copies));
 		
 		
-		int absolute = 1;
-		double relative = 1.0;
-        if (cli.getOptionValue(OPT_TRUNCATE)!=null)
-        {
-        	absolute = cli.getOptionTruncateAbsolute();
-        	relative = cli.getOptionTruncateRelative();
-        } 
-    	O.setCalculationWidth(absolute, relative);
-        out.println(CommandLine.getStandardHeader("Truncated computation: -"
-        		+OPT_TRUNCATE+" "+absolute+","+relative));
+		int absolute = O.factory.getCalculationWidthAbsolute();
+		double relative = O.factory.getCalculationWidthRelative();
+    	String truncate_val = cli.getOptionValue(OPT_TRUNCATE);
+    	if ("auto".equals(truncate_val)) {
+    		O.setWantAutoTruncation(true);
+            out.println(CommandLine.getStandardHeader("Truncated computation: -"
+            		+OPT_TRUNCATE+" "+truncate_val));
+    	} else if ("noauto".equals(truncate_val)) {
+    		O.setWantAutoTruncation(false);
+            out.println(CommandLine.getStandardHeader("Truncated computation: -"
+            		+OPT_TRUNCATE+" "+truncate_val));
+    	} else {
+    		if (truncate_val != null) {
+	        	absolute = cli.getOptionTruncateAbsolute();
+	        	relative = cli.getOptionTruncateRelative();
+	        	O.setCalculationWidth(absolute, relative);
+    		}
+            out.println(CommandLine.getStandardHeader("Truncated computation: -"
+            		+OPT_TRUNCATE+" "+absolute+","+relative));
+    	}
 		
         O.is_duprate_bounded =  cli.getOptionBoolean("opt.dupbound", O.is_duprate_bounded);
         out.println(CommandLine.getStandardHeader("Bounded duplication rate: -opt.dupbound "+O.is_duprate_bounded));
@@ -1859,9 +2491,17 @@ public class StraightEM extends ML implements GLDParameters, Count.UsesThreadpoo
 	        
 	        
 	        double estimated256 = O.timeE*256*nano; 
+	        double cplx = O.complexityE();
+	        double qam = O.utable.getMeanMaxCopies(true);
+	        double qaam = O.utable.getMeanMeanMaxCopies(tree, true);
+	        int ufam = O.utable.getFamilyCount();
 	        
 	        Count.out.println("#*SEM.main startscore "+startscore+"\ttruescore "+(-trueLL)+"\tdiff "+diff+"\trdiff "+diff/(-trueLL)
-	        			+"\testimated: "+ ((int)estimated256)+" seconds/256 iterations");
+	        			+"\testimated: "+ ((int)estimated256)+" seconds/256 iterations;"
+	        			+ "\tcomplexity(edge-copy/node-copy pairs) "+cplx
+	        			+"\tufam "+ufam
+	        			+"\tqavgmax "+qam
+	        			+"\tqavgavgmax "+qaam);
 	        O.timeE = 0L; // reset
         }
 

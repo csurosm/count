@@ -68,6 +68,11 @@ public class Posteriors
 		return P;
 	}
 	
+	protected Profile getUnobservedPosteriors(int maxUnobserved) {
+		return FamilySizeLikelihood.getUnobservedProfile(factory.getRates(), maxUnobserved);
+	}
+	
+	
 	protected final Likelihood factory;	
 	protected Posteriors[] ancestor_posteriors;
 	
@@ -142,6 +147,32 @@ public class Posteriors
 		}
 		return t;
 	}
+	
+	/**
+	 * Computing tail difference in quadratic time:
+	 * N_S[k] = logsum (s=0..k; ell=k+1..max) Tls 
+	 * 
+	 * @param Tls
+	 * @return N_S
+	 */
+	protected static double[] logTailDifference(double[][] Tls)
+	{
+		double[] N_S = new double[Tls.length];
+		Arrays.fill(N_S, Double.NEGATIVE_INFINITY);
+		for (int s=0; s<N_S.length; s++)
+		{
+			double tail = Double.NEGATIVE_INFINITY;
+			for (int ell=Tls.length-1; ell>=s; ell--)
+			{
+				// tails sums ell=s+1..max
+				N_S[ell] = Logarithms.add(N_S[ell], tail); 
+				assert (s<Tls[ell].length);
+				tail = Logarithms.add(tail, Tls[ell][s]);
+			}
+		}
+		return N_S;
+	}
+
 	
 	static double computeExpectation(double[] Pr)
 	{
@@ -247,6 +278,19 @@ public class Posteriors
 		return LL;
 	}
 	
+	/**
+	 * Replaces every array member x by exp(x)
+	 * @param logp
+	 * @return the input array with members replaced
+	 */
+	protected static double[] exp(double[] logp) {
+		for (int i=0; i<logp.length; i++ ) {
+			logp[i] = Math.exp(logp[i]);
+		}
+		return logp;
+	}
+
+	
 
 	/**
 	 * If set to true, then it is verified if the 
@@ -262,7 +306,7 @@ public class Posteriors
 
 	public class Profile 
 	{
-		private Profile(int family_idx)
+		protected Profile(int family_idx)
 		{
 			this.inside = factory.getProfileLikelihood(family_idx);
 			int num_nodes = factory.tree.getNumNodes();
@@ -280,6 +324,11 @@ public class Posteriors
 		final Likelihood.Profile inside;
 		
 		private Profile[] ancestor=null;
+		
+		public double getLogLikelihood() {
+			return inside.getLogLikelihood();
+		}
+		
 		
 		public void computeLikelihoods()
 		{
@@ -328,10 +377,10 @@ public class Posteriors
 			{
 				B[ell] = Logarithms.sum(Bls[ell], Bls[ell].length);
 				
-//				if (!(B[ell]<=0.0))
-//				{
-//					System.out.println("#***P.cO node "+node+"\tB[ell="+ell+"] "+B[ell]+"\tBls "+Arrays.toString(Bls[ell]));
-//				}
+				if (!(B[ell]<=0.0)) // DEBUG
+				{
+					System.out.println("#***P.cO node "+node+"\tB[ell="+ell+"] "+B[ell]+"\tBls "+Arrays.toString(Bls[ell]));
+				}
 				assert (B[ell]<=0.0);// since it is a probability
 			}
 			node_transitions[node] = Bls;
@@ -564,20 +613,22 @@ public class Posteriors
 		
 		public double getLogEdgeMean(int node)
 		{
-			double[] J = getEdgeOutside(node); // sets up inside likelihoods if necessary
-			double[] K = inside.getEdgeLikelihoods(node);
-			double[] log_p  = computeLogPosteriors(J, K);
-			// compute tails
-			double log_tail = Double.NEGATIVE_INFINITY;
-			int j=log_p.length;
-			while (0<j)
-			{
-				--j;
-				double x = log_p[j];
-				log_p[j] = log_tail;
-				log_tail = Logarithms.add(log_tail, x);
-			}
-			double log_mean = Logarithms.sum(log_p, log_p.length);
+//			double[] J = getEdgeOutside(node); // sets up inside likelihoods if necessary
+//			double[] K = inside.getEdgeLikelihoods(node);
+//			double[] log_p  = computeLogPosteriors(J, K);
+			double[] log_p = this.getLogEdgePosteriors(node);
+			double log_mean = computeLogMean(log_p);
+//			// compute tails
+//			double log_tail = Double.NEGATIVE_INFINITY;
+//			int j=log_p.length;
+//			while (0<j)
+//			{
+//				--j;
+//				double x = log_p[j];
+//				log_p[j] = log_tail;
+//				log_tail = Logarithms.add(log_tail, x);
+//			}
+//			double log_mean = Logarithms.sum(log_p, log_p.length);
 			return log_mean;
 		}
 		
@@ -623,9 +674,10 @@ public class Posteriors
 		public double[] getNodeBirthTails(int node)
 		{
 			double[] N_S = this.getLogNodePosteriorIncrease(node);
-			for (int j=0;j<N_S.length; j++)
-				N_S[j]=Math.exp(N_S[j]);
-			return N_S;
+//			for (int j=0;j<N_S.length; j++)
+//				N_S[j]=Math.exp(N_S[j]);
+//			return N_S;
+			return exp(N_S);
 		}
 		
 		public double getLogNodeIncrease(int node)
@@ -634,8 +686,6 @@ public class Posteriors
 			double[] N_S = logTailDifference(Pls);
 			return Logarithms.sum(N_S, N_S.length);
 		}
-		
-		
 		
 		public double getLogEdgeDecrease(int node)
 		{
@@ -663,40 +713,13 @@ public class Posteriors
 		public double[] getEdgeDeathTails(int node)
 		{
 			double[] N_S = this.getLogEdgePosteriorDecrease(node);
-			for (int j=0;j<N_S.length; j++)
-				N_S[j]=Math.exp(N_S[j]);
-			return N_S;
+			return exp(N_S);
+//			for (int j=0;j<N_S.length; j++)
+//				N_S[j]=Math.exp(N_S[j]);
+//			return N_S;
 		}
 		
 		
-		/**
-		 * N_S[k] = logsum (s=0..k; ell=k+1..max) Tls 
-		 * 
-		 * @param Tls
-		 * @return
-		 */
-		private double[] logTailDifference(double[][] Tls)
-		{
-			double[] N_S = new double[Tls.length];
-			Arrays.fill(N_S, Double.NEGATIVE_INFINITY);
-			for (int s=0; s<N_S.length; s++)
-			{
-				double tail = Double.NEGATIVE_INFINITY;
-				for (int ell=Tls.length-1; ell>=s; ell--)
-				{
-					// tails sums ell=s+1..max
-					N_S[ell] = Logarithms.add(N_S[ell], tail); 
-					
-//					if (Tls[ell].length<=s) // DEBUG
-//					{
-//						System.out.println("#***P.lTD ell "+ell+"\ts "+s+"\tTell "+Arrays.toString(Tls[ell]));
-//					}
-					assert (s<Tls[ell].length);
-					tail = Logarithms.add(tail, Tls[ell][s]);
-				}
-			}
-			return N_S;
-		}
 		
 		
 		public double[] getEdgePosteriors(int node)
@@ -845,8 +868,9 @@ public class Posteriors
 			event_probs[FamilyEvent.LOSS.ordinal()] = post_inherit[0]-post_parent[0];
 
 			double q = factory.rates.getDuplicationParameter(node);
+			double logq = factory.rates.getLogDuplicationParameter(node);// Math.log(q);
 			
-			if (q!=0.0) // otherwise expansion and contraction are meaningless 
+			if (logq != Double.NEGATIVE_INFINITY)// q!=0.0) // otherwise expansion and contraction are meaningless 
 			{
 				// collect the siblings 
 				int num_children = factory.tree.getNumChildren(parent);
@@ -868,11 +892,13 @@ public class Posteriors
 					double[] Kw = inside.getEdgeLikelihoods(sister);
 					sib0 += Logarithms.add(sib0, Kw[0]);
 					double pw = factory.getLossParameter(sister);
-					double w0 = Math.log(pw)+Kw[0];
+					double log_pw = factory.getLogLossParameter(sister);
+					double loq1_pw = factory.getLogLossComplement(sister);
+					double w0 = log_pw+Kw[0]; // Math.log(pw)+Kw[0];
 					double w = w0;
 					if (Kw.length>1)
 					{
-						double w1 = Math.log1p(-pw)+Kw[1];
+						double w1 = loq1_pw + Kw[1]; //Math.log1p(-pw)+Kw[1];
 						w = Logarithms.add(w, w1);
 					}
 					sib1 += w;
@@ -886,33 +912,45 @@ public class Posteriors
 				double Bu1 = Bu[1]+sib1;
 				// compute the inside likelihoods conditioned on ancestor copies 0 or 1 
 				double epsi = factory.getExtinction(node);
+				double log_e = factory.getLogExtinction(node);
+				double log1_e = factory.getLogExtinctionComplement(node);
+				
 				double[] Cv = inside.getNodeLikelihoods(node);
 				double Cv0 = Cv[0];
 				double Cv_1 = Cv.length==1?Double.NEGATIVE_INFINITY:Cv[1];
-				double Cv1 = Logarithms.add(Math.log(epsi)+Cv[0], Math.log1p(-epsi)+Cv_1);
+				double Cv1 = Logarithms.add(log_e+Cv[0], log1_e+Cv_1);
+						// Logarithms.add(Math.log(epsi)+Cv[0], Math.log1p(-epsi)+Cv_1);
 				
 				// transitions from 0/1 copies at parent to 0/1 copies at node
 				double p = factory.rates.getLossParameter(node);
 				double κ = factory.rates.getGainParameter(node);
-				double logp = Math.log(p);
-				double log1_p = Math.log1p(-p);
-				double logq = Math.log(q);
-				double log1_q = Math.log1p(-q);
-				double log_κ = Math.log(κ);
+				double logp = factory.rates.getLogLossParameter(node);//  Math.log(p);
+				double log1_p = factory.rates.getLogLossComplement(node); // Math.log1p(-p);
+				double log1_q = factory.rates.getLogDuplicationComplement(node); // Math.log1p(-q);
+				double log_κ =  factory.rates.getLogGainParameter(node);// Math.log(κ);
+				double logkappa_log1_q = log_κ + Logarithms.logitToLogLogComplement(logq-log1_q);
+				double kappa_log1_q = -Math.exp(logkappa_log1_q);
+				
 
-				double t1_0 = logp + log1_q*κ ;
+				
+				double t1_0 = logp + kappa_log1_q; //log1_q*κ ;
 				double t101 = logp + log_κ + logq;
 				double t111 = log1_p+log1_q;
-				double t1_1 = log1_q*κ + Logarithms.add(t101, t111);
+				double t1_1 = kappa_log1_q // log1_q*κ 
+						+ Logarithms.add(t101, t111);
 				
-				double LL = inside.getLogLikelihood(); 
+				double LL = getLogLikelihood(); 
 				double Lnoexp = Bu1+Logarithms.add(t1_0+Cv0, t1_1+Cv1); 
 				double pnoexp = Math.exp(Lnoexp-LL);
 				
 				//assert !Double.isNaN(pnoexp);
 				
 				event_probs[FamilyEvent.EXPAND.ordinal()] = post_parent[1]-pnoexp;
-				double t0_1 = log1_q*κ+log_κ + logq;
+				
+				
+				
+				double t0_1 = kappa_log1_q // log1_q*κ+log_κ 
+						+ logq;
 				double Lnocon = Logarithms.add(Bu0+t0_1, Bu1+t1_1)+Cv1;
 				double pnocon = Math.exp(Lnocon-LL);
 				
@@ -1134,6 +1172,7 @@ public class Posteriors
 				for (int ell=0; ell<Bls.length; ell++)
 				{
 					double[] terms = new double[ell+1];
+					Arrays.fill(terms,Double.NEGATIVE_INFINITY);
 					int t=ell,s=0;
 					//assert (J.length<=ell+1);
 					while (s<J.length && s<=ell)
@@ -1141,9 +1180,12 @@ public class Posteriors
 						double t_logr = (t==0?0.0:t*logr);
 						terms[s] = J[s] - r + t_logr - factory.factorials.factln(t);
 						
-//						if (!(terms[s]<=0.0))
+//						if (!(terms[s]<0.0)) // DEBUG
 //						{
-//							System.out.println("#***P.P.cNT node "+node+"\tBls[ell="+ell+"][s="+s+"] "+terms[s]+"\tJs "+J[s]+"\tr "+r+"\ttlogr "+t_logr+"\tln(t!) "+factory.factorials.factln(t));
+//							System.out.println("#***P.P.cNT node "+node+"\tBls[ell="+ell+"][s="+s+"] "+terms[s]+"\tJs "+J[s]+"\tr "+r+"\ttlogr "+t_logr+"\tln(t!) "+factory.factorials.factln(t)
+//								+"\t// "+factory.rates.toString(node)
+//									
+//									);
 //						}
 						assert terms[s]<=0.0;
 						
@@ -1151,8 +1193,8 @@ public class Posteriors
 						++s;
 						--t;
 					}
-					if (s<terms.length)
-						Arrays.fill(terms,s,terms.length,Double.NEGATIVE_INFINITY);
+//					if (s<terms.length)
+//						Arrays.fill(terms,s,terms.length,Double.NEGATIVE_INFINITY);
 //					B[ell] = Logarithms.sum(terms, s);
 					Bls[ell] = terms;
 				}
@@ -1177,6 +1219,7 @@ public class Posteriors
 					for (int ell=1; ell<Bls.length; ell++)
 					{
 						terms = new double[ell+1];
+						Arrays.fill(terms, Double.NEGATIVE_INFINITY);
 						double factln_ell = factory.factorials.factln(ell-1); // ell-1 and not ell
 						
 						int t=ell-1, sm1=0, s=1; // no contribution from s=0
@@ -1200,8 +1243,8 @@ public class Posteriors
 							++s;
 							++sm1;
 						}
-						if (s<terms.length)
-							Arrays.fill(terms,s,terms.length,Double.NEGATIVE_INFINITY);
+//						if (sm1<terms.length)
+//							Arrays.fill(terms,sm1,terms.length,Double.NEGATIVE_INFINITY);
 //						Bplus[ell] = logCumulativeNodeIncrease(terms, sm1, ell);
 //						B[ell] = Logarithms.sum(terms, sm1);
 						Bls[ell] = terms;
@@ -1213,6 +1256,7 @@ public class Posteriors
 					for (int ell=0; ell<Bls.length; ell++)
 					{
 						double[] terms = new double[ell+1];
+						Arrays.fill(terms, Double.NEGATIVE_INFINITY);
 						double log_ellfact = factory.gain_factorials[node].factln(ell);
 						int t=ell, s=0; 
 						while (s<J.length && s<=ell)
@@ -1220,21 +1264,15 @@ public class Posteriors
 							double log_kappa_s = Logarithms.add(log_kappa, Math.log(s));
 							double log_kappa_slog1_q = log_kappa_s + loglog1_q;
 							double kappa_s_log1_q = -Math.exp(log_kappa_slog1_q); // we want -(-ln(1-q))*(kappa+s)
-							double t_logq= t*logq;
+							double t_logq= t==0?0.0:t*logq;
 							double binom = log_ellfact - factory.gain_factorials[node].factln(s) - factory.factorials.factln(t);
 							//L terms[s] = J[s] + binom + (κ+s)*log1_q + t * logq;
 							terms[s] = J[s] + binom + kappa_s_log1_q + t_logq;
 							
-//							if (!(terms[s]<=0.0))
-//							{
-//								System.out.println("#***P.P.cNT node "+node+"\tBls[ell="+ell+"][s="+s+"] "+terms[s]+"\tt "+t+"\tJs "+J[s]+"\tbinom "+binom
-//										+"\t("+log_ellfact+","+factory.gain_factorials[node].factln(s)+","+factory.factorials.factln(t)+")"
-//										+"\t(k+s)logq "+kappa_s_log1_q+"\ttlogq "+t_logq+"\tln(t!) "+factory.factorials.factln(t));
-//							}
-//							
-//							
+							
+							
 //							// DEBUG
-//							if (0.0<terms[s])
+//							if (! (terms[s]<0))
 //							{
 //								double f1 = log_kappa;
 //								double f2 = f1+Logarithms.add(log_kappa,1.0);
@@ -1246,8 +1284,6 @@ public class Posteriors
 //										+"\tlell! "+log_ellfact+"\tls! "+factory.gain_factorials[node].factln(s)+"\tlt! "+factory.factorials.factln(t)
 //										+"\tf1 "+f1+"\tf2 "+f2
 //										+"\t// "+factory.gain_factorials[node].toString());
-//								
-//								
 //							}
 								
 							
@@ -1258,8 +1294,8 @@ public class Posteriors
 						}
 //						Bplus[ell] = logCumulativeNodeIncrease(terms, s, ell);
 //						B[ell] = Logarithms.sum(terms, s);
-						if (s<terms.length)
-							Arrays.fill(terms,s,terms.length,Double.NEGATIVE_INFINITY);
+//						if (s<terms.length)
+//							Arrays.fill(terms,s,terms.length,Double.NEGATIVE_INFINITY);
 						Bls[ell] = terms;
 					}
 				}
@@ -1296,14 +1332,14 @@ public class Posteriors
 			double logp = factory.getLogLossParameter(node);
 			if (factory.tree.isRoot(node))
 			{
-				
+				double log1_p = factory.getLogLossComplement(node);
 //				double proot = factory.getLossParameter(node);
-				if (factory.getLogLossComplement(node)==Double.NEGATIVE_INFINITY) // (proot == 1.0)
+				if (log1_p==Double.NEGATIVE_INFINITY) // (proot == 1.0)
 				{
 					J = new double[1]; // and the value is log(1)
 					Jls = new double[1][1];
-				} else { // untested
-					double log1_p = factory.getLogLossComplement(node);
+				} else { 
+					// ROOTLOSS
 					J = new double[2];
 					J[0] = logp; //Math.log(proot);
 					J[1] = log1_p; //  Math.log1p(-proot);
@@ -1464,8 +1500,8 @@ public class Posteriors
 							double t_logp2 = t==0?0.0:t*logp2;
 							terms[t] = B_ell + K2[t] + binom + s_logp1 + t_logp2;
 							
-//							if (!(terms[t]<=0.0))
-//								System.out.println("#**P.P.cET node "+node+"\tterms[t="+t+"] "+terms[t]+"\ts "+s+"\tell "+ell+"\tBll "+B_ell+"\tK2 "+K2[t]+"\tbinom "+binom+"\tlogp1 "+logp1+"\tlogp2 "+logp2);
+//							if (!(terms[t]<=0.0)) // DEBUG
+//								System.out.println("#**P.P.cET node "+node+"\tterms[t="+t+"] "+terms[t]+"\ts "+s+"\tell "+ell+"\tBll "+B_ell+"\tK2 "+K2[t]+"\tbinom "+binom+"\tlogp1 "+logp1+"\tlogp2 "+logp2+"\t// "+factory.rates.toString(node));
 
 							assert (terms[t]<=0.0); // since it is a probability
 							
@@ -1569,7 +1605,7 @@ public class Posteriors
     		out.println("\t missing "+miss);
     		edge_miss=Double.max(edge_miss,miss);
     	}
-    	out.println(family_idx+"\tLL\t*\t"+P.inside.getLogLikelihood());
+    	out.println(family_idx+"\tLL\t*\t"+P.getLogLikelihood());
 //        out.println("\n# Log-likelihood for family "+family_idx+"\t"+P.inside.getLogLikelihood());
     }
 	

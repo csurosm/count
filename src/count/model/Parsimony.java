@@ -35,10 +35,12 @@ import count.ds.TreeTraversal;
 import count.ds.UniqueProfileTable;
 import count.io.CommandLine;
 
+import static count.io.CommandLine.OPT_ANCESTRAL;
 import static count.io.CommandLine.OPT_DUPLICATION;
 import static count.io.CommandLine.OPT_GAIN;
 import static count.io.CommandLine.OPT_LOSS;
 import static count.io.CommandLine.OPT_OUTPUT;
+import static count.io.CommandLine.OPT_HISTORY;
 
 /**
  * Parsimony algorithms.
@@ -1439,23 +1441,67 @@ public class Parsimony implements Count.UsesThreadpool //, GLDParameters
 	protected void reportSankoff(PrintStream out)
     {
     	int nF = table.getFamilyCount();
-    	out.println("# Row\tFamily\tNode\tMin\tMax\tProfile");
+    	String prefix_families = OPT_HISTORY.toUpperCase();
+		out.println(prefix_families+"\tfamily\tnodeidx\tpresence:p\tmulti:m\tmaxpresence:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tscopies:n\tmaxcopies:n.\tchange:vp\tbirth:+\tdeath:-");
+    	
+		
+		
+		
+    	//out.println("# Row\tFamily\tNode\tMin\tMax\tProfile");
+    	
+    	
+    	
+    	// my ($prefix, $fam, $node, $p, $multi, $pcorr, $gain, $loss, $expand, $contract, $scopies,
     	int num_nodes = tree.getNumNodes();
     	double score = 0.0;
     	for (int f=0; f<nF; f++)
     	{
     		Profile P = new Profile(f);
-    		int[] min_copies = P.computeSankoff(false);
+    		int[] min_copies =  P.computeSankoff(false);
     		int[] max_copies = P.computeSankoff(true);
     		score += P.getSankoffScore();
     		for (int node=0; node<num_nodes; node++)
     		{
-    			out.print(f+"\t"+table.getFamilyName(f)+"\t"+tree.getIdent(node));
-    			out.print("\t"+min_copies[node]);
-    			out.print("\t"+max_copies[node]);
-    			if (tree.isLeaf(node))
-    				out.print("\t"+P.profile[node]);
-    			out.println();
+    			out.printf("%s\t%d\t%d", prefix_families, f, node);
+    			int n = min_copies[node];
+    			int fp = 0<n?1:0;
+    			int fm = 1<n?1:0;
+    			int fpmax = 0<max_copies[node]?1:0;
+    			int fg, fl, fe, fc;
+    			int cc, cb, cd; 
+    			if (tree.isRoot(node)) {
+    				fg = 0<n?1:0;
+    				fl = 0;
+    				fe = 0;
+    				fc = 0;
+    				cc = n; cb = n; cd=0;
+    			} else {
+    				int parent = tree.getParent(node);
+    				int m = min_copies[parent];
+    				fg = (m==0 && 0<n)?1:0;
+    				fl = (0<m && 0==n)?1:0;
+    				fe = (1==m && 1<n)?1:0;
+    				fc = (1<m && 1==n)?1:0;
+    				cc = n-m; 
+    				cb = m<n?(n-m):0;
+    				cd = n<m?(m-n):0;
+    			}
+    			out.printf("\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n"
+    					, fp, fm, fpmax
+    					, fg, fl, fe, fc
+    					, n, max_copies[node]
+    					, cc, cb, cd		
+    					);
+//    			
+//    			
+//    			
+//    			
+//    			out.print(f+"\t"+table.getFamilyName(f)+"\t"+tree.getIdent(node));
+//    			out.print("\t"+min_copies[node]);
+//    			out.print("\t"+max_copies[node]);
+//    			if (tree.isLeaf(node))
+//    				out.print("\t"+P.profile[node]);
+//    			out.println();
     		}
     	}
     	double s = getSankoffScore();
@@ -1463,12 +1509,215 @@ public class Parsimony implements Count.UsesThreadpool //, GLDParameters
     }
     
     
-    
+    private void reportLineageTotals(PrintStream out)
+    {
+    	int num_nodes = tree.getNumNodes();
+    	int[] lineage_family_present  	= new int[num_nodes];
+    	int[] lineage_family_present_max = new int[num_nodes];
+    	int[] lineage_family_multi   	= new int[num_nodes];
+    	int[] lineage_family_gain   	= new int[num_nodes];
+    	int[] lineage_family_loss   	= new int[num_nodes];
+    	int[] lineage_family_expand   	= new int[num_nodes];
+    	int[] lineage_family_contract	= new int[num_nodes];
+    	int[] lineage_copies_surviving	= new int[num_nodes];
+    	int[] lineage_copies_max   	= new int[num_nodes];
+    	int[] lineage_copies_birth 	= new int[num_nodes];
+    	int[] lineage_copies_death 	= new int[num_nodes];
+    	
+    	String prefix_ancestral = OPT_ANCESTRAL.toUpperCase();
+    	
+		out.println(prefix_ancestral+"\tnode\tpresence:p\tmulti:m\tmaxp:p.\tgain:g\tloss:l\texpand:++\tcontract:--\tncopies:n\tmaxcopies:n.\tbirth:+.\tdeath:-.");
+    	double score = 0.0;
+    	int nF = table.getFamilyCount();
+    	for (int f=0; f<nF; f++)
+    	{
+    		Profile P = getProfile(f);
+	    	score += P.getSankoffScore();
+
+	    	int[] copies = P.computeSankoff(false);
+    		int[] max_copies = P.computeSankoff(true);
+    		
+    		for (int node=0; node<num_nodes; node++)
+    		{
+    			int fcopies = copies[node];
+    			int fmax = max_copies[node];
+    			int fp = 0<fcopies?1:0;
+    			int fpc = 0<fmax?1:0;
+    			int fm = 1<fcopies?1:0;
+    			int pcopies = 0;
+    			if (!tree.isRoot(node))
+    			{
+    				int parent = tree.getParent(node);
+    				pcopies = copies[parent];
+    			}
+    			int fgain = 0==pcopies && 0< fcopies?1:0;
+    			int floss = 0< pcopies && 0==fcopies?1:0;
+    			int fexpand   = 1==pcopies && 1< fcopies?1:0;
+    			int fcontract = 1< pcopies && 1==fcopies?1:0;
+    			
+    			int fbirth = Integer.max(0, fcopies-pcopies);
+    			int fdeath = Integer.max(0, pcopies-fcopies);
+    			
+    			lineage_family_present[node]+=fp;
+    	    	lineage_family_present_max[node] += fpc;
+    	    	lineage_family_multi[node]+=fm;
+    	    	lineage_family_gain[node] += fgain;
+    	    	lineage_family_loss[node] += floss;
+    	    	lineage_family_expand[node] += fexpand;
+    	    	lineage_family_contract[node] += fcontract;
+    	    	lineage_copies_surviving[node] += fcopies;
+    	    	lineage_copies_max[node]   	+= fmax;
+    	    	lineage_copies_birth[node] 	+= fbirth;
+    	    	lineage_copies_death[node] 	+= fdeath;
+    		} // for nodes 
+    	}  // for families
+    	
+		for (int node=0; node<num_nodes; node++)
+		{
+			int fp = lineage_family_present[node];
+			int fm = lineage_family_multi[node];
+			int fpc = lineage_family_present_max[node];
+			int fgain = lineage_family_gain[node];
+			int floss = lineage_family_loss[node];
+			int fexpand = lineage_family_expand[node];
+			int fcontract = lineage_family_contract[node];
+			
+			int fcopies = lineage_copies_surviving[node];
+			int fmax = lineage_copies_max[node];
+			
+			int fbirth = lineage_copies_birth[node];
+			int fdeath = lineage_copies_death[node];
+			
+			out.printf("%s\t%s", prefix_ancestral, tree.getIdent(node));
+			out.printf("\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" 
+						, fp, fm, fpc
+						, fgain, floss, fexpand, fcontract
+						, fcopies, fmax, fbirth, fdeath);    	
+		}
+		
+    }
     
 
+	private void reportTransitions(PrintStream out, int node)
+	{
+		
+		int[][] birth_ns = new int[0][];
+		int[][] death_ns = new int[0][];
+		
+    	int nF = table.getFamilyCount();
+    	
+
+    	int parent = tree.getParent(node);
+    	
+    	int death_nmax=0; // exclusive
+    	int death_smax=0;  // inclusive
+    	int birth_nmax=0; // exclusive
+    	int birth_smax=0;  // inclusive    	
+    	
+    	for (int f=0; f<nF; f++)
+    	{
+    		Profile P = new Profile(f);
+    		int[] copies =  P.computeSankoff(false);
+    		
+    		int pcopy = parent<0?0:copies[parent];
+    		int ncopy = copies[node];
+    		//if (ncopy<=pcopy)
+    		{
+    			// count as death
+    			int n = pcopy;
+    			int s = Integer.min(n,ncopy); // if pcopy < ncopy, we assume that none of parent copies died   // = ncopy;
+    			if (death_nmax<=n) death_nmax = n+1;
+    			if (death_ns.length<=n)
+    			{
+    				death_ns = Arrays.copyOf(death_ns, n+1);
+    			}
+    			if (death_smax<s) death_smax=s;
+    			if (death_ns[n]==null)
+    			{
+    				death_ns[n]=new int[s+1];
+    			} else if (death_ns[n].length<=s)
+    			{
+    				death_ns[n]=Arrays.copyOf(death_ns[n], s+1);
+    			}
+				death_ns[n][s]++;
+    		} // if death
+    		// if (pcopy<=ncopy)
+    		{
+    			// count as birth (equality counted twice)
+    			int n = ncopy;
+    			int s = Integer.min(pcopy,n); // if ncopy<pcopy, we assume no birth only death
+    			if (birth_nmax<=n) birth_nmax = n+1;
+    			if (birth_ns.length<=n)
+    				birth_ns = Arrays.copyOf(birth_ns, n+1);
+    			if (birth_smax<s) birth_smax=s;
+    			if (birth_ns[n]==null)
+    			{
+    				birth_ns[n]=new int[s+1];
+    			} else if (birth_ns[n].length<=s)
+    			{
+    				birth_ns[n] = Arrays.copyOf(birth_ns[n], s+1);
+    			}
+    			birth_ns[n][s]++;
+    		} // if birth
+    	} // for families 
+    	
+		String prefix_birth = "#BIRTH\t";
+		out.print(prefix_birth+"node\tident\ts /(n-s)=");
+		for (int t=0; t<birth_nmax; t++)
+			out.print("\t"+t);
+		out.println();
+		
+		String node_ident = tree.getIdent(node);
+		
+		for (int s=0; s<=birth_smax; s++)
+		{
+			out.print(prefix_birth+node+"\t"+node_ident+"\t"+s);
+			int t=0, n=s+t;
+			while (n<birth_nmax)
+			{
+				int b;
+				if (birth_ns[n]==null || birth_ns[n].length <= s) b=0;
+				else b=birth_ns[n][s];
+				
+				out.printf("\t%d", b);
+				t++;
+				n++;
+			}
+			out.println();
+		}
+    	
+    	
+		String prefix_death = "#DEATH\t";
+		out.print(prefix_death+"node\tident\tn /(n-s)=");
+		for (int t=0; t<=death_smax; t++)
+			out.print("\t"+t);
+		out.println();
+    	
+		for (int n=0; n<death_nmax; n++)
+		{
+			out.print(prefix_death+node+"\t"+node_ident+"\t"+n);
+			int t = 0, s=n;
+			
+			int smin = death_ns[n]==null?0:death_ns[n].length;
+			while (smin<=s)
+			{
+				out.printf("\t%d", 0);
+				++t; --s;
+			}
+			while (0<=s)
+			{
+				out.printf("\t%d", death_ns[n][s]);
+				++t; --s;
+			} while (0<=s);
+			out.println();
+		}
+	}
+    
+    
     public static void main(String[] args) throws Exception
     {
-    	CommandLine cli = new CommandLine(args, Profile.class, 2);
+		Class<?> these = java.lang.invoke.MethodHandles.lookup().lookupClass();
+    	CommandLine cli = new CommandLine(args,these, 2);
     	ProfileTable table = cli.getTable();
     	Phylogeny tree = cli.getTree();
     	
@@ -1502,8 +1751,21 @@ public class Parsimony implements Count.UsesThreadpool //, GLDParameters
     	Parsimony factory = new Parsimony(tree, table);
     	factory.setPenalties(gain_pty, loss_pty, duplication_pty);
     	
-    	factory.reportSankoff(out);
+    	boolean want_families = cli.getOptionBoolean(OPT_HISTORY, true);
+    	boolean want_lineages = cli.getOptionBoolean(OPT_ANCESTRAL, true);
+		int stats = cli.getOptionInt(CommandLine.OPT_STATISTICS, -1);
+    	out.println(CommandLine.getStandardHeader("Detailed history for families: -"+OPT_HISTORY+" "+want_families));
+    	out.println(CommandLine.getStandardHeader("Lineage totals: -"+OPT_ANCESTRAL+" "+want_lineages));
+    	out.println(CommandLine.getStandardHeader("Transition counts at node: -"+CommandLine.OPT_STATISTICS+" "+stats
+    			+(stats<0?" (none)":"")));
     	
+    	if (want_families)
+    		factory.reportSankoff(out);
     	
+    	if (want_lineages)
+    		factory.reportLineageTotals(out);
+    	
+    	if (0<=stats)
+    		factory.reportTransitions(out, stats);
     }
 }

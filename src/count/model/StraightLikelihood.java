@@ -40,7 +40,7 @@ import count.matek.Logarithms;
 public class StraightLikelihood implements GLDParameters
 {
 	private static final boolean TRACK_CALCULATIONS = false; // for debugging
-	private static boolean USE_UNIVERSAL_GAIN_PARAMETER = true;
+	static final boolean USE_UNIVERSAL_GAIN_PARAMETER = true;
 	
 	/**
 	 * Usual instantiation with a rate model. 
@@ -165,7 +165,7 @@ public class StraightLikelihood implements GLDParameters
 		return this.threshold_width_relative;
 	}
 	
-	private int getCalculationWidth(int max_value)
+	protected int getCalculationWidth(int max_value)
 	{
 		double rel = Math.ceil(threshold_width_relative*Math.sqrt(max_value+1.0));
 		double width =  max_value+rel+threshold_width_absolute;
@@ -301,9 +301,9 @@ public class StraightLikelihood implements GLDParameters
 		double r = node_parameters[3*node+PARAMETER_GAIN];
 		if (!USE_UNIVERSAL_GAIN_PARAMETER)
 		{
-			double log1_q = getLogDuplicationComplement(node);
 			if (getLogitDuplicationParameter(node)!=Double.NEGATIVE_INFINITY)  //(log1_q!=0.0)
 			{
+				double log1_q = getLogDuplicationComplement(node);
 				// this is kappa
 				double kappa = r;
 				r = -kappa*log1_q;
@@ -1547,7 +1547,7 @@ public class StraightLikelihood implements GLDParameters
         		Profile SP = this.getProfile(f);
         		Posteriors.Profile PP = post.getPosteriors(f);
         		dLL = SP.getLogLikelihood();
-        		pLL = PP.inside.getLogLikelihood();
+        		pLL = PP.getLogLikelihood();
         		m = table.maxCopies(f);
         		ncopies = table.getMemberCount(f);
         		npresent = table.getLineageCount(f);

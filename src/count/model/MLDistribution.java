@@ -108,8 +108,13 @@ public class MLDistribution extends ML //implements Count.UsesThreadpool // via 
 			utable = (UniqueProfileTable) table;
 		else utable = new UniqueProfileTable(table);
 		
+		if (PURE_LOGISTIC && !(rates instanceof TreeWithLogisticParameters)) {
+			rates = new TreeWithLogisticParameters(rates, false); // hard link
+		}
+		
 		if (PURE_LOGISTIC) this.gradient = new Gradient(new LikelihoodParametrized(rates, utable));
 		else this.gradient = new Gradient(rates,utable);
+		
 		this.rates = gradient.factory.rates; //.parameterCache();
 		if (PURE_LOGISTIC) assert (rates instanceof TreeWithLogisticParameters); // high-precision base model
 

@@ -14,7 +14,10 @@ package count.model;
 * limitations under the License.
 */
 
+import java.io.PrintStream;
+
 import count.ds.AnnotatedTable;
+import count.ds.IndexedTree;
 import count.ds.ProfileTable;
 import count.io.CommandLine;
 import count.matek.Logarithms;
@@ -130,6 +133,10 @@ public class LikelihoodParametrized extends Likelihood
 	{ 
 		if (num_nodes==0) return super.getExtinctionComplement(node);
 		else return Math.exp(this.getLogExtinctionComplement(node));
+	}
+	
+	protected double getLogitSurvivalParameter(int node, int parameter_idx) {
+		return logit_survival_parameters[node][parameter_idx];
 	}
 	
 	private void setLogitSurvivalParameter(int node, int parameter_idx, double x)
@@ -261,8 +268,29 @@ public class LikelihoodParametrized extends Likelihood
 		}
 	}
 	
-	protected void setNodeParametersLogit(int node, double logit_e)
+	@Override
+	public double getLogGainParameter(int node)
 	{
+		// calculate directly from rates 
+		final double getLogGainParameter;
+		double log_q = this.getLogDuplicationParameter(node);
+		if (log_q==Double.NEGATIVE_INFINITY) {
+			// want log r~ = log_r + log(1-epsilon)
+			double log_r = rates.getLogGainParameter(node)+this.getLogExtinctionComplement(node);
+			getLogGainParameter = log_r;
+		} else {
+			double log_kappa = rates.getLogGainParameter(node);
+			getLogGainParameter = log_kappa;
+		}
+		return getLogGainParameter;
+	}
+	
+	@Override
+	public double getGainParameter(int node) {
+		return Math.exp(this.getLogGainParameter(node));
+	}
+	
+	protected void setNodeParametersLogit(int node, double logit_e){
 		setLogitSurvivalParameter(node, PARAMETER_EXTINCTION, logit_e);
 		// copy to super's 
 		super.setExtinction(node, Math.exp(this.getLogExtinction(node)), Math.exp(this.getLogExtinctionComplement(node)));
@@ -348,7 +376,9 @@ public class LikelihoodParametrized extends Likelihood
 		}
 
 		/**
-		 * High-precision variant exploiting logistic scale
+		 * High-precision variant exploiting logistic scale; uses 
+		 * {@link #computeSiblingLogit(int, double[], double)} instead of 
+		 * {@link #computeSibling(int, double[], double)}.
 		 */
 		@Override
 		protected double[] computeNodeFromChildren(int node)
@@ -389,6 +419,9 @@ public class LikelihoodParametrized extends Likelihood
 			return C;
 		}
 		
+		/**
+		 * Auxiliary high-precision calculation for sibling conditional likelihood contributions.
+		 */
 		@Override
 		protected double[] computeSiblingLogit(int junior, double[] C, double logit_eps)
 		{
@@ -493,6 +526,44 @@ public class LikelihoodParametrized extends Likelihood
 		}
 	}
 	
+	
+	/**
+	 * Debug/test from command-line
+	 * 
+	 * @param out
+	 */
+	private void reportTotalGain(PrintStream out) {
+		TreeWithLogisticParameters lrates = (TreeWithLogisticParameters)getRates();
+		IndexedTree tree = lrates.getTree();
+		int num_nodes = tree.getNumNodes();
+		
+		double log_sum = Double.NEGATIVE_INFINITY;
+		double log_sum_leaves = Double.NEGATIVE_INFINITY;
+		for (int node=0; node<num_nodes; node++) {
+			double logitq = this.getLogitSurvivalParameter(node, PARAMETER_DUPLICATION);
+			double log_r;
+			if (logitq == Double.NEGATIVE_INFINITY) {
+				log_r = this.getLogGainParameter(node);
+			} else {
+				double log_kappa = this.getLogGainParameter(node);
+				double loglog1_q = Logarithms.logitToLogLogComplement(logitq);
+				log_r = loglog1_q + log_kappa;
+				
+			}
+			log_sum = Logarithms.add(log_sum,  log_r);
+			if (node<tree.getNumLeaves()) {
+				log_sum_leaves = Logarithms.add(log_sum_leaves, log_r);
+			}
+		}
+		out.printf("# Sum of conserved gain intensities %.3f\tterminal %.3f (%.3f)\n", Math.exp(log_sum), Math.exp(log_sum_leaves), Math.exp(log_sum_leaves-log_sum));
+	}
+	
+	@Override
+	protected void reportLikelihood(PrintStream out, int min_copies, boolean want_distribution)
+	{
+		this.reportTotalGain(out);
+		super.reportLikelihood(out, min_copies, want_distribution);
+	}
 
 	public static void main(String[] args) throws Exception
 	{
