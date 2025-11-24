@@ -1,4 +1,4 @@
-Count 24.08-beta 
+Count 25 - beta
 ================
 
 The Count is a software package for the evolutionary analysis of phylogenetic profiles
@@ -15,8 +15,8 @@ packaged in a JAR file, and can be executed in Java versions
 Licensed under the Apache License, Version 2.0: 
 see http://www.apache.org/licenses/LICENSE-2.0.
 
-You can launch the Count GUI as `java -jar CountXXIV.jar`, but various functionalities 
-are also available from the command line as `java -cp CountXXIV.jar ...`. 
+You can launch the Count GUI as `java -jar CountXXV.jar`, but various functionalities 
+are also available from the command line as `java -cp CountXXV.jar ...`. See the command-line builder below.
 
 Using Count
 ===========
@@ -81,7 +81,7 @@ Trees
 -----
 Every session has a main phylogeny, and can include other rooted trees over the same leaf set. 
 You can either **load a tree** in Newick format, or **build a tree**, or modify one by hand, using the 
-**edit tree** function. (Tres can be built with a simple UPGMA procedure from profiles, 
+**edit tree** function. (Tres can be built with a simple UPGMA or Neighbr-Joining procedure from profiles, 
 or set to random or star topology.
  Edit operations include rerooting, edge-contraction, and subtree-prune-and-regraft.)
  
@@ -114,7 +114,7 @@ whether they have a minimum of 0 (if even the families without any members are k
 1 (if the table covers all genes from all genomes),
  or 2 members (if families correspond to alignments).
 Make sure you filter your table for observation bias on the membership count (sort by clicking on the `#mem` header to find such a cell): 
-families with at least 1 member, or families with at least 2 members if you work with rate models.
+families with at least 1 member, or families with at least 2 members, etc. if you work with rate models.
 
 You can also **simulate a table** using a rate model. The simulation keeps the true ancestral history, 
 which can then be compared to an ancestral reconstruction. 
