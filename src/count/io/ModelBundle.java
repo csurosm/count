@@ -24,6 +24,7 @@ import java.io.StringReader;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -743,6 +744,11 @@ public class ModelBundle implements CountXML
 		return H.bundle_list;
 	}
 	
+	@Override
+	public String toString() {
+		return root_identifier+"["+root.toString()+"]";
+	}
+	
 	/**
 	 * Writes a complete XML file for multiple bundles, 
 	 * with declaration and root element.
@@ -976,7 +982,8 @@ public class ModelBundle implements CountXML
             if (DEBUG_PARSING)
             { 
             	System.out.println("#**MB.H.start "+elementName+"\t"+current+"\tencl "+
-            			(current==null?null:enclosing_entry.get(current.getId())));
+            			(current==null?null:enclosing_entry.get(current.getId()))
+            			+"\tbundle "+current_bundle);
             }
         }		
 
@@ -1004,11 +1011,11 @@ public class ModelBundle implements CountXML
             	|| EMT_POSTERIORS.equals(elementName))
             {
             	Entry backtrack = enclosing_entry.get(current.entry_id);
-            	if (backtrack !=current.getParent() || DEBUG_PARSING) // parent references should reflect XML structure 
+            	if (DEBUG_PARSING || (backtrack !=current.getParent() && false)) // parent references should reflect XML structure 
             	{
             		System.out.println("#**MB.H.end "+elementName+"\t"+current
             				+"\tenclosing "+backtrack+"\tparent "+current.getParent()
-            				+"\t(parsing output from old Count?)");
+            				+(backtrack !=current.getParent()?"\t(parsing output from old Count?)":""));
             	}
 
             	current = backtrack;
@@ -1084,7 +1091,8 @@ public class ModelBundle implements CountXML
         		P.fixZeroEdges();
         		
         		E.tree_data.setData(P);
-//        		System.out.println("#**MB.H.fillC tree leaves "+Arrays.toString(P.getLeafNames()));
+//        		System.out.println("#**MB.H.fillC tree leaves "+Arrays.toString(P.getLeafNames())
+//        				+"\t// E "+E);
         		
         	} else if (E.isRatesEntry())
         	{
@@ -1101,8 +1109,11 @@ public class ModelBundle implements CountXML
         		if (table_type == null)
         		{
         			StringReader R = new StringReader(sb.toString());
-        			Phylogeny main_phylo = current_bundle.getMainTree().tree_data.getContent();
-//        			System.out.println("#**MB.H.fillC leaves "+Arrays.toString(main_phylo.getLeafNames()));
+        			// bug 2025/09/23: Phylogeny main_phylo = current_bundle.getMainTree().tree_data.getContent();
+        			
+        			Entry treeE = E.getRoot().getChild(0, c->c.isTreeEntry());
+        			Phylogeny main_phylo = treeE.tree_data.getContent();
+//        			System.out.println("#**MB.H.fillC leaves "+current_bundle.getMainTree().tree_data); //Arrays.toString(main_phylo.getLeafNames()));
         			AnnotatedTable table = TableParser.readTable(main_phylo.getLeafNames(), R, true);
         			E.table_data.setData(table);
         		} else
@@ -1155,7 +1166,7 @@ public class ModelBundle implements CountXML
 		    // output test: generate some random models
 
 	    	Phylogeny tree = tree_data.getContent();
-		    String session_name = DataFile.chopFileExtension(tree_data.getFile().getName());
+		    String session_name = DataFile.chopCommonFileExtension(tree_data.getFile().getName());
 		    {
 		    	int slash = session_name.lastIndexOf('/');
 		    	if (slash >= 0)

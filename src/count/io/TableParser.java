@@ -15,7 +15,8 @@ package count.io;
  * limitations under the License.
  */
 
-import static count.io.CommandLine.OPT_OUTPUT;
+
+import static count.io.CommandLine.OPT_MINCOPY;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -52,6 +53,18 @@ public class TableParser
 	}
 	
     public static String MISSING_ENTRY = "?";
+    
+    /**
+     * Exception class for parsing syntax violations.
+     */
+    public static class ParseException extends IOException
+    {
+        protected ParseException(int error_id, String s)
+        {
+          super("Table parsing error "+error_id+":"+s);
+        }
+    }
+    
 
     /*
      * Reads in an AnnotatedTable using a reader.
@@ -178,13 +191,22 @@ public class TableParser
         
         if (includes_properties)
         {
-            for (int j=0; j<property_names_in_input.size(); j++)
+            for (int j=0; j<property_names_in_input.size(); j++) {
                 table.registerProperty(property_names_in_input.get(j));
+//                // DEBUG
+//                System.out.println("#**TP.rT property "+j+"\t("+property_names_in_input.get(j)+")");
+            }
             int num_properties = property_names_in_input.size();
             int num_families = parsed_family_properties.size();
             for (int family_idx = 0; family_idx<num_families; family_idx++)
             {
                 List<String> V = parsed_family_properties.get(family_idx);
+                if (V.size() != num_properties) {
+                	throw new ParseException(33, "Wrong number of properties for family "+family_idx
+                				+"("+parsed_family_names.get(family_idx)
+                				+"); got "+V.size()+", need "+property_names_in_input.size()
+                				);
+                }
                 for (int j=0; j<num_properties; j++)
                     table.setFamilyProperty(family_idx, j+1, V.get(j)); // property 0 is family name that is already there
             }
@@ -1032,57 +1054,24 @@ public class TableParser
      */
     public static String getFormattedTable(AnnotatedTable table, boolean include_properties)
     {
+    	return getFormattedTable(table, include_properties, 0);
+    }
 
-//        StringBuilder sb = new StringBuilder();
-//        sb.append(AnnotatedTable.FAMILY_NAME_PROPERTY);
-//        if (include_properties)
-//        {
-//            for (int prop_idx=1; prop_idx<table.getKnownPropertiesCount(); prop_idx++)
-//            {
-//                sb.append('\t');
-//                sb.append(table.getPropertyName(prop_idx));
-//            }
-//        }
-//        String[] taxon_names = table.getTaxonNames();
-//        for (int j=0; j<taxon_names.length; j++)
-//        {
-//            sb.append("\t");
-//            sb.append(taxon_names[j]);
-//        }
-//        sb.append("\n");
-//        int num_properties = table.getKnownPropertiesCount();
-    	
+
+    public static String getFormattedTable(AnnotatedTable table, boolean include_properties, int min_copies)
+    {
     	StringBuilder sb = appendFormattedTableRow(null, -1, table, include_properties); // header
-    	for (int i=0; i<table.getFamilyCount(); i++)
+    	int nfam = 0;
+    	for (int f=0; f<table.getFamilyCount(); f++)
     	{
-    		
-    		sb = appendFormattedTableRow(sb.append("\n"), i, table, include_properties);
+    		if (min_copies <= table.getMemberCount(f))
+    		{
+    			sb = appendFormattedTableRow(sb.append("\n"), f, table, include_properties);
+    			++nfam;
+    		}
     	}
     	sb.append("\n");
-//    	
-//        for (int i=0; i<table.getFamilyCount(); i++)
-//        {
-//            sb.append(table.getFamilyName(i));
-//            if (include_properties)
-//            {
-//                for (int prop_idx=1; prop_idx<num_properties; prop_idx++)
-//                {
-//                    sb.append('\t');
-//                    sb.append(table.getFamilyProperty(i,prop_idx));
-//                }
-//            }
-//            final int[] profile = table.getFamilyProfile(i);
-//            
-//            for (int j=0; j<taxon_names.length; j++)
-//            {
-//                sb.append("\t");
-//                if (profile[j]<0)
-//                    sb.append(MISSING_ENTRY);
-//                else
-//                    sb.append(Integer.toString(profile[j]));
-//            }
-//            sb.append("\n");
-//        }
+    	sb.append("#NFAM\t").append(nfam).append("\tfamilies\n");
         return sb.toString();
     }
     
@@ -1165,34 +1154,17 @@ public class TableParser
         
     }
 	
-    /**
-     * Test code --- reads a phylogeny and a table, and then writes them to stdout.
-     */
-    private void testTableAndTree(String[] args) throws Exception
-    {
-        int arg_idx = 0;
-        if (2+arg_idx != args.length)
-        {
-            
-            throw new IllegalArgumentException("Call as java "+getClass().getName()+" tree table");
-        }
-        
-        String tree_file = args[arg_idx++];
-        String table_file = args[arg_idx++];
-        
-        Phylogeny tree = NewickParser.readTree(new java.io.FileReader(tree_file));
-        AnnotatedTable table = TableParser.readTable(tree.getLeafNames(), 
-        		GeneralizedFileReader.guessReaderForInput(table_file), true);
-        
-        PrintStream out = System.out;
-        
-        out.println(CommandLine.getStandardHeader(this.getClass()));
-        out.println(CommandLine.getStandardRuntimeInfo());
-        out.println(CommandLine.getStandardHeader("Tree file: "+tree_file));
-        out.println(CommandLine.getStandardHeader("Table file:"+table_file));
-        
-        out.println(getFormattedTable(table, true));
-     }
+//    /**
+//     * Test code --- reads a phylogeny and a table, and then writes them to stdout.
+//     */
+//    private void testTableAndTree(PrinStream out, Phylogeny tree, AnnotatedTable table) throws Exception
+//    {
+//        Phylogeny tree = NewickParser.readTree(new java.io.FileReader(tree_file));
+//        AnnotatedTable table = TableParser.readTable(tree.getLeafNames(), 
+//        		GeneralizedFileReader.guessReaderForInput(table_file), true);
+//        
+//        out.println(getFormattedTable(table, true));
+//     }
 
 //    /**
 //     * Test code --- reads a phylogeny and a table, and then writes them to stdout.
@@ -1208,10 +1180,10 @@ public class TableParser
 	public static void main(String[] args) throws Exception
 	{
 		Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
-		count.io.CommandLine cli = new count.io.CommandLine(args, our_class, 1);
+		count.io.CommandLine cli = new count.io.CommandLine(args, our_class, 2);
 		
 		PrintStream out = System.out;
-    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	String out_file = cli.getOptionValue(CommandLine.OPT_OUTPUT);
     	if (out_file!=null)
     	{
     		out = new PrintStream(out_file);
@@ -1220,6 +1192,36 @@ public class TableParser
     	}
 
         Phylogeny tree = cli.getTree();
+        AnnotatedTable table = cli.getTable();
+        
+        int nprop = table.getKnownPropertiesCount();
+        System.out.println("#**TP.main nprop "+nprop);
+        
+    	int min_copies = cli.getOptionInt(CommandLine.OPT_MINCOPY, 0);
+		out.println(CommandLine.getStandardHeader("Minimum observed copies: -"+CommandLine.OPT_MINCOPY+" "+min_copies));
+		
+
+		
+		int max_copy = cli.getOptionInt(CommandLine.OPT_MAXCOPY, 0);
+		if (0<max_copy)
+		{
+			out.println(CommandLine.getStandardHeader("Maximum copy number: -"+CommandLine.OPT_MAXCOPY+" "+max_copy));
+			final AnnotatedTable original = table;
+			table = table.filteredTable(f->original.maxCopies(f)<=max_copy);
+		}
+		
+		boolean uniq = cli.getOptionBoolean("unique", false);
+		if (uniq) {
+			out.println(CommandLine.getStandardHeader("Unique families: -unique "+uniq));
+			table = table.uniqueFamilies();
+		}
+		boolean keep_properties = uniq;
+		keep_properties = cli.getOptionBoolean(CommandLine.OPT_PROPERTIES, keep_properties);
+		out.println(CommandLine.getStandardHeader("Keep properties and unmatched leaf columns: -"+CommandLine.OPT_PROPERTIES+" "+keep_properties));		
+
+		
+		
+		out.print(getFormattedTable(table, keep_properties, min_copies));
     	
 		if (out != System.out)
 		{

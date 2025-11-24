@@ -130,6 +130,33 @@ public final class DataFile<DATA>
         return s;
     }
     
+    /**
+     * Cuts of common file extensions from the file name
+     * 
+     * @param filename
+     * @return
+     */
+    public static String chopCommonFileExtension(String filename) {
+    	String[] commonSuffixes = {"gz","txt","log","tre"};
+    	
+        if (filename==null) return null;
+        int last_dir = filename.lastIndexOf(File.separatorChar);
+        filename = filename.substring(last_dir+1); // ok if not found (-1+1=0)
+        int last_dot = filename.lastIndexOf('.');
+        while (last_dot != -1) {
+        	String ext=filename.substring(last_dot+1);
+        	boolean common = false;
+        	for (String suf: commonSuffixes) 
+        		if (common = suf.equals(ext)) break;
+        	if (common) {
+            	filename = filename.substring(0, last_dot);
+        		last_dot = filename.lastIndexOf('.');
+        	} else break;
+        }
+
+        return filename;    	
+    }
+    
     public static String chopFileExtension(String s)
     {
         if (s==null) return null;

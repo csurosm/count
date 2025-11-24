@@ -140,10 +140,13 @@ public class CommandLine
 	    }
 	    
 	    
-	    if (num_mandatory_arguments+arg_idx > args.length)
+	    if (num_mandatory_arguments+arg_idx > args.length) {
+	    	System.err.println("#**CLI() args "+args.length+"\tnmand "+num_mandatory_arguments+"\taidx "+arg_idx);
 	        throw new IllegalArgumentException("Call as java "+for_class.getCanonicalName()+" tree"
 	        			+(num_mandatory_arguments==1?"":" table"
 	        				+(num_mandatory_arguments<3?"":" rates")));
+	        
+	    }
 	
 
 	    setCommonOptions();
@@ -159,13 +162,13 @@ public class CommandLine
 	    String table_file=null;
 	    if (cli_options.containsKey(OPT_TABLE))
 	    	table_file = cli_options.getProperty(OPT_TABLE);
-	    else if (arg_idx<args.length)
+	    else if (arg_idx<args.length && 1!= num_mandatory_arguments)
 	    	table_file = args[arg_idx++];
 	    
 	    String rates_file=null;
 	    if (cli_options.containsKey(OPT_RATES))
 	    	rates_file = cli_options.getProperty(OPT_RATES);
-	    else if (arg_idx<args.length)
+	    else if (arg_idx<args.length && 1!=num_mandatory_arguments)
 	    	rates_file = args[arg_idx++];
 	    
 	    extra_arguments = new ArrayList<>();
@@ -176,7 +179,7 @@ public class CommandLine
 	    Phylogeny tree;
 	    if (tree_file != null && !NO_FILE.equals(tree_file))
 	    {
-	    	tree = count.io.NewickParser.readTree(new java.io.FileReader(tree_file));
+	    	tree = count.io.NewickParser.readTree(GeneralizedFileReader.guessReaderForInput(tree_file));
 	    	int num_nodes = tree.getNumNodes();
 	    	int num_fixed_edges = tree.fixZeroEdges();
         	if (num_fixed_edges>0)
@@ -199,7 +202,7 @@ public class CommandLine
 	    	
 	    	String[] taxon_names = (tree==null)?null:tree.getLeafNames();
 		    AnnotatedTable table = TableParser.readTable(taxon_names, 
-		    		GeneralizedFileReader.guessReaderForInput(table_file), false);
+		    		GeneralizedFileReader.guessReaderForInput(table_file), true);
 		    table_data = new DataFile<>(table, new File(table_file));
 	    } else
 	    {
@@ -215,7 +218,7 @@ public class CommandLine
 		    	//FreeMixedModel free_model = RateVariationParser.readFreeRates(B, tree, (GammaInvariant)input_model);
 			    model_data = new DataFile<>((GammaInvariant)input_model, new File(rates_file));
 			    //free_model_data = new DataFile<>(free_model, new File(rates_file));
-			    variation_data = new DataFile<>(RateVariationModel.convert((GammaInvariant)input_model),  new File(rates_file));
+			    variation_data = new DataFile<>(RateVariationModel.convert(RateVariationModel.LogisticShift.class,(GammaInvariant)input_model),  new File(rates_file));
 		    } else
 		    {
 		    	assert (input_model instanceof RateVariationModel);
@@ -231,7 +234,7 @@ public class CommandLine
 	    	variation_data = null;
 	    }
 	
-	    if (num_mandatory_arguments>0)
+	    if (0<num_mandatory_arguments)
 	    {
 		    PrintStream out = System.out;
 		    
@@ -247,9 +250,13 @@ public class CommandLine
 	    		out.println(getStandardHeader("Table file: "+table_file+
 	    				(table_data==null
 	    					?""
-	    					:"\t(hash "+table_data.getContent().tableHashCode()
+	    					:"\t(hash(by alphabetic taxon order) "+table_data.getContent().tableHashCode()
 	    						+"; nfam "+table_data.getContent().getFamilyCount()
-	    						+"; avg copies "+table_data.getContent().getMeanCopies(true)
+	    						+"; qavg copies "+table_data.getContent().getMeanCopies(true)
+	    						+", qavgmax copies "+table_data.getContent().getMeanMaxCopies(true)
+	    						+", qavgavgmax copies "+table_data.getContent().getMeanMeanMaxCopies(tree, true)
+	    						+", qavgsum copies "+table_data.getContent().getMeanSumCopies(tree, true)
+	    						+", aavgsum copies "+table_data.getContent().getMeanSumCopies(tree, false)
 	    						+")"
 	    				)));
 	    	}
@@ -397,18 +404,34 @@ public class CommandLine
 //	public static final String OPT_OUTPUT_SAVEALL = "saveall";
 	public static final String OPT_LOAD = "load";
 	public static final String OPT_SAVE = "save";
+	
+	
+	
 	public static final String OPT_SNAPSHOT = "snapshots";
 	
 	public static final String OPT_TRUNCATE = "truncate";
 	public static final String OPT_THREADS = "threads";
 	public static final String OPT_TASKS_UNIT = "unittask"; 
 	
+	
+	
+	public static final String OPT_PROPERTIES = "properties";
+	
+	
 	public static final String OPT_ROUNDS = "maxiter";
 	public static final String OPT_EPS = "convergence";
+	
+	public static final String OPT_PRETRAIN = "pretrain";
+	public static final String OPT_ALGORITHM = "algo";
 	
 	public static final String OPT_TOP = "top";
 	
 	public static final String OPT_MINCOPY = "mincopy";
+	public static final String OPT_MAXCOPY = "maxcopy";
+	
+	public static final String OPT_MINTAXA = "mintaxa";
+	public static final String OPT_MAXTAXA = "maxtaxa";
+	
 	
 	
 	public static final String OPT_RELABEL = "relabel";
@@ -439,7 +462,7 @@ public class CommandLine
     public static final String OPT_LOSS = "loss";
     
     
-	public final static String OPT_ROWCOUNT = "n";
+	public final static String OPT_N = "n";
 	
 	public final static String OPT_RND = "rnd";
 
@@ -457,11 +480,22 @@ public class CommandLine
 	public static final String OPT_MODEL_UNIFORM_DUPLICATION = "uniform_duplication";
 	public static final String OPT_MODEL_UNIFORM_GAIN = "uniform_gain";
 	
+	public static final String OPT_COMMON_GAIN = "opt.gainpar";
+	public static final String OPT_DUP_BOUNDED = "opt.dupbound";
+	public static final String OPT_GAIN_BOUNDED = "opt.gainbound";
+	
+	
+	public static final String OPT_SURVIVAL = "survival";
+	
 	public static final String OPT_STATISTICS = "stats";
 	public static final String OPT_ANCESTRAL = "ancestral";
 	public static final String OPT_HISTORY = "history";
 	
 	public static final String OPT_REINIT = "reinit";
+	
+	public static final String OPT_COMPARE = "compare";
+	
+	public static final String OPT_NODE = "node";
 	
 	
 //	public static final String PREFIX_ANCESTRAL = "#ANCESTRAL";
@@ -513,12 +547,18 @@ public class CommandLine
 	            params[i] = Double.parseDouble(fields[i+1]);
 	        if (Poisson.class.getSimpleName().equals(fields[0]))
 	        {
-	        	getOptionDistribution = new Poisson(params[0]);
+	        	double gain = 0<params.length?params[0]:TreeWithRates.DEFAULT_GAIN_RATE;
+	        	getOptionDistribution = new Poisson(gain);
 	        } else if (NegativeBinomial.class.getSimpleName().equals(fields[0]))
 	        {
-        		getOptionDistribution = new NegativeBinomial(params[0], params[1]);
+	        	double gain = 0<params.length?params[0]:TreeWithRates.DEFAULT_GAIN_RATE;
+	        	double dup  = 0<params.length?params[1]:TreeWithRates.DEFAULT_DUPLICATION_RATE;
+	        	
+        		getOptionDistribution = new NegativeBinomial(gain, dup);
 	        } else if (ShiftedGeometric.class.getSimpleName().equals(fields[0]))
 	        {
+	        	double p = 0<params.length?params[0]:TreeWithRates.DEFAULT_EDGE_LENGTH;
+	        	double q  = 0<params.length?params[1]:TreeWithRates.DEFAULT_DUPLICATION_RATE;
 	        	getOptionDistribution = new ShiftedGeometric(params[0], params[1]);
 	        } else
 	        	throw new java.lang.IllegalArgumentException("Prior distribution -"+opt+" '"+fields[0]+"' is unknown.");
@@ -569,7 +609,7 @@ public class CommandLine
 		Random RND = null;
 		if (getOptionValue(OPT_RND)!=null)
 		{
-			int rnd_seed = getOptionInt(OPT_RND, 0);
+			long rnd_seed = getOptionLong(OPT_RND, 0L);
 			RND = (rnd_seed==0?new Random():new Random(rnd_seed));
 			out.println(getStandardHeader("Random initialization: -"+OPT_RND+" "+rnd_seed));    			
 		}

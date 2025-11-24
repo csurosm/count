@@ -70,6 +70,10 @@ public interface CountXML
     public static final String ATT_RATES = EMT_RATES; 
     public static final String ATT_TREE = EMT_TREE;
     public static final String ATT_TABLE =  EMT_TABLE;
+    // history 
+    public static final String ATT_SELECTION = "selection";
+    public static final String ATT_CONTROLS = "controls";
+    
     // in numerical parsimony
     public static final String ATT_GAIN = CommandLine.OPT_GAIN;
     public static final String ATT_LOSS = CommandLine.OPT_LOSS;
@@ -78,7 +82,7 @@ public interface CountXML
     public static final String ATT_FIX_ROOT = "fixroot";
     // in simulation
     public static final String ATT_RND = CommandLine.OPT_RND;
-    public static final String ATT_ROWCOUNT = CommandLine.OPT_ROWCOUNT;
+    public static final String ATT_ROWCOUNT = CommandLine.OPT_N;
     
     public static final String ATT_MINCOPY = CommandLine.OPT_MINCOPY;
     

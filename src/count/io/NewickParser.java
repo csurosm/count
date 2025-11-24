@@ -16,18 +16,23 @@
 package count.io;
 
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import count.ds.IndexedTree;
 import count.ds.Phylogeny;
 import count.ds.TreeTraversal;
+import count.matek.PseudoRandom;
 
 import java.io.PrintStream;
 
@@ -352,7 +357,7 @@ public class NewickParser
         for (int i=0; !need_quote && i<cname.length; i++)
         {
             char c = cname[i];
-            need_quote = NEED_QUOTE_FOR.indexOf(c)!=-1 || Character.isWhitespace(c);
+            need_quote = NEED_QUOTE_FOR.indexOf(c)!=-1 || Character.isWhitespace(c) || c=='_';
         }
         if (need_quote)
         {
@@ -907,22 +912,50 @@ public class NewickParser
         }
     }
     
+    /**
+     * Various tree manipulation and reporting from command-lne
+     * @param args
+     * @throws Exception
+     */
     private void mainmain(String[] args) throws Exception
     {
-    	
     	CommandLine cli = new CommandLine(args, getClass(), 0);
         Phylogeny tree = cli.getTree();
         PrintStream out = System.out;
         
         out.println(CommandLine.getStandardHeader(this.getClass()));
         out.println(CommandLine.getStandardRuntimeInfo(this.getClass(), args));
+
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	    out.println(CommandLine.getStandardHeader(getClass()));
+    	    out.println(CommandLine.getStandardRuntimeInfo(getClass(), args));
+    	}
         
         boolean line_breaks = false;
+		boolean list_only = cli.getOptionBoolean(CommandLine.OPT_LIST, false);
+		
+		int num_leaves = tree.getNumLeaves();
+		int num_leaves_wanted = cli.getOptionInt(CommandLine.OPT_N, num_leaves);
+		if (num_leaves_wanted < num_leaves)
+		{
+			Random rnd = cli.getOptionRND(out);
+			PseudoRandom prnd = new PseudoRandom(rnd);
+			int[] all_leaves = prnd.nextPermutation(num_leaves);
+			String[] leaves_kept = new String[num_leaves_wanted];
+			for (int leaf=0; leaf<num_leaves_wanted; leaf++)
+				leaves_kept[leaf]=tree.getName(all_leaves[leaf]);
+			tree.filterLeaves(leaves_kept);
+		}
         
 		int subtree_root = cli.getOptionInt(CommandLine.OPT_SUBTREE, -1);
 		if (0<= subtree_root)
 		{
-			int[] subtree_nodes = TreeTraversal.getSubtreeNodes(tree, subtree_root);			
+			out.println(CommandLine.getStandardHeader("Subtree\t-"+CommandLine.OPT_SUBTREE+" "+subtree_root+"\t"+tree.getIdent(subtree_root)));
+			int[] subtree_nodes = TreeTraversal.getSubtreeNodes(tree, subtree_root);
+			
     		List<String> leaves_kept = new ArrayList<>();
 			for (int j=0; j<subtree_nodes.length; j++)
 			{
@@ -952,11 +985,9 @@ public class NewickParser
     			}
     		} while (line != null);
     		R.close();
-    		
-    		
-    		
     		tree.filterLeaves(leaves_kept.toArray(new String[0])); 
     	}
+		
     	String relabel_file = cli.getOptionValue(CommandLine.OPT_RELABEL);
     	if (relabel_file != null)
     	{
@@ -997,19 +1028,36 @@ public class NewickParser
 //    		}
     	} // relabel
     	
-    	boolean want_nodeid = filter_file==null && relabel_file==null;
-    	if (filter_file==null && relabel_file==null)
-        {
-            for (Phylogeny.Node node: tree.getNodes())
-            {
-            	String name = node.isLeaf()?node.getName():node.getNodeIdentifier();
-            	String type = node.isLeaf()?"LEAF":"NODE";
-                out.println("#"+type+"\t"+name+"\t"+node.getIndex()+"\t"+node.toString());
-            }
-        	line_breaks = true;
-        }
-        out.println(printTree(tree, false, true, line_breaks, want_nodeid));
     	
+    	String root = cli.getOptionValue(CommandLine.OPT_ROOT);
+    	if (root != null) {
+    		tree.getRootNode().setName(root);
+    	}
+		
+    	boolean want_reversed = cli.getOptionBoolean("reverse",false);
+    	if (want_reversed) tree.reverseLeafOrder();
+    	
+
+    	if (list_only)
+    	{
+    		num_leaves = tree.getNumLeaves();
+    		for (int leaf=0; leaf<num_leaves; leaf++)
+    			out.println(tree.getName(leaf));
+    	} else
+    	{
+	    	boolean want_nodeid = filter_file==null && relabel_file==null;
+	    	if (num_leaves == tree.getNumLeaves() && relabel_file==null) // did not change 
+	        {
+	            for (Phylogeny.Node node: tree.getNodes())
+	            {
+	            	String name = node.isLeaf()?node.getName():node.getNodeIdentifier();
+	            	String type = node.isLeaf()?"LEAF":"NODE";
+	                out.println("#"+type+"\t"+name+"\t"+node.getIndex()+"\t"+node.toString());
+	            }
+	        	line_breaks = true;
+	        }
+	        out.println(printTree(tree, false, true, line_breaks, want_nodeid));
+    	}
     }
     
     /**

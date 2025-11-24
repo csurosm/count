@@ -36,6 +36,7 @@ import count.model.GLDParameters;
 import count.model.GammaInvariant;
 import count.model.MixedRateModel;
 import count.model.RateVariationModel;
+import count.model.TreeWithLogisticParameters;
 import count.model.TreeWithRates;
 //import count.model.TreeWithLogisticParameters;
 //import count.model.junkyard.FreeMixedModel;
@@ -827,6 +828,34 @@ public class RateVariationParser
         }
     }
     
+    private void printStats(PrintStream out, MixedRateModel zeb) {
+    	TreeWithRates rates = zeb.getBaseModel();
+    	TreeWithLogisticParameters lrates;
+    	if (rates instanceof TreeWithLogisticParameters) lrates = (TreeWithLogisticParameters) rates;
+    	else lrates = new TreeWithLogisticParameters(rates);
+    	IndexedTree tree = rates.getTree();
+    	int num_nodes = tree.getNumNodes();
+    	double sum_len = 0.0;
+    	double sum_gain = 0.0;
+    	for (int node=0; node<num_nodes; node++) {
+    		double len = lrates.getEdgeLength(node);
+    		double log_gain = lrates.getLogGainParameter(node, GLDParameters.PARAMETER_LOSS);
+    		double gain;
+    		if (tree.isRoot(node)) {
+    			gain = Math.exp(log_gain);
+    			sum_gain += gain;
+    		} else {
+    			sum_len += len;
+    			gain=Math.exp(log_gain+Math.log(len));
+    			sum_gain += gain;
+    		}
+    		//out.printf("#**RVP.pStats %d\tsumg %.4f\t\tavg/node %.4f\tgain %.4f/%.4f\tsumlen %.1f\tavg/len %.4f\t// %s\n", node, sum_gain,sum_gain/(1.0+node),gain,Math.exp(log_gain), sum_len,sum_gain/sum_len,tree.toString(node));
+     	}
+    	out.println("# Total edge length: "+sum_len);
+    	out.println("# Total gain rate:   "+sum_gain+"\tavg "+sum_gain/sum_len);
+    	
+    }
+    
     private void mainmain(String[] args) throws Exception
     {
 		Class<?> us = this.getClass();
@@ -884,8 +913,8 @@ public class RateVariationParser
     			}
     		}
     		
-    	}
-        
+    	} 
+        printStats(out, zeb);
         out.println(printRates(zeb));
         
     }
