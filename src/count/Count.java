@@ -1,7 +1,7 @@
 package count;
 
 /*
- * Copyright 2021-2023 Mikl&oacute;s Cs&#369;r&ouml;s.
+ * Copyright 2021-2025 Mikl&oacute;s Cs&#369;r&ouml;s.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,11 @@ import javax.swing.UIManager;
 
 import java.util.concurrent.ForkJoinPool;
 
+import count.ds.AnnotatedTable;
 import count.gui.AppFrame;
 import count.gui.Session;
 import count.io.CommandLine;
+import count.io.DataFile;
 
 
 /**
@@ -39,12 +41,12 @@ public class Count
 	/**
 	 * Official app name.
 	 */
-    public static final String APP_TITLE = "Count XXIV";
+    public static final String APP_TITLE = "Count XXV";
     /**
      * Version string starting with a float value (integer part=major version); 
      * set to the date during development.
      */
-    public static final String APP_VERSION = "24.0815::BundleTree.Node.addTree";
+    public static final String APP_VERSION = "25.1124 [beta]";
     
     /**
      * Name of the application.
@@ -69,7 +71,7 @@ public class Count
     /**
      * Numerical part of app version.
      * 
-     * @return
+     * @return major version.minor version 
      */
     public final static double getAppVersionNumber()
     {
@@ -121,22 +123,30 @@ public class Count
 	 * Empty interface to indicate that a class is multithreaded
 	 * 
 	 */
-	public static interface UsesThreadpool{}
+	public static interface UsesThreadpool{
+		public default ForkJoinPool commonThreadPool() {
+			return threadPool();
+		}
+	}
+	
+	private static ForkJoinPool commonPool=null;
 	
 	/**
 	 * Instantiates a new thread pool based on the 
-	 * current value of {@link #THREAD_PARALLELISM} 
+	 * current value of {@link #THREAD_PARALLELISM}. Different
+	 * multithreaded computations lanced from the GUI use 
+	 * this same thread pool (instead of setting up their own).  
 	 * @return null if {@link #THREAD_PARALLELISM} is not greater than 1
 	 */
-	public static ForkJoinPool threadPool()
+	public synchronized static ForkJoinPool threadPool()
 	{
-		ForkJoinPool pool = null;
-		if (1<THREAD_PARALLELISM)
+		
+		if (commonPool == null && 1<THREAD_PARALLELISM)
 		{
-			pool = new ForkJoinPool(THREAD_PARALLELISM);	
+			commonPool = new ForkJoinPool(THREAD_PARALLELISM);	
 //			System.out.println("#**C.threadPool init: "+THREAD_PARALLELISM+" threads for "+pool+"\ton thread "+Thread.currentThread());
 		}
-		return pool;
+		return commonPool;
 	}
 	
 	public static int unitTask(int task_count)
@@ -186,23 +196,39 @@ public class Count
         count.gui.UncaughtExceptionHandler handler = top_frame.getExceptionHandler();
         Thread.currentThread().setUncaughtExceptionHandler(handler);
         	
-        if (cli.getTree()==null) 
-        {
-	        top_frame.doAbout(true);
-        } else
-        {
-        	Session sesh = new Session(top_frame, cli.getTreeData());
-        	top_frame.addSession(sesh);
-        	if (cli.getTableData() != null)
-        	{
-        		sesh.addDataSet(cli.getTableData());
-        	}
-        	if (cli.getMixedRateModelData()!= null)
-        	{
-        		sesh.addRates(cli.getMixedRateModelData(), true);
-        	}
-        }
-        top_frame.setVisible(true);
+        
+	    if (cli.getOptionValue(CommandLine.OPT_LOAD)!=null)
+	    {
+	    	String session_file = cli.getOptionValue(CommandLine.OPT_LOAD);
+	    	top_frame.doLoadSessions(null, session_file);
+	    	top_frame.setVisible(true);
+	    } else {
+	        if (cli.getTree()==null) 
+	        {
+		        top_frame.doAbout(true);
+	        } else
+	        {
+	        	Session sesh = new Session(top_frame, cli.getTreeData());
+	        	top_frame.addSession(sesh);
+	        	if (cli.getTableData() != null)
+	        	{
+	        		DataFile<AnnotatedTable> table_data = cli.getTableData();
+	        		AnnotatedTable table = table_data.getContent();
+	        		if (1<table.getKnownPropertiesCount()) {
+	        			boolean keep_props = cli.getOptionBoolean(CommandLine.OPT_PROPERTIES,  false);
+	        			if (!keep_props) {
+	        				table.clearProperties();
+	        			}
+	        		}
+	        		sesh.addDataSet(table_data);
+	        	}
+	        	if (cli.getMixedRateModelData()!= null)
+	        	{
+	        		sesh.addRates(cli.getMixedRateModelData(), true);
+	        	}
+	        }
+	        top_frame.setVisible(true);
+	    }
     }
     
     
@@ -230,6 +256,7 @@ public class Count
                 System.setProperty("apple.laf.useScreenMenuBar", "true");
                 System.setProperty("com.apple.mrj.application.apple.menu.about.name", APP_TITLE);
                 System.setProperty("apple.awt.showGrowBox","true");
+                System.setProperty("com.apple.macos.use-file-dialog-packages", "true");
                 //System.setProperty("apple.awt.brushMetalLook","true");
                 
                 
