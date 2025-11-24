@@ -27,7 +27,8 @@ import java.util.Map;
 
 /**
  * Direct implementation of the UPGMA algorithm 
- * (unweighted pair-group method with arithmetic mean), from dissimilarity/distance.
+ * (unweighted pair-group method with arithmetic mean), and Neighbor-Joining 
+ * from dissimilarity/distance.
  * 
  */
 public class UPGMA 
@@ -36,6 +37,10 @@ public class UPGMA
 	 * Whether set edge lengths in clustering (true), or rather set all of them to 1.0 (false).
 	 */
 	private static final boolean SET_EDGE_LENGTHS = true;
+	/**
+	 * Debugging NJ algorithm
+	 */
+	private static final boolean PRINT_NJ_STEPS = false;
 	
 	private UPGMA(String[] leaf_names, double[][] distances)
 	{
@@ -67,7 +72,12 @@ public class UPGMA
 		/**
 		 * Complete linkage (max-distance/farthest neighbor)
 		 */
-		CompleteLinkage("Complete-linkage");
+		CompleteLinkage("Complete-linkage"),
+		/**
+		 * Neighbor-joining
+		 */
+		NJ("Neighbor-joining")
+		;
 		
 		private ClusteringPolicy(String name)
 		{
@@ -125,7 +135,6 @@ public class UPGMA
 		{
 			return Double.compare(this.distance, that.distance);
 		}
-		
 	}
 	
 	public static Phylogeny buildTree(ProfileTable table, ClusteringPolicy clustering)
@@ -148,9 +157,158 @@ public class UPGMA
 		return factory.buildTree(clustering);
 	}
 	
-
+//	private void transformToLogDistances(double max_dissim) {
+//		for (int u=0; u<leaf_distances.length; u++) {
+//			for (int v=0; v<leaf_distances[u].length; v++) {
+//				double d = leaf_distances[u][v];
+//				assert (0<=d);
+//				assert (d<=max_dissim);
+//				leaf_distances[u][v] = -Math.log(1.0-d/max_dissim);
+//			}
+//		}
+//	}
+	
+	private Phylogeny neighborJoining(boolean log_transform_dissimilarity) {
+//		if (log_transform_dissimilarity) {
+//			transformToLogDistances(1.0);
+//		}
+		List<Phylogeny> nodes = new ArrayList<>(); 
+		for (int leaf=0; leaf<leaf_names.length; leaf++)
+		{
+			Phylogeny leaf_only = new Phylogeny();
+			leaf_only.getRootNode().setName(leaf_names[leaf]);
+			nodes.add(leaf_only);
+		}		
+		Map<Phylogeny, Heap<Distance>> node_distances = new HashMap<>();
+		Map<Phylogeny, Double> sum_distances = new HashMap<>();
+		for (int our=0; our<nodes.size(); our++)
+		{
+			Phylogeny our_phylo = nodes.get(our);
+			Heap<Distance> pairs = new Heap<>();
+			double[] our_dist = leaf_distances[our];
+			double sum = 0.0;
+			for (int other=0; other<our_dist.length; other++)
+				if (our!=other)
+				{
+					Phylogeny other_phylo = nodes.get(other);
+					double d = our_dist[other];
+					if (log_transform_dissimilarity) {
+						assert (0.0<=d);
+						assert (d<=1.0);
+						d = -Math.log(1.0-d);
+					}
+					
+					Distance D = new Distance(our_phylo, other_phylo, d);
+					pairs.add(D);
+					sum += d;
+				}
+			node_distances.put(our_phylo, pairs);
+			sum_distances.put(our_phylo, sum);
+		}
+		
+		Phylogeny join_phylo = null;
+		while (2<node_distances.size()) {
+			int ntaxa = node_distances.size();
+			// 1.1 find closest pair
+			Distance mindist = null;
+			double minQ = Double.POSITIVE_INFINITY;
+			for (Heap<Distance> dist: node_distances.values())
+			{
+				for (Distance D: dist) {
+					Phylogeny v = D.our_phylo;
+					Phylogeny w = D.other_phylo;
+					double vwQ = (ntaxa-2.0)*D.distance-sum_distances.get(v)-sum_distances.get(w);
+					if (vwQ<minQ) { 
+						minQ = vwQ;
+						mindist = D;
+					}
+				}
+			}
+			// 2. join the pair members 
+			Phylogeny our_phylo = mindist.our_phylo;
+			Phylogeny.Node our_root = our_phylo.getRootNode();
+			int our_size = our_phylo.getNumLeaves();
+			Phylogeny other_phylo = mindist.other_phylo;
+			Phylogeny.Node other_root = other_phylo.getRootNode();
+			int other_size = other_phylo.getNumLeaves();
+			int join_size = our_size+other_size;
+			
+			join_phylo = new Phylogeny();
+			Phylogeny.Node join_root = join_phylo.getRootNode();
+			join_root.addChild(our_root);
+			join_root.addChild(other_root);
+			assert (join_phylo.getNumLeaves()==join_size);
+			nodes.add(join_phylo);
+			
+			if (PRINT_NJ_STEPS) {
+				System.out.println("#**UPGM.NJ\t"+ntaxa+"\tjoin\tminQ "+minQ+"\tv "+our_root+"\tw "+other_root+"\tu "+join_root);
+			}
+			// 3. update the distances 
+			// 3.1 set edge lengths
+			double sumdiff = 0.5*(sum_distances.get(our_phylo)-sum_distances.get(other_phylo))/(ntaxa-2.0);
+			double our_len = 0.5*mindist.distance+sumdiff;
+			double other_len = 0.5*mindist.distance-sumdiff;
+			
+			our_root.setLength(our_len);
+			other_root.setLength(other_len);
+			// 3.2 update 
+			Heap<Distance> our_dist = node_distances.remove(our_phylo);
+			Heap<Distance> other_dist = node_distances.remove(other_phylo);
+			Heap<Distance> join_dist = new Heap<>(); // to be filled in 
+			double join_sum = 0.0;
+			for (Phylogeny third: node_distances.keySet()) // without our and other
+			{
+				Heap<Distance> third_dist = node_distances.get(third);
+				Distance our_third = our_dist.get(new Distance(our_phylo,third));
+				Distance other_third = other_dist.get(new Distance(other_phylo,third));
+				assert (our_third != null);
+				assert (other_third != null);
+				
+				third_dist.remove(our_third);
+				third_dist.remove(other_third);
+				
+				double join_distance= 0.5*(our_third.distance+other_third.distance-mindist.distance);
+				Distance join_third = new Distance(join_phylo, third, join_distance);
+				join_dist.add(join_third);
+				third_dist.add(join_third); // member order is immaterial 
+				
+				double third_sum = sum_distances.get(third);
+				third_sum = third_sum+join_distance-our_third.distance-other_third.distance;
+				sum_distances.put(third, third_sum);
+				
+				join_sum += join_distance;
+			}			
+			node_distances.put(join_phylo, join_dist);
+			
+			sum_distances.remove(our_phylo);
+			sum_distances.remove(other_phylo);
+			sum_distances.put(join_phylo, join_sum);
+		}
+		
+		// 4. only two nodes remain
+		assert node_distances.get(join_phylo).size()==1;
+		Distance last_distance = node_distances.get(join_phylo).deleteLeast();
+		Phylogeny last_phylo = last_distance.other_phylo;
+		if (last_phylo==join_phylo)
+			last_phylo = last_distance.our_phylo;
+		Phylogeny.Node join_root = join_phylo.getRootNode();
+		Phylogeny.Node last_root = last_phylo.getRootNode();
+		last_root.setLength(last_distance.distance);
+		join_root.addChild(last_root);
+		join_phylo.computeIndexes();
+		return join_phylo;
+	}	
+	
+	/**
+	 * UPGMA tree building algorithm
+	 * @param clustering
+	 * @return
+	 */
 	private Phylogeny buildTree(ClusteringPolicy clustering)
 	{
+		if (ClusteringPolicy.NJ.equals(clustering))
+			return neighborJoining(true);
+		
 		Map<Phylogeny, Heap<Distance>> node_distances = new HashMap<>();
 		List<Phylogeny> nodes = new ArrayList<>(); 
 		
@@ -202,8 +360,8 @@ public class UPGMA
 			
 			join_phylo = new Phylogeny();
 			Phylogeny.Node join_root = join_phylo.getRootNode();
-			join_root.addChild(our_phylo.getRootNode());
-			join_root.addChild(other_phylo.getRootNode());
+			join_root.addChild(our_root);
+			join_root.addChild(other_root);
 			assert (join_phylo.getNumLeaves()==join_size);
 			nodes.add(join_phylo);
 			

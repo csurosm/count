@@ -15,9 +15,18 @@ package count.ds;
  * limitations under the License.
  */
 
+
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import count.io.CommandLine;
+import count.io.NewickParser;
+import count.io.GeneralizedFileReader;
 
 /**
  * Class implementing Day's linear-time 
@@ -298,32 +307,103 @@ public class TreeComparator
 	
 	public static void main(String[] args) throws Exception
 	{
-		String tree_file1 = args[0];
-		String tree_file2 = args[1];
-    	IndexedTree tree1 = count.io.NewickParser.readTree(new java.io.FileReader(tree_file1));
-		TreeComparator C = new TreeComparator(tree1);
-		for (IndexedTree tree2: count.io.NewickParser.readAllTrees(new java.io.FileReader(tree_file2)))
+		if (args.length==2)
 		{
-			System.out.println("#TREE "+count.io.NewickParser.printTree(tree2));
-//			IndexedTree tree2 = count.io.NewickParser.readTree(new java.io.FileReader(tree_file2));
-			TreeComparator.NodeMap M = C.map(tree2);
-			
-			int[] ref_mapping = M.fromReference();
-			int num_unmapped = 0;
-			for (int node=0; node<ref_mapping.length; node++)
+			String tree_file1 = args[0];
+			String tree_file2 = args[1];
+	    	IndexedTree tree1 = count.io.NewickParser.readTree(new java.io.FileReader(tree_file1));
+			TreeComparator C = new TreeComparator(tree1);
+			for (IndexedTree tree2: count.io.NewickParser.readAllTrees(new java.io.FileReader(tree_file2)))
 			{
-				if (ref_mapping[node]==-1)
+				System.out.println("#TREE "+count.io.NewickParser.printTree(tree2));
+	//			IndexedTree tree2 = count.io.NewickParser.readTree(new java.io.FileReader(tree_file2));
+				TreeComparator.NodeMap M = C.map(tree2);
+				
+				int[] ref_mapping = M.fromReference();
+				int num_unmapped = 0;
+				for (int node=0; node<ref_mapping.length; node++)
 				{
-					System.out.println("#MISSING\t"+node+"\t"+tree1.toString(node));
-					num_unmapped++;
+					if (ref_mapping[node]==-1)
+					{
+						System.out.println("#MISSING\t"+node+"\t"+tree1.toString(node));
+						num_unmapped++;
+					}
 				}
+				System.out.println("Mapping from reference:\tunmapped\t"+num_unmapped+"\t"+Arrays.toString(ref_mapping));
+				
+				int[] og_nodes = M.toReference();
+				int num_notref = 0;
+				for (int j:og_nodes) num_notref += (j==-1?1:0);
+				System.out.println("Mapping to reference: \tnotref\t"+num_notref+"\t"+Arrays.toString(og_nodes));
 			}
-			System.out.println("Mapping from reference:\tunmapped\t"+num_unmapped+"\t"+Arrays.toString(ref_mapping));
-			
-			int[] og_nodes = M.toReference();
-			int num_notref = 0;
-			for (int j:og_nodes) num_notref += (j==-1?1:0);
-			System.out.println("Mapping to reference: \tnotref\t"+num_notref+"\t"+Arrays.toString(og_nodes));
+		} else if (false)
+		{
+			// this is not the class for differently-sized trees 
+			Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
+
+			PrintStream out = System.out;
+    	    
+			out.println(CommandLine.getStandardHeader(our_class));
+    	    out.println(CommandLine.getStandardRuntimeInfo(our_class, args));
+    	    
+    	    Map<String,Phylogeny> input_trees = new HashMap<>();
+			for (int ti=0; ti<args.length; ti++)
+			{
+				String treefile = args[ti];
+				Phylogeny phylo = NewickParser.readTree(GeneralizedFileReader.guessReaderForInput(treefile));
+				input_trees.put(treefile,phylo);
+			}
+			List<String> tree_order = new ArrayList<>(input_trees.keySet());
+			Collections.sort(tree_order, new java.util.Comparator<>() {
+				@Override
+				public int compare(String o1, String o2) {
+					Phylogeny t1 = input_trees.get(o1);
+					Phylogeny t2 = input_trees.get(o2);
+					return Integer.compare(t2.getNumNodes(), t1.getNumNodes()); // descending
+				}
+			});
+//			// header
+//			out.println("# Node mapping from largest tree");
+//			for (int ti=0; ti<tree_order.size(); ti++)
+//			{
+//				String treefile = tree_order.get(ti);
+//				if (0<ti) out.print("\t");
+//				out.print(treefile);
+//			}
+//			out.println();
+//			
+//			final Phylogeny main_tree = input_trees.get(tree_order.get(0));
+//			TreeComparator TC = new TreeComparator(main_tree);
+//			List<int[]> node_maps = new ArrayList<>(); // in tree order
+//			for (int ti=0; ti<tree_order.size(); ti++)
+//			{
+//				Phylogeny tree = input_trees.get(tree_order.get(ti));
+//				NodeMap map = TC.map(tree);
+//				int[] toref = map.toReference();
+//				int[] fromref = map.fromReference();
+//				
+//				int[] invtoref = new int[main_tree.getNumNodes()];
+//				Arrays.fill(invtoref, -1);
+//				for (int node=0; node<tree.getNumNodes(); node++)
+//				{
+//					int rnode = toref[node];
+//					if (rnode!=-1)
+//						invtoref[rnode]=node;
+//				}
+//				
+//				node_maps.add(invtoref);
+//			}
+//			
+//			for(int u = 0; u<main_tree.getNumNodes(); u++)
+//			{
+//				for (int ti=0; ti<tree_order.size(); ti++)
+//				{
+//					int[] ref = node_maps.get(ti);
+//					if (0<ti) out.print("\t");
+//					out.print(ref[u]);
+//				}				
+//				out.println();
+//			}
 		}
 		
 		

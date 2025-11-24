@@ -18,6 +18,7 @@ package count.ds;
 
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 
 /**
@@ -136,11 +137,12 @@ public interface ProfileTable
 	
 	
 	/**
+	 * Mean copy number at the leaves.
 	 * 
-	 * @param geometric whether geometric or arithmetic mean across families
+	 * @param geometric whether quadratic or arithmetic mean across families
 	 * @return
 	 */
-	public default double getMeanCopies(boolean geometric)
+	public default double getMeanCopies(boolean quadratic)
 	{
 		double sum_avg=0.0;
 		double sum_avgsq = 0.0;
@@ -163,9 +165,128 @@ public interface ProfileTable
 		
 		//System.out.println("#**PT.gMC arimean "+avg_avg+"\tgeomean "+Math.sqrt(avg_avgsq));
 		
-		return geometric?Math.sqrt(avg_avgsq):avg_avg;
+		return quadratic?Math.sqrt(avg_avgsq):avg_avg;
 	}
 	
+	public default double getMeanMaxCopies(boolean quadratic)
+	{
+		double sum_max=0.0;
+		double sum_maxsq = 0.0;
+		
+		int nF = getFamilyCount();
+		for (int f=0; f<nF; f++)
+		{
+			int m = maxCopies(f);
+			sum_max += m;
+			sum_maxsq += m*m;
+		}
+		double avg_max = sum_max / nF;
+		double avg_maxsq = sum_maxsq / nF;
+		
+		return quadratic?Math.sqrt(avg_maxsq):avg_max;
+	}
+	
+	public default double getMeanMeanMaxCopies(IndexedTree tree, boolean quadratic)
+	{
+		if (tree==null) return Double.NaN;
+		int num_nodes = tree.getNumNodes();
+		int num_leaves = tree.getNumLeaves();
+		double[] node_avg_max = new double[num_nodes];
+		double[] node_avg_maxsq = new double[num_nodes];
+		int nF = getFamilyCount();
+		double[] pmax = new double[num_nodes]; // reused
+		for (int f=0; f<nF; f++)
+		{
+			Arrays.fill(pmax, 0);
+			int[] profile = getFamilyProfile(f);
+			int node = 0;
+			while (node<num_leaves)
+			{
+				double m = pmax[node] = profile[node];
+				node_avg_max[node]+=m/nF;
+				node_avg_maxsq[node]+=m*m/nF;
+				++node;
+			}
+			while (node<num_nodes)
+			{
+				double m = pmax[node] = 0.0;
+				for (int ci=0; ci<tree.getNumChildren(node); ci++)
+				{
+					int child = tree.getChild(node, ci);
+					double cmax = pmax[child];
+					m = Double.max(m, cmax);
+				}
+				pmax[node] = m;
+				node_avg_max[node]+=m/nF;
+				node_avg_maxsq[node]+=m*m/nF;
+				++node;
+			}
+		}		
+		// per node average  
+		double avg_max = 0.0;
+		double avg_maxsq = 0.0;
+		
+		for (int node=0; node<num_nodes; node++)
+		{
+			avg_max += node_avg_max[node]/num_nodes;
+			avg_maxsq += node_avg_maxsq[node]/num_nodes;
+		}
+		
+		return quadratic?Math.sqrt(avg_maxsq):avg_max;
+	}
+	
+	
+	public default double getMeanSumCopies(IndexedTree tree, boolean quadratic) {
+		if (tree==null) return Double.NaN;
+		int num_nodes = tree.getNumNodes();
+		int num_leaves = tree.getNumLeaves();
+		double[] node_avg_sum = new double[num_nodes];
+		double[] node_avg_sumsq = new double[num_nodes];
+		int nF = getFamilyCount();
+		double[] psum = new double[num_nodes]; // reused
+		for (int f=0; f<nF; f++)
+		{
+			Arrays.fill(psum, 0.0);
+			int[] profile = getFamilyProfile(f);
+			int node = 0;
+			while (node<num_leaves)
+			{
+				double m = psum[node] = Integer.max(0,profile[node]);
+				//if (plus1) m+= 1.0;
+				node_avg_sum[node]+=m/nF;
+				node_avg_sumsq[node]+=m*m/nF;
+				++node;
+			}
+			while (node<num_nodes)
+			{
+				double m = psum[node] = 0.0;
+				for (int ci=0; ci<tree.getNumChildren(node); ci++)
+				{
+					int child = tree.getChild(node, ci);
+					double csum = psum[child];
+					m = m+csum;
+				}
+				psum[node] = m;
+				//if (plus1) m+= 1.0;
+				node_avg_sum[node]+=m/nF;
+				node_avg_sumsq[node]+=m*m/nF;
+				++node;
+			}
+			
+		}
+		// per node average  
+		double avg_sum = 0.0;
+		double avg_sumsq = 0.0;
+		
+		for (int node=0; node<num_nodes; node++)
+		{
+			avg_sum += node_avg_sum[node]/num_nodes;
+			avg_sumsq += node_avg_sumsq[node]/num_nodes;
+		}
+		
+		return quadratic?Math.sqrt(avg_sumsq):avg_sum;
+		
+	}
 	
 	public default int minCopies()
 	{
@@ -241,16 +362,53 @@ public interface ProfileTable
 		
 	}
 	
+	/**
+	 * Hashcode computed over the families: with columns 
+	 * in lexicographic order of taxon names, so that 
+	 * different trees/orderings of the same taxa give the same hashcode.
+	 * 	  
+	 * @return an integer value 
+	 */
 	public default int tableHashCode()
 	{
+		String[] taxa = getTaxonNames();
+		Integer[] order = new Integer[taxa.length];
+		for (int i=0; i<order.length; i++) order[i]=i;
+		Arrays.sort(order, new Comparator<Integer>() {
+			@Override
+			public int compare(Integer o1, Integer o2) {
+				return taxa[o1].compareTo(taxa[o2]);
+			}
+		});
+		
 		int h = 0;
 		for (int fam=0; fam<getFamilyCount(); fam++)
 		{
 			int[] profile = getFamilyProfile(fam);
-			int hf = Arrays.hashCode(profile);
+			int hf = 0;
+			for (int i=0; i<order.length; i++)
+				hf = 31*hf + Integer.hashCode(profile[order[i]]);
+			// int hf = Arrays.hashCode(profile);
 			h = 17*h+hf;
 		}	
 		return h;
+	}
+	
+	public default String tableStatistics(IndexedTree tree) {
+		StringBuilder sb = new StringBuilder();
+		int nfam = this.getFamilyCount();
+		sb.append("nfam ").append(nfam);
+		int num_nodes = tree.getNumNodes();
+		sb.append(", ntaxa ").append(tree.getNumLeaves()).append("/").append(num_nodes);
+		sb.append("; qavg ").append(getMeanCopies(true));
+		double nqmean = getMeanSumCopies(tree, true);
+		double namean = getMeanSumCopies(tree,false);
+		double complexity = (nqmean*nqmean + namean)*nfam*num_nodes/1e6;
+		
+		sb.append(", qsumavg ").append(nqmean);
+		
+		sb.append("; time complexity ").append(complexity).append("M");
+		return sb.toString();
 	}
 	
 	

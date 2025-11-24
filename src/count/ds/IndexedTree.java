@@ -28,7 +28,7 @@ import java.util.Arrays;
  * leaves, and indices <var>m</var>, <var>m</var>+1,...,<var>n</var>-1 are ancestral nodes
  * with non-null children.  
  * Parent's index is always larger than the child's index; the root has index <var>n</var>-1.  
- * Children are ordered by the node's indexing {@link Node#getChild(int) }.
+ * 
  * 
  * 
  * @author Mikl&oacute;s Cs&#369;r&ouml;s
@@ -61,8 +61,6 @@ public interface IndexedTree
 
     /**
      * Index of parent node. 
-     * 
-     * Default implementation uses {@link Node#getParent() }.
      * 
      * @param node_idx node index; node may be root
      * @return parent's index; negative value for root
@@ -126,7 +124,7 @@ public interface IndexedTree
     }
 
     /**
-     * Number of children. Default implementation calls {@link Node#getNumChildren() }.
+     * Number of children. 
      * 
      * @param node_idx node index
      * @return number of children; 0 for leaf/external node
@@ -137,7 +135,7 @@ public interface IndexedTree
      * Index of a child node. 
      * 
      * @param node_idx node index;
-     * @param cidx order of the child node (0=left, 1=right for binary); 0..{@link Node#getNumChildren()}-1
+     * @param cidx order of the child node (0=left, 1=right for binary); 0..{@link getNumChildren(int)}-1
      * @return index of that child node; unspecified/exception for bad index 
      */
     public abstract int getChild(int node_idx, int cidx);
@@ -181,6 +179,41 @@ public interface IndexedTree
     }
     
     /**
+     * Depth of a node (path length from root).  
+     * 
+     * @param node
+     * @return
+     */
+    public default int getDepth(int node)
+    {
+    	int getDepth=0;
+    	while (!isRoot(node))
+    	{
+    		++getDepth;
+    		node = getParent(node);
+    	}
+    	return getDepth;
+    }
+    /**
+     * Path from root to a node (array of ancestors ordered by depth).    
+     * 
+     * @param node
+     * @return array with root at position 0 and the node in the last cell
+     */
+    public default int[] getPathTo(int node)
+    {
+    	int d = getDepth(node);
+    	int[] getPathTo = new int[d+1];
+    	while (0<=d)
+    	{
+    		getPathTo[d] = node;
+    		node = getParent(node);
+    		--d;
+    	}
+    	return getPathTo;
+    }
+    
+    /**
      * Array of leaf names (to be used for ordering the columns of the input table)
      * 
      * @return a non-null array of leaf names 
@@ -195,6 +228,37 @@ public interface IndexedTree
         }
         return leaf_names;
     }
+    
+    /**
+     * Most recent common ancestor of two nodes.
+     * 
+     * @param nodeA
+     * @param nodeB
+     * @return
+     */
+    public default int getLCA(int nodeA, int nodeB)
+    {
+    	if (nodeA<0 || nodeB<0) return -1;
+    	
+    	int[] pathA = getPathTo(nodeA);
+    	int[] pathB = getPathTo(nodeB);
+    	
+    	int d=0;
+    	int mrca = pathA[d];
+    	
+    	++d;
+    	while (d<pathA.length && d<pathB.length
+    			&& pathA[d]==pathB[d])
+    	{
+    		mrca = pathA[d];
+    		++d;
+    	}
+    	
+    	return mrca;
+    }
+    
+    
+    
     
     /**
      * Shortest positive-length edge in 

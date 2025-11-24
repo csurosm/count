@@ -15,8 +15,11 @@
  */
 package count.ds;
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
@@ -24,6 +27,10 @@ import java.util.HashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
+
+import count.io.CommandLine;
+import count.io.GeneralizedFileReader;
+import count.io.NewickParser;
 
 /**
  * Standard implementation for rooted tree with arbitrary 
@@ -51,6 +58,12 @@ public class Phylogeny implements IndexedTree
         this();
         copyFromTree(tree);
     }    
+    
+    
+    public Phylogeny(IndexedTree tree, int subtree_root) {
+    	this();
+    	copyFromTree(tree, subtree_root);
+    }
         
     private Node root;
     /**
@@ -383,6 +396,20 @@ public class Phylogeny implements IndexedTree
     	computeIndexes();
     }
     
+    
+    /**
+     * Reverses the order of leaves (changes node indexing). 
+     */
+    public void reverseLeafOrder() {
+    	getRootNode().reverseChildOrdering();
+    	this.computeIndexes();
+    }
+    
+    /**
+     * Removes the unselected leaves, and the resulting unary inner nodes.
+     * 
+     * @param leaves_kept
+     */
     public void filterLeaves(String[] leaves_kept)
     {
     	int nl = getNumLeaves();
@@ -502,6 +529,30 @@ public class Phylogeny implements IndexedTree
         p.addChild(pruned_node);
     }
     
+
+    private void copyFromTree(IndexedTree tree, final int subtree_root) {
+    	TreeTraversal traversal = new TreeTraversal(tree);
+    	int[] og_nodes = traversal.preOrder(subtree_root);
+    	Node[] our_nodes = new Node[tree.getNumNodes()];
+
+    	for (int node:og_nodes) {
+    		Node N;
+    		if (node==subtree_root) {
+    			N = root; // created at instantiation
+    		} else {
+    			N = new Node(tree.getNumChildren(node));
+    			int parent = tree.getParent(node);
+    			Node P = our_nodes[parent];
+    			P.addChild(N);
+    	        if (tree.hasLength())
+    	        	N.setLength(tree.getLength(node));
+    		}
+    		N.setName(tree.getName(node));
+			our_nodes[node] = N;
+    	}
+    	this.hasLength(tree.hasLength());
+    	computeIndexes(); // indexes are computed automatically but why wait 
+    }    
     
     private void copyFromTree(IndexedTree tree)
     {
@@ -1271,6 +1322,24 @@ public class Phylogeny implements IndexedTree
         }
         
         
+        private void reverseChildOrdering() {
+        	int nc = getNumChildren();
+        	for (int c=0; c<nc; c++) {
+        		Node child = getChild(c);
+        		child.reverseChildOrdering();
+        	}
+        	int i=0, j=nc-1; 
+        	while (i<j) {
+        		Node ci = children[i];
+        		Node cj = children[j];
+        		children[i]=cj;
+        		children[j]=ci;
+        		++i;
+        		--j;
+        	}
+        }
+        
+        
         /**
          * A short identifying string for this node: leaf or ancestral + index.  
          * 
@@ -1373,6 +1442,128 @@ public class Phylogeny implements IndexedTree
         
      }
     
+    private int[] mapLCA(Phylogeny that)
+    {
+    	Map<String,Integer> leaf_indices=new HashMap<>();
+    	for (int leaf=0; leaf<this.getNumLeaves(); leaf++)
+    	{
+    		leaf_indices.put(this.getName(leaf), leaf);
+    	}
+    	int[] mapLCA = new int[that.getNumNodes()];
+    	for (int that_node=0; that_node<mapLCA.length; that_node++)
+    	{
+    		if (that.isLeaf(that_node))
+    		{
+    			Integer this_leaf = leaf_indices.get(that.getName(that_node));
+    			if (this_leaf == null)
+    				throw new IllegalArgumentException("Phylogeny argument must contain leaves with names known here");
+    			else
+    				mapLCA[that_node] = this_leaf;
+    		} else
+    		{
+    			int this_node=-1;
+    			for (int ci=0; ci<that.getNumChildren(that_node); ci++)
+    			{
+    				int that_child = that.getChild(that_node, ci);
+    				int this_child = mapLCA[that_child];
+    				if (ci==0) this_node = this_child;
+    				else this_node = this.getLCA(this_node, this_child);
+    			}
+    			mapLCA[that_node] = this_node;
+    		}
+    	}
+    	return mapLCA;
+    }
     
+    /**
+     * Test code: outputs table of LCA mapping from a tree to downsampled phylogenies.
+     * 
+     * @param args list of tree files 
+     * @throws Exception
+     */
+	public static void main(String[] args) throws Exception
+	{
+		Class<?> our_class = java.lang.invoke.MethodHandles.lookup().lookupClass();
+	
+		CommandLine cli = new CommandLine(args, our_class, 1);
+
+        PrintStream out = System.out; 
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	}	    
+		out.println(CommandLine.getStandardHeader(our_class));
+	    out.println(CommandLine.getStandardRuntimeInfo(our_class, args));
+    
+	    Map<String,Phylogeny> input_trees = new HashMap<>();
+	    Phylogeny main_tree = cli.getTree();
+	    assert (main_tree != null);
+	    
+	    if (main_tree == null)
+	    	throw new IllegalArgumentException("Call with at least 1 tree");
+	    
+		for (int ti=0; ti<cli.getExtraArgumentCount(); ti++)
+		{
+			String treefile = cli.getExtraArgument(ti);
+			Phylogeny phylo = NewickParser.readTree(GeneralizedFileReader.guessReaderForInput(treefile));
+			input_trees.put(treefile,phylo);
+		}
+	    
+		List<String> tree_order = new ArrayList<>(input_trees.keySet());
+		Collections.sort(tree_order, new java.util.Comparator<>() {
+			@Override
+			public int compare(String o1, String o2) {
+				Phylogeny t1 = input_trees.get(o1);
+				Phylogeny t2 = input_trees.get(o2);
+				return Integer.compare(t2.getNumNodes(), t1.getNumNodes()); // descending
+			}
+		});
+		
+		String main_treefile = cli.getTreeData().getFile().toString();
+	    input_trees.put(main_treefile, main_tree);
+	    tree_order.add(0, main_treefile);
+	    
+	    
+		// header
+		out.println("# Node mapping from first tree");
+		for (int ti=0; ti<tree_order.size(); ti++)
+		{
+			String treefile = tree_order.get(ti);
+			if (0<ti) out.print("\t");
+			out.print(treefile);
+		}
+		out.println();
+//		
+//		final Phylogeny main_tree = input_trees.get(tree_order.get(0));
+//		TreeComparator TC = new TreeComparator(main_tree);
+		List<int[]> node_maps = new ArrayList<>(); // in tree order
+		for (int ti=0; ti<tree_order.size(); ti++)
+		{
+			Phylogeny tree = input_trees.get(tree_order.get(ti));
+			int[] toref = main_tree.mapLCA(tree);
+			int[] invtoref = new int[main_tree.getNumNodes()];
+			Arrays.fill(invtoref, -1);
+			for (int node=0; node<tree.getNumNodes(); node++)
+			{
+				int rnode = toref[node];
+				if (rnode!=-1)
+					invtoref[rnode]=node;
+			}
+			
+			node_maps.add(invtoref);
+		}
+		
+		for(int u = 0; u<main_tree.getNumNodes(); u++)
+		{
+			for (int ti=0; ti<tree_order.size(); ti++)
+			{
+				int[] ref = node_maps.get(ti);
+				if (0<ti) out.print("\t");
+				out.print(ref[u]);
+			}				
+			out.println();
+		}
+	}
     
 }

@@ -19,15 +19,18 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Predicate;
 
 //import org.json.JSONObject;
 
 import count.io.CommandLine;
+import count.io.GeneralizedFileReader;
 import count.io.TableParser;
 import count.matek.PseudoRandom;
 
@@ -339,6 +342,17 @@ public class AnnotatedTable implements ProfileTable
         checkMissingEntries();
     }    
     
+    /**
+     * Removes the family annotations, only keeping family name property.
+     */
+    public void clearProperties() {
+    	property_names  = Arrays.copyOf(property_names, 1);
+    }
+    
+    /**
+     * Maps this table to a given tree, so that column taxa in the table are ordered as the leaf taxa in the tree 
+     * @param tree
+     */
     public void mapTo(IndexedTree tree)
     {
     	int[] column_order = new int[getTaxonCount()];
@@ -672,6 +686,57 @@ public class AnnotatedTable implements ProfileTable
    	return new FilteredTable();
    }
    
+   public AnnotatedTable uniqueFamilies() {
+	   UniqueProfileTable utable = new UniqueProfileTable(this);
+	   String prop_mul = "Multiplicity";
+	   String prop_mem = "Fams";
+	   
+	   AnnotatedTable uniqueFamilies = new AnnotatedTable(this.getTaxonNames());
+	   
+	   int unF = utable.getFamilyCount();
+	   int[][] profiles = new int[unF][];
+
+	   String[] fmems = new String[unF];
+	   String[] fnames = new String[unF];
+	   int[] fcount = new int[unF];
+	   
+	   for (int f=0; f<this.getFamilyCount(); f++) {
+		   int uf = utable.getUniqIndex(f);
+		   if (fcount[uf]==0) {
+			   fnames[uf] = fmems[uf] = this.getFamilyName(f);
+		   } else {
+			   fmems[uf] = fmems[uf]+","+this.getFamilyName(f);
+		   }
+		   fcount[uf]++;
+	   }
+	   
+	   for (int uf=0; uf<unF; uf++) {
+		   profiles[uf] = utable.getFamilyProfile(uf);
+		   int mul = utable.getMultiplicity(uf);
+		   assert (mul == fcount[uf]);
+		   
+		   if (1<mul) {
+			   if (2<mul)
+				   fnames[uf] = fnames[uf]+"+"+(mul-1);
+			   else 
+				   fnames[uf] = fmems[uf];
+		   } 
+	   }
+	   
+	   uniqueFamilies.setTable(profiles, fnames);
+	   
+	   uniqueFamilies.registerProperty(prop_mul);
+	   uniqueFamilies.registerProperty(prop_mem);
+	   
+	   for (int uf=0; uf<unF; uf++) {
+		   uniqueFamilies.setFamilyProperty(uf, prop_mul, Integer.toString(utable.getMultiplicity(uf)));
+		   uniqueFamilies.setFamilyProperty(uf, prop_mem, fmems[uf]);
+	   }	   
+	   
+	   return uniqueFamilies;
+   }
+   
+   
    public AnnotatedTable mappedToTree(IndexedTree tree)
    {
 	   String[] table_taxon_names = getTaxonNames();
@@ -844,6 +909,16 @@ public class AnnotatedTable implements ProfileTable
 	   return new BinaryTable();
    }
    
+//   public AnnotatedTable subtract(AnnotatedTable table)
+//   {
+//	  final Set<String> table_families = new HashSet<>(); 
+//	  for (String f: table.family_names)
+//	  {
+//		  table_families.add(f);
+//	  }
+//	  return filteredTable(f->!table_families.contains(this.getFamilyName(f)));
+//	  
+//   }
 
    public AnnotatedTable bootstrap(Random RND)
    {
@@ -856,7 +931,6 @@ public class AnnotatedTable implements ProfileTable
 	   }
 	   return filteredTable(bootstrap_rows);
    }
-   
    
    public AnnotatedTable downsampledTable(double p_select_single, Random RND)
    {
@@ -944,6 +1018,12 @@ public class AnnotatedTable implements ProfileTable
 //	    	int seed = cli.getOptionInt(OPT_RND, 0);
 	    	RND = cli.getOptionRND(out);
 	    }
+	    int mincopy = table.minCopies();
+	    int minopt = cli.getOptionInt(CommandLine.OPT_MINCOPY, mincopy);
+	    
+	    
+	    
+	    
 	    if (cli.getOptionValue(opt_downsample)!=null)
 	    {
 	    	if (RND == null)
@@ -957,43 +1037,173 @@ public class AnnotatedTable implements ProfileTable
 //	    			seed==0?new Random():new Random(seed);
 		    table = table.bootstrap(RND);
 		    
-	    	AnnotatedTable[] batches = table.randomBatches(new PseudoRandom(RND), 256);
-	    	for (int bi=0; bi<batches.length; bi++)
-	    	{
-	    		System.out.println("#**AT.main batch "+bi+"\tsize "+batches[bi].getFamilyCount());
-	    	}
+//	    	AnnotatedTable[] batches = table.randomBatches(new PseudoRandom(RND), 256);
+//	    	for (int bi=0; bi<batches.length; bi++)
+//	    	{
+//	    		System.out.println("#**AT.main batch "+bi+"\tsize "+batches[bi].getFamilyCount());
+//	    	}
 		    
+	    } 
+	    
+	    if (mincopy != minopt) {
+	    	final AnnotatedTable ftable=table;
+	    	table = ftable.filteredTable(f -> minopt <= ftable.getMemberCount(f));
 	    }
 	    
-	    out.println(TableParser.getFormattedTable(table, true));
+		boolean keep_properties = cli.getOptionBoolean(CommandLine.OPT_PROPERTIES, false);
+		out.println(CommandLine.getStandardHeader("Keep properties and unmatched leaf columns: -"+CommandLine.OPT_PROPERTIES+" "+keep_properties));		
 	    
-	    int[] profile_distribution = new int[phylo.getNumLeaves()+1];
-	    for (int f=0; f<table.getFamilyCount(); f++)
-	    {
-	    	int num_lineages = table.getLineageCount(f);
-	    	profile_distribution[num_lineages]++;
-	    }
-		out.println("#DISTRIBUTION\tsize\tn");
-	    for (int size=0; size<profile_distribution.length; size++)
-	    {
-	    	out.println("#DISTRIBUTION\t"+size+"\t"+profile_distribution[size]);
-	    }
 	    
-	    Arrays.fill(profile_distribution, 0);
-	    for (int f=0; f<table.getFamilyCount(); f++)
-	    {
-	    	int[] copies = table.getFamilyProfile(f);
+		
+		if (cli.getOptionValue(CommandLine.OPT_COMPARE)!=null) {
+			String otherfile = cli.getOptionValue(CommandLine.OPT_COMPARE);
+			out.println(CommandLine.getStandardHeader("Compare to other table: -"+CommandLine.OPT_COMPARE+" "+otherfile));	
+			String[] leaves = phylo.getLeafNames();
+			AnnotatedTable other = TableParser.readTable(leaves, GeneralizedFileReader.guessReaderForInput(otherfile), false);
+			int nF = table.getFamilyCount();
+			int mF = other.getFamilyCount();
+			if (mF != nF) 
+				out.println("#** Expected "+nF+" families; got "+mF);
+			// matching by family names 
+			Map<String, int[]> tp = new HashMap<>();
+			Map<String, int[]> op = new HashMap<>();
+			List<String> families = new ArrayList<>();
+			
+			
+			for (int f=0; f<nF; f++) {
+				String fname = table.getFamilyName(f);
+				int[] profile = table.getFamilyProfile(f);
+				tp.put(fname, profile);
+				families.add(fname);
+			}
+			for (int f=0; f<mF; f++) {
+				String fname = other.getFamilyName(f);
+				int[] profile = other.getFamilyProfile(f);
+				op.put(fname, profile);
+			}
+
+			int[] diff = new int[leaves.length];
+			int ndiff = 0;
+			int ncommon = 0;
+			
+			for (String fname : families) {
+				if (op.containsKey(fname)) {
+					++ncommon;
+					int[] a = tp.get(fname);
+					int[] b = op.get(fname);
+					
+					if (!Arrays.equals(a, b)) {
+						++ndiff;
+						for (int w=0; w<leaves.length; w++) {
+							if (a[w] != b[w]) {
+								String lname = phylo.toString(w);
+								out.printf("#DIFF\t%s\t%d\t%d\t%d\t%s\n"
+										, fname, w, a[w], b[w], lname);
+								diff[w] += b[w]-a[w];
+							}
+						}
+					}
+				} else {
+					out.println("#MISSING family "+fname+" in "+otherfile);
+				}
+			}
+			for (String fname: op.keySet()) {
+				if (!tp.containsKey(fname)) {
+					out.println("#EXTRA family "+fname+" in "+otherfile);
+				}
+			}
+			int tmiss = nF-ncommon;
+			int omiss = mF-ncommon;
+			
+			out.println("#RESULT\tacross "+ncommon+" families, difference in "+ndiff+" families; missing "+tmiss+", extra "+omiss);
+			for (int w=0; w<leaves.length; w++) {
+				String lname = phylo.toString(w);
+				out.printf("#RESULT\t%d\t%d\t%s\n"
+						, w, diff[w], lname);
+			}
+		} else {
+			boolean list_only = cli.getOptionBoolean(CommandLine.OPT_LIST, false);
+			if (list_only) {
+				out.println(CommandLine.getStandardHeader("List only family names: -"+CommandLine.OPT_LIST+" "+list_only));	
+				
+			} else {
+			    out.println(TableParser.getFormattedTable(table, keep_properties));
+			}
+			int nF = table.getFamilyCount();
+			for (int f=0;f<nF; f++) {
+				out.printf("#NAME\t%d\t%s\n", f, table.getFamilyName(f));
+			}
+
+//		    int min_leaf, max_leaf, selected_node;
+//		    
+//		    
+//		    if (cli.getOptionValue(CommandLine.OPT_NODE)==null) {
+//		    	selected_node = phylo.getRoot();
+//		    	
+//		    	
+//		    	
+//		    	pdist_atnode = new int[1][];
+//		    	selected_nodes = new int[pdist_atnode.length];
+//		    	selected_leaves = new int[pdist_atnode.length][];
+//		    } else {
+//		    	String node_list = cli.getOptionValue(CommandLine.OPT_NODE);
+//		    	String[] node_indices = node_list.split(",");
+//		    	pdist_atnode = new int[1+node_indices.length][];
+//		    	selected_nodes = new int[pdist_atnode.length];
+//		    	for (int j=0; j<node_indices.length; j++) {
+//		    		int node 
+//		    		= selected_nodes[1+j] = Integer.parseInt(node_indices[j]);
+//		    		int min_leaf = 	leaf_ranges[node][0];
+//		    		int max_leaf = 	leaf_ranges[node][1];
+//		    		pdist_atnode[1+j] = new int[max_leaf-min_leaf+2];
+//		    	}
+//		    }
+//	    	selected_nodes[0] = phylo.getRoot();
+//	    	pdist_atnode[0] = new int[phylo.getNumLeaves()+1];
+		    
+		    int[] profile_distribution = new int[phylo.getNumLeaves()+1];
+		    for (int f=0; f<table.getFamilyCount(); f++)
+		    {
+		    	int num_lineages = table.getLineageCount(f);
+		    	profile_distribution[num_lineages]++;
+		    	
+		    	int[] profile = table.getFamilyProfile(f);
+		    	
+//		    	for (int j=1; j<selected_nodes.length; j++) {
+//		    		int node = selected_nodes[j];
+//		    		int min_leaf = 	leaf_ranges[node][0];
+//		    		int max_leaf = 	leaf_ranges[node][1];
+//		    		
+//		    		int n=0;
+//		    		for (int leaf=min_leaf; leaf<=max_leaf; leaf++)
+//		    			if (1<=profile[leaf])
+//		    	}
+		    	
+		    	
+		    }
+			out.println("#DISTRIBUTION\tnlineages\tn");
+		    for (int size=0; size<profile_distribution.length; size++)
+		    {
+		    	out.println("#DISTRIBUTION\t"+size+"\t"+profile_distribution[size]);
+		    }
+		    
+		    Arrays.fill(profile_distribution, 0);
+		    for (int f=0; f<table.getFamilyCount(); f++)
+		    {
+		    	int[] copies = table.getFamilyProfile(f);
+		    	for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+		    	{
+		    		int c = copies[leaf];
+		    		if (c>0) profile_distribution[leaf]++;
+		    	}
+		    }
+			out.println("#FAMILIES\tleaf\tn");
 	    	for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
 	    	{
-	    		int c = copies[leaf];
-	    		if (c>0) profile_distribution[leaf]++;
+	    		out.println("#FAMILIES\t"+leaf+"\t"+profile_distribution[leaf]+"\t"+phylo.getIdent(leaf));
 	    	}
-	    }
-		out.println("#FAMILIES\tleaf\tn");
-    	for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
-    	{
-    		out.println("#FAMILIES\t"+leaf+"\t"+profile_distribution[leaf]+"\t"+phylo.getIdent(leaf));
-    	}
+    	
+		}
     	
     	
    }

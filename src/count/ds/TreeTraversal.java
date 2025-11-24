@@ -15,9 +15,15 @@ package count.ds;
  * limitations under the License.
  */
 
+import static count.io.CommandLine.OPT_OUTPUT;
+
+import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntConsumer;
+
+import count.io.CommandLine;
 
 /**
 *
@@ -55,6 +61,10 @@ public class TreeTraversal
 		return (new TreeTraversal(tree)).preOrder();
 	}
 	
+	public static int[] postOrder(IndexedTree tree, int subtree_root) {
+		return (new TreeTraversal(tree)).postOrder(subtree_root);
+	}
+	
 	public int[] postOrder()
 	{
 		int[] postOrder = new int[tree.getNumNodes()];
@@ -67,6 +77,13 @@ public class TreeTraversal
 		return postOrder;
 	}
 	
+	public int[] postOrder(int subtree_root) {
+		int[] postOrder = new int[tree.getNumNodes()];
+		int n = visit(subtree_root, 0, null, postOrder);
+		postOrder = Arrays.copyOf(postOrder, n);
+		return postOrder;
+	}
+	
 	public int[] preOrder()
 	{
 		int[] preOrder = new int[tree.getNumNodes()];
@@ -76,6 +93,19 @@ public class TreeTraversal
 			int n = visit(root, 0, preOrder, null);
 			assert (n==preOrder.length); // everybody was visited
 		}
+		return preOrder;
+	}
+	
+	/**
+	 * Preorder traversal starting at a given node 
+	 *  
+	 * @param node
+	 * @return
+	 */
+	public int[] preOrder(int subtree_root) {
+		int[] preOrder = new int[tree.getNumNodes()];
+		int n =  visit(subtree_root, 0, preOrder, null);
+		preOrder = Arrays.copyOf(preOrder, n);
 		return preOrder;
 	}
 	
@@ -169,6 +199,37 @@ public class TreeTraversal
 		return get;
 	}
 	
+	/**
+	 * Min and max leaf per node
+	 * 
+	 * @param tree
+	 * @return
+	 */
+	public static int[][] getLeafRanges(IndexedTree tree)
+	{
+		final int[][] getLeafRanges = new int[tree.getNumNodes()][];
+		for (int node=0; node<tree.getNumNodes(); node++)
+		{
+			int[] minmax = new int[2];
+			if (tree.isLeaf(node))
+			{
+				minmax[0]=minmax[1] = node;
+			} else
+			{
+				for (int ci=0; ci<tree.getNumChildren(node); ci++)
+				{
+					int child = tree.getChild(node, ci);
+					int[] cminmax = getLeafRanges[child];
+					if (ci==0 || cminmax[0]<minmax[0]) minmax[0]=cminmax[0];
+					if (ci==0 || minmax[1]<cminmax[1]) minmax[1]=cminmax[1];
+				}
+			}
+			getLeafRanges[node] = minmax;
+		}
+		return getLeafRanges;
+	}
+	
+	
 	
 	/**
 	 * Tree traversal by recursion 
@@ -196,9 +257,11 @@ public class TreeTraversal
 	
 	private int visit(int node, int visit_pos, int[] preOrder, int[] postOrder)
 	{
+		assert (preOrder==null || postOrder==null);
+		
 		if (preOrder!=null)
 		{
-			preOrder[visit_pos] = node;
+			preOrder[visit_pos++] = node;
 		}
 		int num_children = tree.getNumChildren(node); 
 		for (int ci=0; ci<num_children; ci++)
@@ -208,9 +271,9 @@ public class TreeTraversal
 		}
 		if (postOrder != null)
 		{
-			postOrder[visit_pos] = node;
+			postOrder[visit_pos++] = node;
 		}
-		return visit_pos+1;
+		return visit_pos;
 	}
 	
 	/**
@@ -433,6 +496,55 @@ public class TreeTraversal
     	}
     	return depth;
     	
+    }
+    
+    private void printSubtreeStats(PrintStream out) {
+		int[] heights = getHeights(tree);
+		int[] sizes = getSubtreeSizes(tree);
+    	
+		String prefix = "SUBTREE";
+		out.printf("%s\tnode\theight\tleaves\tdiameter\tident\n", prefix);
+		for (int u = tree.getNumLeaves(); u<tree.getNumNodes(); u++) {
+			int s = sizes[u];
+			int n = (s+1)/2;
+			int h = heights[u];
+			int v = tree.getChild(u,0);
+			int w = tree.getChild(u,1);
+			int h1 = Integer.max(heights[v], heights[w]);
+			int h2 = Integer.min(heights[v], heights[w]);
+			// multifurcation?
+			for (int c=2; c<tree.getNumChildren(u); c++) {
+				v = tree.getChild(u, c);
+				int hv = heights[v];
+				if (h1<hv) {h2 = h1; h1=hv;}
+				else if (h2<hv) {h2 = hv;}
+			}
+			int d=h1+h2+2;
+			out.printf("%s\t%d\t%d\t%d\t%d\t%s\n", prefix, u, h, n, d, tree.getIdent(u));
+		}
+    }
+    
+    /**
+     * Command-line test code: list subtree statistics
+     */
+    public static void main(String[] args) throws Exception {
+		Class<?> these = java.lang.invoke.MethodHandles.lookup().lookupClass();
+		CommandLine cli = new CommandLine(args, these, 1);
+		PrintStream out = System.out;
+    	String out_file = cli.getOptionValue(OPT_OUTPUT);
+    	if (out_file!=null)
+    	{
+    		out = new PrintStream(out_file);
+    	    out.println(CommandLine.getStandardHeader(these));
+    	    out.println(CommandLine.getStandardRuntimeInfo(these, args));
+    	}
+		
+		Phylogeny phylo = cli.getTree();
+		TreeTraversal parcours = new TreeTraversal(phylo); 
+		parcours.printSubtreeStats(out);
+		
+		
+		if (out!=System.out) out.close();
     }
     
 	
