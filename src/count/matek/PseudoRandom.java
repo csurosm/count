@@ -28,12 +28,13 @@ public class PseudoRandom
     /** Creates a new instance of PseudoRandom */
     public PseudoRandom(Random RND) 
     {
-        this.RND=RND;
+    	if (RND==null) this.RND = new Random();
+        else this.RND=RND;
     }
     
     public PseudoRandom()
     {
-        this(new Random());
+        this(null);
     }
     
     public PseudoRandom(long seed)
@@ -41,7 +42,7 @@ public class PseudoRandom
     	this(new Random(seed));
     }
     
-    private Random RND;
+    private final Random RND;
     
 
     /**
@@ -162,4 +163,9 @@ public class PseudoRandom
     	
     }
     
+    
+    public static int[] randomPermutation(int n) {
+    	PseudoRandom rnd = new PseudoRandom();
+    	return rnd.nextPermutation(n);
+    }
 }

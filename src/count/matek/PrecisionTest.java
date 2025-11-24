@@ -84,12 +84,118 @@ public class PrecisionTest
 		
 	}
 	
+	private void productTest(PrintStream out) {
+		int n = 1000;
+		int REP = 4096;
+		double[] a = new double[n];
+		double[] b = new double[n];
+		
+		long T1 = 0L;
+		long T16 = 0L;
+		
+		double ss=0.0;
+		
+		for (int r=0; r<REP; r++) {
+			for (int i=0; i<n; i++){
+				a[i] = Math.sin(r+i);
+				b[i] = Math.log((r+1)*(i+1));
+			}
+			
+			long T0 = System.nanoTime();
+			double s = 0.0;
+			for (int i=0; i<n; i++) {
+				s += a[i]*b[i];
+			}
+			long dT1 = System.nanoTime()-T0;
+			T0 = System.nanoTime();
+			double t = 0.0;
+			double m = n % 16;
+			int j=0;
+			while (j<m) {
+				t += a[j]*b[j];
+				j++;
+			}
+			while (j < n) {
+				double t0 = a[j]*b[j];
+				final int j1 = j+1;
+				double t1 = a[j1]*b[j1];
+				final int j2 = j+2;
+				double t2 = a[j2]*b[j2];
+				final int j3 = j+3;
+				double t3 = a[j3]*b[j3];
+				final int j4 = j+4;
+				double t4 = a[j4]*b[j4];
+				final int j5 = j+5;
+				double t5 = a[j5]*b[j5];
+				final int j6 = j+6;
+				double t6 = a[j6]*b[j6];
+				final int j7 = j+7;
+				double t7 = a[j7]*b[j7];
+				final int j8 = j+8;
+				double t8 = a[j8]*b[j8];
+				final int j9 = j+9;
+				double t9 = a[j9]*b[j9];
+				final int j10 = j+10;
+				double t10 = a[j10]*b[j10];
+				final int j11 = j+11;
+				double t11 = a[j11]*b[j11];
+				final int j12 = j+12;
+				double t12 = a[j12]*b[j12];
+				final int j13 = j+13;
+				double t13 = a[j13]*b[j13];
+				final int j14 = j+14;
+				double t14 = a[j14]*b[j14];
+				final int j15 = j+15;
+				double t15 = a[j15]*b[j15];
+				t0 += t1;
+				t2 += t3;
+				t4 += t5;
+				t6 += t7;
+				t8 += t9;
+				t10 += t11;
+				t12 += t13;
+				t14 += t15;
+				t0 += t2;
+				t4 += t6;
+				t8 += t10;
+				t12 += t14;
+				t0 += t4;
+				t8 += t12;
+				t += t0+t8;
+				
+				j+= 16;
+			}
+			long dT16 = System.nanoTime() - T0;
+			
+			T1 += dT1;
+			T16 += dT16;
+			
+			ss += (s-t);
+		}
+		
+		double nano = 1e-9;
+		double t1 = T1*nano/REP;
+		double t16 = T16*nano/REP;
+		
+		out.printf("#DOTPRDUCT timing : t1 %.3g t16 %.3g (speedup %f)\t(ss %f)\n", t1, t16, t1/t16, ss);
+		
+		
+		
+		
+		
+		
+		
+		
+	}
+	
 	public static void main(String[] args)
 	{
 		PrecisionTest T = new PrecisionTest();
 		
 		System.out.println("# Best way to calculate ln(1-b)=ln(1-exp(-x)): Math.log(-Math.expm1(-x)) when x is small (b near 1); Math.log1p(-Math.exp(-x)) when x is big (b near 0)");
 		T.logTest(System.out);
+		
+		T.productTest(System.out);
 		
 		
 	}

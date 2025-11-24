@@ -48,6 +48,53 @@ public class Logarithms
 	}
 	
 	/**
+	 * Cell-by-cell addition of two-dimensional arrays
+	 * 
+	 * @param logsum can be null
+	 * @param log_t
+	 * @return updated logsum
+	 */
+	public static double[][] add(double[][] logsum, double[][] log_t)
+	{
+		if (logsum==null) logsum = new double[0][];
+		int n=0; 
+		while (n<logsum.length && n<log_t.length)
+		{
+			assert (logsum[n]!=null);
+			int s = 0; 
+			while (s<logsum[n].length && s<log_t[n].length)
+			{
+				logsum[n][s]=Logarithms.add(logsum[n][s],log_t[n][s]);
+				++s;
+			}
+			if (s<log_t[n].length)
+			{
+				logsum[n] = Arrays.copyOf(logsum[n], log_t[n].length);
+				do 
+				{
+					logsum[n][s]=log_t[n][s];
+					++s;
+				} while (s<logsum[n].length);
+			}
+			++n;
+		}
+		if (n<log_t.length)
+		{
+			logsum = Arrays.copyOf(logsum, log_t.length);
+			do 
+			{
+				logsum[n]=log_t[n];
+				++n;
+			} while (n<logsum.length);
+		}
+		
+		return logsum;
+	}
+	
+	
+	
+	
+	/**
 	 * Calculates <var>x</var> = logit(<var>p</var>) from <var>p</var>.
 	 * 
 	 * @param p between 0.0 and 1.0 (inclusively)
@@ -266,7 +313,7 @@ public class Logarithms
 	}
 	
 	/**
-	 * Calculates ln(1-exp(-logp))
+	 * Calculates ln(1-exp(logp))
 	 * @param log_p log-probability (must be non-positive)
 	 * @return
 	 */
@@ -381,10 +428,10 @@ public class Logarithms
 		}
 		double d = b-a;
 		
-//		if (!(d<=0.0)) // DEBUG
-//		{
-//			System.out.println("#**L.ldB (a,b) "+a+"\t"+b+"\t"+Arrays.toString(ldiff)+"\td="+d+"\tispos "+is_positive);
-//		}
+		if (!(d<=0.0)) // DEBUG
+		{
+			System.out.println("#**L.ldB (a,b) "+a+"\t"+b+"\t"+Arrays.toString(ldiff)+"\td="+d+"\tispos "+is_positive);
+		}
 		assert (d<=0.0); // because we exchanged a and b otherwise 
 		
 		// log(exp(a)-exp(b)) = a + log(1-exp(b-a)) with b<=a 
@@ -414,6 +461,12 @@ public class Logarithms
 	 */
 	public static double ldiffValue(double[] ldiff)
 	{
+		double ldValue;
+		
+		// e^a-e^b 
+		//   = e^a(1-e^{b-a}) if b<=a
+		//   = e^b(e^{a-b}-1) if a<b
+		// but we do via logs in case max |a|,|b| is too large but they are still close to each other
 		
 		if (ldiff[LDIFF_POS]!=Double.NEGATIVE_INFINITY
 				&& ldiff[LDIFF_NEG]!=Double.NEGATIVE_INFINITY)
@@ -421,7 +474,6 @@ public class Logarithms
 			// not balanced
 			ldiff = ldiffBalance(ldiff, null); // replace with 0-offset difference
 		}
-		double ldValue;
 		if (ldiff[LDIFF_POS]==Double.NEGATIVE_INFINITY)
 		{ // negative balance
 			ldValue = -Math.exp(ldiff[LDIFF_NEG]);
@@ -484,6 +536,14 @@ public class Logarithms
 	public static boolean ldiffIsPositive(double[] ldiff)
 	{
 		return ldiff[LDIFF_NEG]<ldiff[LDIFF_POS];
+	}
+	
+	public static boolean ldiffIsFinite(double[] ldiff) {
+		return Double.isFinite(ldiffValue(ldiff));
+	}
+	
+	public static boolean ldiffIsNaN(double[] ldiff) {
+		return Double.isNaN(ldiffValue(ldiff));
 	}
 	
 	

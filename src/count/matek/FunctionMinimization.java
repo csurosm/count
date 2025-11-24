@@ -94,6 +94,20 @@ public class FunctionMinimization
     	double euclideanNorm = Math.sqrt(sum);
     	return euclideanNorm;
     }
+    
+    
+    public static double euclideanDistance(double[] p, double[] q) {
+    	double sum=0.0;
+    	int n= p.length;
+    	assert (q.length==n);
+    	
+    	for (int i=0; i<n; i++) {
+    		double d = p[i]-q[i];
+    		sum += d*d;
+    	}
+    	double euclideanDistance = Math.sqrt(sum);
+    	return euclideanDistance;
+    }
     /**
      * Vector length/magnitude. 
      * 
@@ -104,6 +118,23 @@ public class FunctionMinimization
     {
     	return euclideanNorm(p, p.length);
     }
+    
+    public static double maxNorm(double[] p) {
+    	double maxNorm=0.0;
+    	for (double pi: p) { 
+    		double a = Math.abs(pi);
+    		if (maxNorm<a) maxNorm=a;
+    	}
+    	return maxNorm;
+    }
+    
+    public static double maxNormAngle(double[] p) {
+    	double len = euclideanNorm(p);
+    	double max = maxNorm(p);
+    	double angle = Math.acos(max/len);
+    	return angle;
+    }
+    
     
     
     /**
@@ -563,7 +594,7 @@ public class FunctionMinimization
     public static double LNSRCH_ALF=1.0e-4; 
 
     /**
-     * Given a point xold[1..n], and a direction p[1..n], finds a new point x[1..n] 
+     * Given a point xold[0..n-1], and a direction p[0..n-1], finds a new point x[0..n-1] 
      * along the direction p from 
      * xold where the function func has decreased <q>sufficiently.</q>
      *
@@ -779,19 +810,30 @@ public class FunctionMinimization
     private static final boolean CG_POLAK_RIBIERE = true; // if false, 
     
     private static final boolean CHATTY_DFP = false;
+    /**
+     * Whether BFGS uses the massively superior Mor&eacute;-Thuente 
+     * line search instead of Armijo-style line search.
+     */
+    private static final boolean DFP_LNSRCH_ZOOM = true;
+    
+    private static final boolean DFP_TIMING = true;
+    private static boolean DEBUG_ZLNSRCH = false; // during development/performance testing
     
     /**
      * Given a starting point, the Broyden-Fletcher-Goldfarb-Shanno
      * variant of Davidon-Fletcher-Powell minimization is performed
      * on a function, using 
      * its gradient.  
-     * The routine lnsrch is called to perform approximate line minimizations. 
+     * The routine {@link #lnsrch(double[], double, double[], double[], double[], double[], double, Function)}
+     * or {@link #zlnsrch(double[], double, double[], double[], double[], double[], Function, Function)}
+     *  is called to perform approximate line minimizations. 
      *
-     * Based on Numerical Recipes ch. 10.7
+     * Based on Numerical Recipes ch. 10.7; line search by More and Thuente
      *
      * @param p starting point, also the location of the minimum on return
      * @param gtol the convergence requirement on zeroing the gradient
      * @param func the function to be minimized
+     * @param gradient the function gradient 
      * @param iterations tracks the intermediate function values: one element added  per iteration
      * 
      * @return the value of the minimum, and p is updated to show its location
@@ -802,8 +844,8 @@ public class FunctionMinimization
         
         double[] fret = new double[1];
 
-        double fp=func.apply(p); // Calculate starting function value and gradient
         double[] g=gradient.apply(p);
+        double fp=func.apply(p); // Calculate starting function value and gradient
         
         if (iterations!=null) iterations.add(fp);
         
@@ -825,28 +867,31 @@ public class FunctionMinimization
             max_p = Double.max(max_p, Math.abs(p[i]));
         }
         double stpmax= DFP_STPMX*Math.max(Math.sqrt(sum),(double)n); // versions 23.xx < 23.0820 DFP_STPMX*Math.max(Math.sqrt(sum), 1.0);  // Numerical Recipes: DFP_STPMX*Math.max(Math.sqrt(sum),(double)n);   
-//        // DEBUG
-//        double stpmaxmax =  DFP_STPMX*Math.max(max_p, 1.0); 
-//        System.out.println("#*FM.dfpmin stpmax "+stpmax+"\t(maxmax "+stpmaxmax+")\tsum "+sum+"\tn "+n+"\titmax "+dfp_itmax+"\tNRstpmax "+DFP_STPMX*Math.max(Math.sqrt(sum),(double)n)
-//        		+"\tsqrsum "+Math.sqrt(sum)+"\tmaxp "+max_p);
-        
-        //stpmax = stpmaxmax;
         
         double[] pnew=new double[n]; 
         double[] dg=new double[n];
         double[] hdg=new double[n]; 
         int its;
+        
+        long computeTime = 0L;
+        long searchTime = 0L;
         for(its=1;its<=dfp_itmax;its++)
         { // Main loop over the iterations. 
         	
-//        	try
-//        	{
-        		lnsrch(p,fp,g,xi,pnew,fret,stpmax,func); 
-//        	} catch (Throwable t)
-//        	{
-//        		System.out.println("#**FM.dfpmin numerr its "+its+"\tstpmax "+stpmax+"\tsum "+sum);
-//        		throw t;
-//        	}
+            for(int i=0;i<n;i++)
+                dg[i]=g[i]; // Save the old gradient, 
+
+            long T0 = DFP_TIMING?System.nanoTime():0L;
+            if (DFP_LNSRCH_ZOOM) {
+            	zlnsrch(p,fp,g,xi,pnew,fret,func,gradient, WOLFE_C2_BFGS);
+            } else {
+            	lnsrch(p,fp,g,xi,pnew,fret,stpmax,func); 
+            }
+            if (DFP_TIMING) {
+            	long T1 = System.nanoTime();
+            	searchTime += T1-T0;
+            	T0 = T1;
+            }
 
             // The new function evaluation occurs in lnsrch; save the function value in fp for the 
             // next linesearch. It is usually safe to ignore the return value. 
@@ -867,25 +912,38 @@ public class FunctionMinimization
             } 
             if(test<DFP_TOLX)
             { 
+            	if (DFP_TIMING) {
+            		computeTime += System.nanoTime()-T0;
+            		double iterationTime = computeTime*1e-9/(its-1);
+            		double iterSearch = searchTime*1e-9/its;
+            		System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test+"\tdone/delta"+"\t// itertime "+iterationTime+"\tsrchtime "+iterSearch); 
+            	}
             	if (CHATTY_DFP)
-            		System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test+"\tdone/delta"+"\t// "+DFP_TOLX); // DEBUG
+            		System.out.println("#**FM.dfp "+its+"\tdeltax small\t"+test+"\tdone/delta"+"\t// "+DFP_TOLX); // timing
                 return fret[0]; 
             } 
             double test_deltax = test;
             
-            for(int i=0;i<n;i++)
-                dg[i]=g[i]; // Save the old gradient, 
-            g=gradient.apply(p); // and get the new gradient. 
-            test=0.0; // Test for convergence on zero gradient. 
+            if (!DFP_LNSRCH_ZOOM)
+            	g=gradient.apply(p); // get the new gradient. 
+
             double den= Math.max(Math.abs(fret[0]),1.0);    // Numerical recipes: Math.max(fret[0],1.0); 
+            test=0.0; // Test for convergence on zero gradient. 
             for(int i=0;i<n;i++)
             { 
-                double temp=Math.abs(g[i])*Math.max(Math.abs(p[i]),1.0)/den; 
+                double temp=Math.abs(g[i]);  // we want convergence test on the absolute value of the gradient 
+                // NR: temp = Math.abs(g[i])*Math.max(Math.abs(p[i]),1.0)/den; 
                 if(temp>test)
                     test=temp; 
             } 
             if(test<gtol)
             { 
+            	if (DFP_TIMING) {
+            		computeTime += System.nanoTime()-T0;
+            		double iterationTime = computeTime*1e-9/(its-1);
+            		double iterSearch = searchTime*1e-9/its;
+            		System.out.println("#**FM.dfp "+its+"\tgrad \t"+test+"\tdone/gradient"+"\t// itertime "+iterationTime+"\tsrchtime "+iterSearch); // timing
+            	}
             	if (CHATTY_DFP)
             		System.out.println("#**FM.dfp "+its+"\tgrad "+test+"\tdone/gradient"); // DEBUG
                 return fret[0]; 
@@ -924,7 +982,7 @@ public class FunctionMinimization
             //		H[i][j] = H[i][j] + xi[i] * xi[j] / fac + hdg[i]*hdg[j]/fae  
             // BFGS:
             //		H[i][j] = H[i][j] + xi[i]*xi[j]/fac - hdg[i]*hdg[j]/fae + fae*(xi[i]/fac - hdg[i]/fae)*(xi[j]/fac-hdg[j]/fae)
-            //				= H[i][j] + xi[i]*xi[j]/fac 
+            //				= H[i][j] + xi[i]*xi[j]/fac  ...
             if(fac>Math.sqrt(EPS*sumdg*sumxi))
             { // Skip update if fac not sufficiently positive.
                 fac=1.0/fac; 
@@ -955,7 +1013,9 @@ public class FunctionMinimization
 	                    } 
 	                } 
                 }
-            } 
+            } else {
+            	System.out.println("#**FM.dfpmin/"+iterations+"\tnoupdate\tfac "+fac+"\tsumdg "+sumdg+"\tsumxi "+sumxi);
+            }
             for(int i=0;i<n;i++)
             { // Now calculate the next direction to go, 
                 xi[i]=0.0; 
@@ -968,17 +1028,34 @@ public class FunctionMinimization
                 return Double.NaN;
             }
             
+            if (DFP_TIMING) {
+            	computeTime += System.nanoTime()-T0;
+//        		double iterationTime = computeTime*1e-9/(its);
+//        		System.out.println("#**FM.dfp "+its+"\titertime "+iterationTime); // tming
+            }
+            
         } // and go back for another iteration. 
         if (iterations == null) 
         	if (REPORT_UNUSUAL)
         		System.out.println("#**FM.dfpmin: Too many iterations in dfpmin"); 
         
+    	if (DFP_TIMING) {
+    		double iterationTime = computeTime*1e-9/(its);
+    		double iterSearch = searchTime*1e-9/its;
+    		System.out.println("#**FM.dfp "+its+"\tdone/iter"+"\t// itertime "+iterationTime+"\tsrchtime "+iterSearch); 
+    	}
     	if (CHATTY_DFP)
     		System.out.println("#**FM.dfp "+its+"\tdone/iter"); // DEBUG
 
         
         return fret[0];
     }    
+    
+    
+    
+    
+    
+    
     /**
      * calls powell with unit directions
      */
@@ -1072,12 +1149,12 @@ public class FunctionMinimization
                     del=fptt-(fret);
                     ibig=i;
                 }
-                // DEBUG
-                System.out.println("#**FM.powell iter:dir "+iter+":"+i+"\tf "+fret+"\tdel "+(fptt-fret));
+//                // DEBUG
+//                System.out.println("#**FM.powell iter:dir "+iter+":"+i+"\tf "+fret+"\tdel "+(fptt-fret));
             }
             
-            // DEBUG
-            System.out.println("#**FM.powell iter "+iter+"/"+powell_itmax+"\tf "+fret+"\tdel "+del+"\t@ibig "+ibig+"/"+n);
+//            // DEBUG
+//            System.out.println("#**FM.powell iter "+iter+"/"+powell_itmax+"\tf "+fret+"\tdel "+del+"\t@ibig "+ibig+"/"+n);
             
             if (iterations!=null) iterations.add(fret); // record this step
             
@@ -1160,6 +1237,9 @@ public class FunctionMinimization
 			// Loop over iterations.
 			
 			fret = dlinmin(p, xi, func, dfunc); // fret = linmin(p,xi,func);
+			
+			
+			
             if (iterations!=null) iterations.add(fret); // record this step
 			// Next statement is the normal return: 
 			if (2.0*Math.abs(fret-fp) <= ftol*(Math.abs(fret)+Math.abs(fp)+EPS)) 
@@ -1197,14 +1277,434 @@ public class FunctionMinimization
         return fret;
     }
     
+    /**
+     * Conjugent gradient update variants in Nocedal and Wright
+     */
+    public static enum CGVariant {
+    	/**
+    	 * Original Fletcher-Reeves update
+    	 */
+    	FletcherReeves,
+    	/**
+    	 * Polak-Ribière variant
+    	 */
+    	PolakRibiere,
+    	/**
+    	 * Hestenes-Stiefel variant
+    	 */
+    	HestenesStiefel,
+    	/**
+    	 * FR-PR from Nocedal and Wright Equation (5.48)
+    	 */
+    	FR_PR,
+    	/**
+    	 * Dai-Yuan variant fromNocedal and Wright Equation (5.49)
+    	 */
+    	DaiYuan, 
+    	/**
+    	 * Minimum between Dai-Yuan and Hestenes-Stiefel; current favorite
+    	 */
+    	DY_HS
+    }
     
+    
+    /**
+     *  Conjugate gradient method for minimization. Based on 
+     *  Nocedal and Wright Section 5.2. 
+     *  
+     * @param x starting point (column vector); set to new point on return 
+     * @param gtol  tolerance on the gradient (converged if Lmax norm less than or equal)
+     * @param itmax maximum number of iterations
+     * @param func function to be minimized
+     * @param gradient gradient of same function
+     * @param iterations if not null, the function value is added in each iteratiojn
+     * @param updatePolicy style for updates
+     * @return new function value
+     */
+    public static double conjugateGradientMin(double[] x, double gtol, int itmax, Function<double[], Double> func, Function<double[], double[]>  gradient, List<Double> iterations, CGVariant updatePolicy) {
+    	final int n = x.length;
+    	
+    	final double reset_orthogonal = 0.1; // infinity means ignore orthogonality reset rule
+    	
+    	final double[] df = gradient.apply(x);
+    	double f = func.apply(x);
+    	
+    	
+    	int k=0; // iterations
+    	// arrays reused in each iteration
+//    	final double[] prev_df = new double[n];
+//    	final double[] prev_x = new double[n];
+    	final double[] fret = new double[1];
+    	
+
+    	final double[] p = new double[n]; // direction
+    	for (int i=0; i<n; i++) p[i]=-df[i];
+    	
+    	double dflen = maxNorm(df);
+    	while (k<itmax && gtol < dflen // stop conditions checked early within the loop too 
+    			&& !Thread.currentThread().isInterrupted())  // keep interrupt status
+    	{ 
+//    		System.arraycopy(df, 0, prev_df, 0, n); // save old gradient
+//    		System.arraycopy(x, 0, prev_x, 0, n); // save old position
+    		double[] prev_df = Arrays.copyOf(df, n);  // save old gradient
+    		double[] prev_x = Arrays.copyOf(x, n);    // save old position
+    		double prev_f = f; // save function value
+    		++k;
+    		
+    		boolean srchFail = zlnsrch(prev_x, prev_f, df, p, x, fret, func, gradient, WOLFE_C2_CG);
+    	
+    		if (srchFail) { // gradient is not set (will exit loop and return)
+    			assert Arrays.equals(x, prev_x); // did not find a better point??
+    			System.arraycopy(prev_df, 0, df, 0, n); // even though never used after this
+    		}
+    		f = fret[0];
+    		if (iterations!=null) iterations.add(f);
+    		
+    		// now x, f, and df are updated for this iteration
+    		
+    		// check convergence 
+    		double dx = 0.0; // max displacement of parameter values 
+    		double max_delta = 0.0;
+    		for (int i=0; i<n; i++) {
+    			double delta = x[i]-prev_x[i];
+    			double t=Math.abs(delta)/Double.max(Math.abs(prev_x[i]),1.0);     			
+    			if (dx<t) dx=t;
+    			max_delta = Double.max(max_delta, Math.abs(delta)); 
+    		}
+    		dflen = maxNorm(df);
+    		
+    		if (DEBUG_ZLNSRCH) {
+	    		System.out.println("#**FM.cGM/"+k+"\tf "+f+"\tdflen "+dflen+"\tL2 "+euclideanNorm(df)
+	    				+"\tmaxdx "+dx
+	    				+"\tlogmxdelta "+Math.log(max_delta));
+    		}
+    		
+    		
+    		if (k==itmax || dflen <= gtol || dx < DFP_TOLX) {
+    			break;
+    		}
+    		
+    		// update for next iteration
+    		double beta;
+    		switch(updatePolicy) {
+			case HestenesStiefel:
+			case DaiYuan:  // FR nonminator, HS denominator
+			case DY_HS: {
+	    			double tHS=0.0, q=0.0;
+	    			double tDY=0.0;
+	    			for (int i=0; i<n; i++) {
+	    				double d = df[i]-prev_df[i];
+	    				tHS += df[i]*d;
+	    				tDY += df[i]*df[i];
+	    				q += p[i]*d;
+	    			}
+    				double betaHS = tHS/q;
+    				double betaDY = tDY/q;
+	    			if (CGVariant.HestenesStiefel.equals(updatePolicy))
+	    				beta = betaHS;
+	    			else if (CGVariant.DaiYuan.equals(updatePolicy))
+	    				beta = betaDY;
+	    			else {
+	    				assert (CGVariant.DY_HS.equals(updatePolicy));
+	    				// take minimum 
+	    				if (0.0<=betaHS && (betaHS<=betaDY || betaDY<0.0))
+	    					beta = betaHS;
+	    				else 
+	    					beta = Double.max(betaDY,0.0);
+	    			}
+				}
+				break;
+			case FletcherReeves:
+			case PolakRibiere:
+			case FR_PR:
+			default: // no default remains...
+				{  
+	    			double tFR=0.0, q=0.0;
+	    			double tPR=0.0;
+	    			for (int i=0; i<n; i++) {
+	    				q += prev_df[i]*prev_df[i];
+	    				tFR += df[i]*df[i];
+	    				double d = df[i]-prev_df[i];
+	    				tPR += df[i]*d;
+	    			}
+	    			double betaFR = tFR/q;
+	    			double betaPR = tPR/q;
+	    			
+	    			if (CGVariant.FletcherReeves.equals(updatePolicy)) {
+	    				beta = betaFR;
+	    			} else if (CGVariant.PolakRibiere.equals(updatePolicy)
+	    					|| (CGVariant.FR_PR.equals(updatePolicy) && k<2)) {
+	    				beta = betaPR;
+	    			} else {
+	    				assert (CGVariant.FR_PR.equals(updatePolicy) && 2<=k);
+	    				if (betaPR<-betaFR)
+	    					beta = -betaFR;
+	    				else if (Math.abs(betaPR)<=betaFR) 
+	    					beta = betaPR;
+	    				else 
+	    					beta = betaFR;
+	    			}
+				}
+				// no break necessary
+    		} // switch
+    		
+    		
+    		double og_beta = beta;
+    		if (beta<0.0) beta=0.0; // ensure steepest descent 
+    		else { // check if gradients are sufficiently orthogonal
+    			double t=0.0,q=0.0;
+    			for (int i=0; i<n; i++) {
+    				t += prev_df[i]*df[i];
+    				q += df[i]*df[i];
+    			}
+    			double test = t/q;
+    			if (reset_orthogonal <= test) beta=0.0; // reset by Nocedal and Wright Eqn. (5.52)
+    		}
+    		
+//    		System.out.println("#**FM.cGM/"+k+"\tbeta "+beta+
+//    				(beta==og_beta?"":
+//    				"\t(og "+og_beta+")")); // DEBUG
+    		
+    		// update the direction
+    		for (int i=0; i<n; i++) {
+    			p[i] = -df[i]+beta*p[i];
+    		}
+    	} // next iteration
+    	return f;
+    }
+    
+    
+
+    /**
+     *  BFGS for minimization. Based on 
+     *  Nocedal and Wright Section 6.1/Algorithm 6.1 
+     *  
+     * @param x starting point (column vector); set on return to minimum point found
+     * @param gtol  tolerance on the gradient (converged if Lmax norm less than or equal)
+     * @param itmax maximum number of iterations
+     * @param func function to be minimized
+     * @param gradient gradient of same function 
+     * @param iterations if not null, the function value is added in each iteration
+     * @param updatePolicy style for updates
+     * @return new function value
+     */
+    public static double quasiNewtonMin(double[] x, double gtol, int itmax, Function<double[], Double> func, Function<double[], double[]>  gradient, List<Double> iterations) {
+    	final int n=x.length;
+        
+    	final double[] df = gradient.apply(x);
+    	double f = func.apply(x);
+    	
+    	
+    	double dflen = maxNorm(df);
+    	
+    	int k=0; // iterations
+    	// arrays reused in each iteration
+        final double[] fret = new double[1];
+        final double[][] H = new double[n][n];// inverse Hessian; intialized within loop 
+        for (int i=0; i<n; i++) H[i][i]=1.0;
+        
+        long computeTime = 0L;
+        long searchTime = 0L;
+        
+		long T0 = DFP_TIMING?System.nanoTime():0L;
+        
+		double[] max_delta = new double[itmax+1];
+		
+		double dx=0.0;
+				
+    	while (k<itmax && gtol < dflen // stop conditions checked early within the loop too 
+    			&& !Thread.currentThread().isInterrupted())  // keep interrupt status
+    	{ 
+    		
+        	final double[] p = new double[n]; // direction (column vector)
+        	final double[] s = new double[n]; // displacement
+        	final double[] y = new double[n]; // difference of gradients 
+     
+    		// calculate direction p=-H*df
+    		for (int i=0; i<n; i++) {
+    			double product = 0.0;
+    			final double[] Hrow = H[i];
+    			for (int j=0; j<n; j++) {
+    				product += Hrow[j]*df[j];
+    				//assert Double.isFinite(product);
+    			}
+    			
+    			p[i] = -product;
+    			
+    			
+//    			// DEBUG
+//    			assert Double.isFinite(x[i]); // check this also
+    		}
+    		double[] prev_df = Arrays.copyOf(df, n);  // save old gradient
+    		double[] prev_x = Arrays.copyOf(x, n);    // save old position
+    		double prev_f = f; // save function value
+    		
+    		++k;
+            
+            if (DFP_TIMING) {
+            	long T1 = System.nanoTime();
+            	computeTime += T1-T0;
+            	T0 = T1;
+            }
+
+            boolean srchFail = zlnsrch(prev_x, prev_f, df, p, x, fret, func, gradient, WOLFE_C2_BFGS);
+            
+            if (DFP_TIMING) {
+            	long T1 = System.nanoTime();
+            	searchTime += T1-T0;
+            	T0 = T1;
+            }
+    		
+    		if (srchFail) { // gradient is not set (will exit loop and return)
+    			assert Arrays.equals(x, prev_x); // did not find a better point??
+    			System.arraycopy(prev_df, 0, df, 0, n);
+    		}
+    		
+    		f = fret[0];
+    		if (iterations!=null) iterations.add(f);
+    		
+    		// now x, f, and df are updated for this iteration
+    		
+    		// check convergence 
+    		dx = 0.0; // max displacement of parameter values 
+    		max_delta[k] = 0.0;
+    		for (int i=0; i<n; i++) {
+    			double delta = Math.abs(x[i]-prev_x[i]);
+    			double t=delta/Double.max(Math.abs(prev_x[i]),1.0);     			
+    			if (dx<t) dx=t;
+    			max_delta[k] = Double.max(max_delta[k],delta);
+    		}
+    		dflen = maxNorm(df);
+    		
+    		if (k==itmax || dflen <= gtol || dx < DFP_TOLX) { // stop conditions
+    			break;
+    		}
+    		
+    		double convrate = 1<k?Math.log(max_delta[k])/Math.log(max_delta[k-1]):0.0;
+    		
+    		if (DEBUG_ZLNSRCH)
+	    		System.out.println("#**FM.qNM/"+k+"\tf "+f+"\tdflen "+dflen+"\tL2 "+euclideanNorm(df)
+	    				+"\tlogmxdelta "+Math.log(max_delta[k])
+	    				+"\tconvrate "+convrate
+	    				+"\tdfmaxangle "+maxNormAngle(df)*180.0/Math.PI);
+
+    		// BFGS updates
+    		for (int i=0; i<n; i++) {
+    			s[i] = x[i]-prev_x[i]; // displacement
+    			y[i] = df[i]-prev_df[i]; // difference of gradients
+    			
+//    			assert Double.isFinite(s[i]);
+//    			assert Double.isFinite(y[i]);
+    		}
+    		
+			double ys=0.0; //dot product y.s
+			for (int i=0; i<n; i++) 
+				ys += y[i]*s[i];
+			
+    		if (k==1) {
+    			// scale initial  H0 by Nocedal  and Wright Eqn. (6.20)
+    			double yy=0.0; // dot product y.y 
+    			for (int i=0; i<n; i++) {
+    				yy += y[i]*y[i];
+    			}
+    			double scale = ys/yy;
+    			for (int i=0; i<n; i++) {
+    				H[i][i] = scale; 
+    			}
+    		}
+    		
+    		double rho = 1.0/ys;
+    		
+//    		assert Double.isFinite(rho);
+    		/* 
+    			BFGS update
+
+    			Nocedal and Wright Eqn. (6.17)
+    			
+    		 H = (I-r s y') H (I-r y s')+r s s'
+    		   = H - rsy'H-Hrys'+rsy'Hrys' + rss'
+    		 rU = rsy'H = rs (y'H) = rsu'
+    		     u[j] = sum_i y[i]*H[i][j]
+    		     U[i][j] = s[i]*u[j]
+    		 rV = Hrys' = (Hy) rs' = v rs'
+    		     v[i] = sum_j H[i][j]*y[j]
+    		     V[i][j] = v[i]*s[j]
+    		 r^2 W = rsy'Hrys' = rU rys' = r(Uy)rs' = rwrs'
+    		     w[i] = sum_j U[i][j]*y[j] = sum_j s[i]*u[j]*y[j]
+    		     W[i][j] = w[i]*s[j]
+    		 or rather r^2W = rs (y' H y) rs' = 
+    		 	(y'H)[j] = sum_i y[i]*H[i][j]
+    		 	h = (y'H y) = sum_j sum_i y[i]*H[i][j]*y[j] = sum_j u[j]*y[j]
+    		 	W[i][j] = (s h s')[i][j] = s[i] * h * s[j]
+    		 rZ = rss' 
+    		     Z[i][j] = s[i]*s[j]
+    		 H = H-rU-rV+r^2W+rZ
+    		 H[i][j] = H[i][j] - rU[i][j]-rV[i][j]+r^2 W[i][j]+r Z[i][j]
+    		 	= H[i][j] -  r*s[i]*u[j] -  r*v[i]*s[j] +  r^2*w[i]*s[j] + r*s[i]*s[j]
+     		  = H[i][j] +r*(-s[i]*u[j]+(-v[i]+r*w[i]+s[i])*s[j])
+     		  
+     		  = H[i][j] + r*((-s[i]*u[j])+(-v[i]+r*s[i]*h+s[i])*s[j])
+     		  
+     		  */
+    		final double[] u = new double[n];
+    		final double[] v = new double[n];
+    		double h=0.0;
+    		for (int j=0;j<n; j++) {
+    			double uj = 0.0;
+    			double vj = 0.0;
+    			for (int i=0;i<n; i++) {
+    				uj += y[i]*H[i][j];
+    				vj += H[j][i]*y[i];
+    			}
+    			u[j] = uj;
+    			v[j] = vj;
+    			
+//    			assert Double.isFinite(uj);
+//    			assert Double.isFinite(vj);
+    			
+    			h += uj*y[j];
+    		}
+    		for (int i=0; i<n; i++) {
+    			double si = s[i];
+				double ti = si*(1.0+rho*h)-v[i];
+    			for (int j=0; j<n; j++) {
+    				H[i][j] +=  rho*(ti*s[j]-si*u[j]);
+//    				assert Double.isFinite(H[i][j]);
+    			}
+    		}
+    		// another iteration
+            if (DFP_TIMING) {
+            	long T1 = System.nanoTime();
+            	computeTime += T1-T0;
+            	T0 = T1;
+            }
+    	} // BFGS iterations until convergence 
+    	
+    	if (DFP_TIMING) {
+    		double nano = 1e-9;
+    		double iterationTime = computeTime*nano/(k-1);
+    		double iterSearch = searchTime*nano/k;
+    		boolean gradOK = dflen <= gtol ;
+    		boolean iterDone = k==itmax;
+    		boolean dxdone = dx < DFP_TOLX;
+    		String reason = (gradOK?"/gradient":"")
+    				+(dxdone?"/dx":"")
+    				+(iterDone?"/iter":"");
+    		
+    		
+    		
+    		System.out.println("#**FM.qNM "+k+"\tdone"+reason+"\tdflen "+dflen+"\tdx "+dx+"\t// itertime "+iterationTime+"\tsrchtime "+iterSearch); 
+    	}
+    	
+    	return f;
+    }    
     
     /**
      * initial bracketing values for line minimization within powell()
      */
     public static double POWELL_BRACKET_A=0.0;
     public static double POWELL_BRACKET_B=1.0;
-    public static final double POWELL_TOL=2e-4;
+    public static final double POWELL_TOL= 1e-8 ; // 2e-4;
     
     /**
      * Given an n-dimensional point p[1..n] and an n-dimensional direction xi[1..n], moves and
@@ -1255,6 +1755,77 @@ public class FunctionMinimization
     }
     
     /**
+     * Function for line search
+     * 
+     * @param p0	starting point
+     * @param ξ     direction
+     * @param f  n-dimensional function 
+     * @return 1-dimensional function α to f(p0+αξ)
+     */
+    private static DoubleFunction<Double> lnsrchFunc(double[] p0, double[] ξ, Function<double[], Double> f){
+        final int n=p0.length;
+    	final double[] x = new double[n];
+    	
+    	return (α)->{
+    		for (int i=0; i<n; i++) x[i]=p0[i]+α*ξ[i];
+    		return f.apply(x);
+    	};
+    }
+    
+    private static class LineSearchDFunc implements DoubleFunction<Double>  {
+    	/**
+    	 * 
+    	 * @param p0 initial point
+    	 * @param ξ  direction
+    	 * @param df gradient
+    	 */
+    	LineSearchDFunc(double[] p0, double[] ξ, Function<double[],double[]> df){
+    		this.p0=p0;
+    		this.ξ=ξ;
+    		this.df = df;
+    	}
+    	private final double[] p0;
+    	private final double[] ξ;
+    	private final Function<double[],double[]> df;
+    	double[] gradient;
+    	double lastα=-1.0; // never called
+    	
+    	@Override
+    	public Double apply(double α) {
+    		final int n = p0.length;
+    		double[] x = new double[n];
+        	for (int i=0; i<n; i++) x[i]=p0[i]+α*ξ[i]; 
+        	gradient = df.apply(x); 
+        	double dfda=0.0;
+            for (int j=0; j<n; j++) dfda += gradient[j]*ξ[j]; // scalar product
+            this.lastα = α; 
+            return dfda;
+    	}
+    	
+    	double atGradient(double[] g) {
+    		this.gradient = g;
+    		this.lastα = 0.0;
+        	double dfda=0.0;
+            for (int j=0; j<ξ.length; j++) dfda += gradient[j]*ξ[j]; // scalar product
+            return dfda;
+    	}
+    }
+    
+    
+    
+    private static DoubleFunction<Double> lnsrchDFunc(double[] p0, double[] ξ, Function<double[],double[]> df){
+        final int n=p0.length;
+        final double[] x = new double[n];
+        return (α)->{
+        	for (int i=0; i<n; i++) x[i]=p0[i]+α*ξ[i]; 
+        	double[] g = df.apply(x); 
+        	double dfda=0.0;
+            for (int j=0; j<n; j++) dfda += g[j]*ξ[j]; // scalar product
+            return dfda;
+        };
+    }
+
+    /**
      * Given an n-dimensional point p[] and an n-dimensional direction xi[], 
      * moves and resets p to where the function func(p) takes on a minimum along the 
      * direction xi from p, and replaces xi by the actual vector displacement that p was moved. 
@@ -1274,53 +1845,56 @@ public class FunctionMinimization
         double ax=POWELL_BRACKET_A;
         double xx=POWELL_BRACKET_B;
         final int n=p.length;
-        class F implements DoubleFunction<Double>
-        {
-            F()
-            {
-                xt=new double[n];
-            }
-            
-            private final double[] xt; // reused 
-            
-            @Override
-            public Double apply(double x)
-            {
-                for (int i=0; i<n; i++)
-                {
-                    xt[i]=p[i]+x*xi[i];
-//                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
-                }
-                return func.apply(xt);
-            }
-        }    	
+//        class F implements DoubleFunction<Double>
+//        {
+//            F()
+//            {
+//                xt=new double[n];
+//            }
+//            
+//            private final double[] xt; // reused 
+//            
+//            @Override
+//            public Double apply(double x)
+//            {
+//                for (int i=0; i<n; i++)
+//                {
+//                    xt[i]=p[i]+x*xi[i];
+////                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
+//                }
+//                return func.apply(xt);
+//            }
+//        }    	
+//        
+//        class DF implements DoubleFunction<Double>
+//        {
+//        	DF()
+//        	{
+//                xt=new double[n];
+//        	}
+//        	private final double[] xt; // reused 
+//            @Override
+//            public Double apply(double x)
+//            {
+//                for (int i=0; i<n; i++)
+//                {
+//                    xt[i]=p[i]+x*xi[i];
+////                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
+//                }
+//                double[] df = dfunc.apply(xt);
+//                double dfdx = 0.0;
+//                for (int j=0; j<n; j++)
+//                {
+//                	dfdx += df[j]*xi[j];
+//                }
+//                return dfdx;
+//            }
+//        }
+//        DoubleFunction<Double> f1dim=new F();
+//        DoubleFunction<Double> df1dim = new DF();
+        DoubleFunction<Double> f1dim= lnsrchFunc(p, xi, func);
+        DoubleFunction<Double> df1dim = lnsrchDFunc(p, xi, dfunc);
         
-        class DF implements DoubleFunction<Double>
-        {
-        	DF()
-        	{
-                xt=new double[n];
-        	}
-        	private final double[] xt; // reused 
-            @Override
-            public Double apply(double x)
-            {
-                for (int i=0; i<n; i++)
-                {
-                    xt[i]=p[i]+x*xi[i];
-//                    System.out.println("FM.PD.e "+x+"\t"+i+"\tp "+p[i]+"\txi "+xi[i]+"\txt "+xt[i]);
-                }
-                double[] df = dfunc.apply(xt);
-                double dfdx = 0.0;
-                for (int j=0; j<n; j++)
-                {
-                	dfdx += df[j]*xi[j];
-                }
-                return dfdx;
-            }
-        }
-        DoubleFunction<Double> f1dim=new F();
-        DoubleFunction<Double> df1dim = new DF();
         double[] brak=mnbrak(ax, xx, f1dim);
         double[] z=dbrent(brak[0], brak[1], brak[2], f1dim, df1dim, POWELL_TOL);      
         double fret=z[1];
@@ -1334,6 +1908,403 @@ public class FunctionMinimization
         return fret;
     }
     
+    private static final double WOLFE_C1 = 0.0001;
+    private static final double WOLFE_C2_BFGS = 0.9;
+    private static final double WOLFE_C2_CG = 0.499;
+    private static final double ZOOM_TOL = 1.0/(1L<<30); // 0.5^28 = 3.7e-9 //  1e-8;
+//    private static final double ZOOM_CLOSE = 0.001;
+    private static final int ZOOM_ITMAX = 96; // way too generous; zoom usually finishes in a few iterations, but we allocate for the case if bisection needs to be used a lot
+    
+//    /**
+//     * Given a point x0[0..n-1], and a direction ξ[0..n-1], finds a new point x[0..n-1] 
+//     * along the direction ξ from x0 where the function func satisfies the strong Wolfe conditions.
+//     * Based on Nocedal and Wright "Numerical Optimization", 2nd ed. Springer 2008,
+//     * Fletcher "Practical Methods of Optimization", 2nd ed. Wiley & Sons, 1987, 
+//     * and Moré and Thuente "Line search algorithms with guaranteed sufficient decrease" 
+//     * ACM Transactions on Mathematical Software, 20:286-307, 1994.
+//     * 
+//     *
+//     * @param x0 starting point
+//     * @param f0 function value at starting point
+//     * @param g0 gradient at starting point (returned at new point)
+//     * @param ξ direction for line search
+//     * @param x new point (returned)
+//     * @param fret new function value ( fret[0] returned)
+//     * @param func the function
+//     * @param dfunc gradient
+//     *
+//     * @return false on a normal exit. It is true when search failed and 
+//     *    initial point is set on return 
+//     */ 
+//    public static boolean zlnsrch(double[] x0, double f0, double[] g0, double[] ξ, double[] x, double[] fret,  Function<double[], Double> func, Function<double[], double[]> dfunc) {
+//    	return zlnsrch(x0, f0, g0, ξ, x, fret, func, dfunc, WOLFE_C2);
+//    }
+
+    /**
+     * Given a point x0[0..n-1], and a direction ξ[0..n-1], finds a new point x[0..n-1] 
+     * along the direction ξ from x0 where the function func satisfies the strong Wolfe conditions.
+     * Based on Nocedal and Wright "Numerical Optimization", 2nd ed. Springer 2008,
+     * Fletcher "Practical Methods of Optmization", 2nd ed. Wiley & Sons, 1987, 
+     * and Moré and Thuente "Line search algorithms with guaranteed sufficient decrease" 
+     * ACM Transactions on Mathematical Software, 20:286-307, 1994.
+     * 
+     *
+     * @param x0 starting point
+     * @param f0 function value at starting point
+     * @param g gradient at starting point (returned at new point)
+     * @param ξ direction for line search
+     * @param x new point (returned)
+     * @param fret new function value ( fret[0] returned)
+     * @param func the function
+     * @param dfunc gradient
+     * @param constantWolfe2 constant c2 in strong Wolfe condition (recommended 0.9 for BFGS, 0.5 for CG)
+     *
+     * @return false on a normal exit. It is true when search failed and 
+     *    initial point is set on return 
+     */ 
+    public static boolean zlnsrch(double[] x0, double f0, double[] g, double[] ξ, double[] x, double[] fret,  Function<double[], Double> func, Function<double[], double[]> dfunc, double constantWolfe2) {
+    	
+    	final double max_trial_change = 1.0; // not too big displacement for the first function evaluation
+    	
+        final double ε = ZOOM_TOL; // minimum interval length
+        
+        final double δ = 2.0/3.0;
+//        final double δ2 = ZOOM_CLOSE*(1.0-ZOOM_CLOSE);
+        // with a<x<b or b<x<a, x is too close [within a+-ZOOM_CLOSE or b+-ZOOM_CLOSE] if (x-a)*(x-b)<(a-b)^2*delta2
+
+        DoubleFunction<Double> φ = lnsrchFunc(x0, ξ, func);
+        LineSearchDFunc dφ = new LineSearchDFunc(x0, ξ, dfunc);
+
+        final double df0  = dφ.atGradient(g);
+
+        if (!(df0<0.0)) {
+        	System.out.println("#**FM.zlns bad slope "+df0);
+        	fret[0]=f0;
+        	int n=x0.length;
+        	for (int j=0; j<n; j++) {
+        		x[j] = x0[j];
+        	}
+        	return true;
+        }
+        
+        assert (df0<0.0); // must have negative slope
+        
+        
+
+        final double w1 = -WOLFE_C1*df0;
+        final double w2 = -constantWolfe2*df0;
+        
+        double αmax = f0/w1;
+        
+        
+        double αlo = 0.0;
+        double flo = f0;
+        double dflo = df0;
+        
+        double αhi = Double.min(1.0,αmax); 
+        for (double z: ξ) { // make sure that the first trial step is not an absurdly large change in parameter values 
+        	double az = Math.abs(z);
+        	if (max_trial_change < αhi*az)
+        		αhi = max_trial_change/az;
+        }
+//    	if (DEBUG_ZLNSRCH)
+//        	System.out.println("#**FM.zlns first "+αhi+"\tdflen "+maxNorm(ξ));
+        
+        
+//        
+        double //dfhi = Double.POSITIVE_INFINITY;
+        	dfhi = dφ.apply(αhi); // we will need it either bc we exit with case 1 immediately, or bc we need to decide between cases 2/3/4/-1
+        
+        double fhi = φ.apply(αhi);
+
+        int mtCase = 0; // cases 1-4 in Moré and Thuente Section 4; 0 is init, -1 means success
+        // bracketing
+        int i = 0; 
+        do { // loop from NW Algorithm 3.5 / Fletcher 2.6
+        	++i;
+        	
+//        	if (DEBUG_ZLNSRCH)
+//	        	System.out.println("#**FM.zlns "+i+"/brakt\tlo("+αlo+","+flo+","+dflo+")"
+//	        			+"\thi("+αhi+","+fhi+")");
+        	
+        	if (f0-w1*αhi < fhi || (1<i && flo<=fhi)) {
+        		mtCase=1; break;
+        	}
+        	//else 
+        	{ // we have sufficient decrease 
+        		// dfhi = dφ.apply(αhi);
+        		if (Math.abs(dfhi)<= w2) { // satisfies the strong Wolfe 
+        			mtCase = -1;
+    	        	if (DEBUG_ZLNSRCH)
+			        	System.out.println("#**FM.zlns "+i+"/brakt.bingo"
+			        			+"\tat("+αhi+","+fhi+","+dfhi+")"
+			        			+"\tlo("+αlo+","+flo+","+dflo+")"
+			        			);
+        			αlo = αhi; flo = fhi; dflo=dfhi;
+        			break; // can return it 
+        		} 
+        		//else 
+        		if (0 <= dfhi) { // got bracket but switch lo and hi for zoom
+        			mtCase = 2; 
+        			double a = αlo; αlo = αhi; αhi = a;
+        			double f = flo; flo = fhi; fhi = f;
+        			double df = dflo; dflo = dfhi; dfhi = df;
+        			break; 
+        		} 
+        		// else 
+        		{
+        			// still decreasing significantly at ahi
+        			mtCase = 3; // or 4
+        			
+        			// generate bigger ahi<amax
+        			// with increasing step size 
+        			if (αhi == αmax && αmax < 1.0) αmax*=2.0; // was supposed to be large enough though
+
+        			double α = Double.min(2.0*αhi, αmax);
+    	        	if (DEBUG_ZLNSRCH)
+		        	System.out.println("#**FM.zlns "+i+"/brakt.expand"
+		        			+" "+α
+		        			+"\tlo("+αlo+","+flo+","+dflo+")"
+		        			+"\thi("+αhi+","+fhi+","+dfhi+")"
+		        			+(α == αmax?"@max":"\tmax "+αmax)
+		        			);
+        			
+        			αlo = αhi; flo = fhi; dflo = dfhi;
+        			αhi = α  ; dfhi = dφ.apply(αhi); fhi = φ.apply(α); // dfhi = Double.POSITIVE_INFINITY;
+        			if (i==ZOOM_ITMAX && fhi<flo && Double.isFinite(dfhi) ) { // will exit and return alo bc iterations are exhausted 
+        				αlo = αhi; flo = fhi; dflo = dfhi;
+        			}
+        		} 
+        	}
+        } while (i<ZOOM_ITMAX); 
+
+        // zoom NW Algorithm 3.6 / Fletcher 2.6
+        // with trial step (alpha) selection using MT rules 
+//        if (mtCase==1) {
+//        	//assert (dfhi == Double.POSITIVE_INFINITY); // not computed yet
+//        	//dfhi = dφ.apply(αhi);        	
+//        }
+        double u = αhi - αlo;
+        double uold=1.0;
+        double uold_ratio = 1.0; 
+    	double α = -1.0; // will be set properly in first iteration when mtCase==1 or ==2 
+    	assert (mtCase==1 || mtCase==2 || mtCase==-1
+    			|| i==ZOOM_ITMAX); // that's how we exited 
+    	
+        while (i<ZOOM_ITMAX && ε < Math.abs(u)
+        		&& !Thread.currentThread().isInterrupted())  // keeps interrupt status
+        {
+        	++i;
+        	
+        	if (uold_ratio != 1.0 && δ<Math.abs(uold_ratio*u/uold)) {
+        		α = αlo + u*δ; // stopgap: bisection if interval is not shrinking fast enough
+        		uold_ratio = 1.0;
+	        	if (DEBUG_ZLNSRCH)
+		        	System.out.println("#**FM.zlns "+i+"/zoomS.bisect"
+		        			+" "+α
+		        			+"\tlo("+αlo+","+flo+","+dflo+")"
+		        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        	} else {
+        		uold_ratio = u/uold;
+        		double v = fhi-flo;
+        		if (mtCase == 1) { // alo stayed, ahi was set
+        			double s = dflo * u;
+        			double t = s/(v-s);
+        			double αquad = αlo - 0.5*s*u/t; // quadratic interpolation minimizer
+        			double d1 = dflo+dfhi-3.0*v/u;
+        			double d2 = Math.signum(u)*Math.sqrt(d1*d1-dflo*dfhi);
+        			double αcub = αhi - u*(dfhi+d2-d1)/(dfhi-dflo+2.0*d2); // cubic interpolation minimizer
+        			if (Math.abs(αcub-αlo)<Math.abs(αquad-αlo)) { // pick closest
+        				α = αcub;
+	    	        	if (DEBUG_ZLNSRCH)
+			        	System.out.println("#**FM.zlns "+i+"/zoom1.cubic"
+			        			+" "+α
+			        			+"\tlo("+αlo+","+flo+","+dflo+")"
+			        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        			} else {
+        				α = 0.5*(αcub+αquad);
+        	        	if (DEBUG_ZLNSRCH)
+        		        	System.out.println("#**FM.zlns "+i+"/zoom1.quad"
+        		        			+" "+α
+        		        			+"\tlo("+αlo+","+flo+","+dflo+")"
+        		        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        			}
+        		} else if (mtCase == 2) { // alo was set, ahi took old alo
+        			double d1 = dflo+dfhi-3.0*v/u;
+        			double d2 = Math.signum(u)*Math.sqrt(d1*d1-dflo*dfhi);
+        			double αcub = αhi - u*(dfhi+d2-d1)/(dfhi-dflo+2.0*d2); // cubic interpolation minimizer
+        			double αsec = (αlo*dfhi-αhi*dflo)/(dfhi-dflo); // secant interpolation minimizer
+        			if (Math.abs(αcub-αlo)<Math.abs(αsec-αlo)) { // pick farthest
+        				α = αsec;
+        	        	if (DEBUG_ZLNSRCH)
+        	        		System.out.println("#**FM.zlns "+i+"/zoom2.secant"
+			        			+" "+α
+			        			+"\tlo("+αlo+","+flo+","+dflo+")"
+			        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        			} else {
+        				α =αcub;
+        	        	if (DEBUG_ZLNSRCH)
+        	        		System.out.println("#**FM.zlns "+i+"/zoom2.cubic"
+			        			+" "+α
+			        			+"\tlo("+αlo+","+flo+","+dflo+")"
+			        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        			}
+        		} else {
+        			// alpha is already set
+        		}
+        	}
+        	
+        	
+        	
+			double q = (α-αlo)*(αhi-α);
+			if (!Double.isFinite(α) ||  q<=0.0) { //) { 
+				// reject if not inside interval (could also test too close q<=ε*Math.abs(u))
+				// stopgap: bisection
+				// we also get here if step size was too big alpha is NaN
+				α = αlo + δ*u; 
+	        	if (DEBUG_ZLNSRCH)
+		        	System.out.println("#**FM.zlns "+i+"/zoomX.bisect"
+		        			+" "+α
+		        			+"\tlo("+αlo+","+flo+","+dflo+")"
+		        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+			}
+    		double df = dφ.apply(α);
+        	double f = φ.apply(α);
+        	if (f0-w1*α < f || flo <= f) {
+        		mtCase = 1;
+        		αhi = α; fhi = f; dfhi = df;
+        	} else {
+        		if (Math.abs(df)<=w2) {
+        			// got it 
+        			mtCase = -1;
+        			αlo = α; flo = f; dflo = df; 
+        			αhi = αlo; fhi = flo; dfhi = dflo;
+        			break;
+        		}
+        		// else 
+        		if (0 <= df*u) {
+        			mtCase = 2;
+        			αhi = αlo; fhi = flo; dfhi = dflo;
+        			αlo = α; flo = f; dflo = df;         		
+        		} else { // cases 3 and 4 
+        			if (mtCase == 1 || mtCase==2) {
+        				uold_ratio = 1.0; // don't replace by bisection step for not shrinking enough if switching cases (1/2)->(3/4)
+        			}
+        			double αnext;
+        			if (Math.abs(dflo)<Math.abs(df)) {
+        				mtCase = 4;
+            			double uu = αhi-α;
+            			double d1 = df+dfhi-3.0*(fhi-f)/uu;
+            			double d2 = Math.signum(uu)*Math.sqrt(d1*d1-df*dfhi);
+            			double αcub = αhi - uu*(dfhi+d2-d1)/(dfhi-df+2.0*d2); // cubic interpolation minimizer
+
+//        				if (Double.isNaN(αcub)) { // DEBUG
+//        	        		System.out.println("#**FM.zlns "+(i+1)+"/zoom4.error"
+//			        			+"\td1 "+d1 
+//			        			+"\td2 "+d2
+//			        			+"\tuu "+uu
+//        	        				+"\ta("+α+","+f+","+df+")"
+//			        			+"\thi("+αhi+","+fhi+","+dfhi+")"
+//			        			);
+//        					
+//        				}
+        				
+        				αnext = αcub;
+        	        	if (DEBUG_ZLNSRCH)
+        	        		System.out.println("#**FM.zlns "+(i+1)+"/zoom4.cubic"
+			        			+" "+αnext
+			        			+"\tlo("+α+","+f+","+df+")"
+			        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        			} else {
+        				mtCase = 3;
+            			double uu = α-αlo;
+            			double d1 = dflo+df-3.0*(f-flo)/uu;
+            			double d2 = Math.signum(uu)*Math.sqrt(d1*d1-dflo*df);
+            			double αcub = α - uu*(df+d2-d1)/(df-dflo+2.0*d2); // cubic interpolation minimizer
+            			double αsec = (αlo*df-α*dflo)/(df-dflo); // secant interpolation minimizer
+            			// cubic in the right direction if in (alo, a, acub) or (acub, a, alo) order 
+            			
+        				if (Double.isFinite(αcub) && 0.0<(αcub-α)*(α-αlo) && Math.abs(αcub-α)<Math.abs(αsec-α)) { // being cautious: take closer step to alpha
+        					αnext = αcub;
+            	        	if (DEBUG_ZLNSRCH)
+            	        		System.out.println("#**FM.zlns "+(i+1)+"/zoom3.cubic"
+    			        			+" "+αnext
+    			        			+"\tlo("+α+","+f+","+df+")"
+            	        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        				} else {
+        					αnext = αsec;
+            	        	if (DEBUG_ZLNSRCH)
+            	        		System.out.println("#**FM.zlns "+(i+1)+"/zoom3.secant"
+    			        			+" "+αnext
+    			        			+"\tlo("+α+","+f+","+df+")"
+            	        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+        				}
+        			} 
+    				if (Math.abs(αhi-αnext)<ε) {
+    					αnext = α + δ*(αhi-α);
+        	        	if (DEBUG_ZLNSRCH)
+        	        		System.out.println("#**FM.zlns "+(i+1)+"/zoom34.bisect"
+			        			+" "+αnext
+			        			+"\tlo("+α+","+f+","+df+")"
+			        			+"\thi("+αhi+","+fhi+","+dfhi+")");
+    				}
+    				// we don't verify here if αnext is between α and αhi because it is tested in next iteration  bf taking such a step (zoomX.bisect)
+    				
+    				
+        			αlo = α; flo = f; dflo = df;         		
+        			α = αnext;
+        		} // cases 3 and 4 
+        	}
+        	uold = u;
+        	u = αhi - αlo;
+        	
+        	
+        	// Too close to either lo or hi (not used):
+        	// lo < a < hi: a=(hi+lo)/2+b; a-lo = b+(hi-lo)/2 hi-a=(hi-lo)/2-b
+        	//     (a-lo)*(hi-a) = (hi-lo)^2/4-b^2
+        	// hi < a < lo: a=(hi+lo)/2+b; a-lo = b+(hi-lo)/2 hi-a=(hi-lo)/2-b
+        	//     (a-lo)*(hi-a) = (lo-hi)^2/4-b^2
+        	//
+        	// if b = +- (1/2-e)(hi-lo) then b^2 = (1/2-e)^2 (hi-lo)^2
+        	// and (a-lo)*(hi-a) = (hi-lo)^2*(1/4-1/4+e-e^2)
+        	//     = (hi-lo)^2*   e*(1-e)
+        	
+        }
+        
+    	if (DEBUG_ZLNSRCH)
+        	System.out.println("#**FM.zlns "+i+"/done"
+        			+"\t("+αlo+","+flo+","+dflo+")"
+        			+"\tcase "+mtCase);
+        
+        // return αlo
+        if (f0<flo) {
+        	// fail
+        	fret[0]=f0;
+        	int n=x0.length;
+        	for (int j=0; j<n; j++) {
+        		x[j] = x0[j];
+        	}
+        	return true;
+        } else {
+        	fret[0]=flo;
+        	if (αlo != dφ.lastα) dφ.apply(αlo); // sets gradient
+        	int n=x0.length;
+        	for (int j=0; j<n; j++) {
+        		g[j]=dφ.gradient[j];
+        		x[j] = x0[j]+αlo*ξ[j];
+        		
+        		
+	        	if (DEBUG_ZLNSRCH) {
+	        		if (!Double.isFinite(x[j])) { // DEBUG
+	        			System.out.println("#**FM.zlns bad x["+j+"]\tx0 "+x0[j]+"\txi "+ξ[j]+"\talo "+αlo);
+	        		}
+	        		assert Double.isFinite(x[j]);
+	        		assert Double.isFinite(g[j]);
+	        	}
+        	}
+        	return false;
+        }
+    }
     
     public static final double ARMIJO_C = 0.9; //0.5; //Math.exp(Math.log(0.5)/2.0);
     public static final double ARMIJO_MUL = 0.5; //Math.exp(Math.log(0.5)/2.0);
@@ -1385,6 +2356,10 @@ public class FunctionMinimization
     	} while (delta_f < threshold  && delta_f != 0.0);
     	return fx;
     }
+    
+    
+    
+    
     
     public static boolean GD_ARMIJO = true; // if false, then line minimization
     
