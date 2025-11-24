@@ -16,6 +16,7 @@ package count.gui.kit;
  */
 
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
@@ -27,6 +28,7 @@ import java.util.Map;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JViewport;
@@ -231,7 +233,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         // add to JSplitPane
         // set up the data_table scrolling 
         setViewportView(data_table);
-        
+
 //        // scroll bars are always shown (MacOS X philosophy)
 //        setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_ALWAYS);
 //        setHorizontalScrollBarPolicy(HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -432,7 +434,15 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         data_table.setRowSorter(sorter);
         header_table.setRowSorter(sorter);
         
-        
+    }
+    
+    /**
+     * Returns the common row sorter for data and header tables
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+	public TableRowSorter<? extends TMODEL> getRowSorter() {
+    	return (TableRowSorter<? extends TMODEL>) data_table.getRowSorter(); // if it was set properly, the conversion is ok
     }
     
     public ListSelectionModel getSelectionModel()
@@ -518,11 +528,13 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     {
         data_table.getSelectionModel().setValueIsAdjusting(true);
         data_table.clearSelection();
-        for (int j=0; j<selected_rows.length; j++)
-        {
-            int row_idx = data_table.convertRowIndexToView(selected_rows[j]);
-            //System.out.println("#**SSS.sSMR ["+j+"]\t"+selected_rows[j]+"\t-> "+row_idx);
-            data_table.addRowSelectionInterval(row_idx, row_idx);
+        if (selected_rows !=null) {
+	        for (int j=0; j<selected_rows.length; j++)
+	        {
+	            int row_idx = data_table.convertRowIndexToView(selected_rows[j]);
+	            //System.out.println("#**SSS.sSMR ["+j+"]\t"+selected_rows[j]+"\t-> "+row_idx);
+	            data_table.addRowSelectionInterval(row_idx, row_idx);
+	        }
         }
         data_table.getSelectionModel().setValueIsAdjusting(false);
 
@@ -601,7 +613,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         int default_choice_idx = 0;
         if (column_class == String.class)
         {
-            choices = new String[2];
+            choices = new String[3];
             choices[0] = "equals '"+cell_value+"'";
             choices[1] = "contains '"+cell_value+"'";
             choices[2] = "starts with '"+cell_value+"'";
@@ -646,6 +658,11 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     }
     
     private String last_similar_families_command=null;
+    private String kept_similar_families_command = null;
+    private void resetSimilarCommand() {
+    	kept_similar_families_command = last_similar_families_command;
+		last_similar_families_command = null;
+    }
     
     /**
      * This method is called after the user double-clicks on 
@@ -672,8 +689,11 @@ public class TableScroll<TMODEL extends AbstractTableModel>
 
         int num_selected = 0;
         
-        for (int j=0; j<data_table.getRowCount(); j++)
+        TableRowSorter<? extends TMODEL> row_sorter = getRowSorter();
+        int nrows = row_sorter.getViewRowCount();
+        for (int sj=0; sj<nrows; sj++)
         {
+        	int j = row_sorter.convertRowIndexToModel(sj);
         	boolean want_to_select;
         	if ("contains".equals(command))
         	{
@@ -700,8 +720,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         	}
             if (want_to_select)
             {
-                int display_row = data_table.convertRowIndexToView(j);
-                data_table.addRowSelectionInterval(display_row, display_row);
+            	data_table.addRowSelectionInterval(sj, sj);
                 num_selected++;
             }
         }
@@ -713,10 +732,18 @@ public class TableScroll<TMODEL extends AbstractTableModel>
         else if (command.equals("ge"))
         	last_similar_families_command += "\u2265";
         last_similar_families_command += model.getValueAt(family_idx, col);
-    			
+    	kept_similar_families_command = last_similar_families_command;		
         data_table.getSelectionModel().setValueIsAdjusting(false);
         
         return num_selected;
+    }
+    /**
+     * Last command used for selection
+     * 
+     * @return null if user selected the rows by hand or no selection
+     */
+    public String getLastSelectionCommand() {
+    	return this.kept_similar_families_command;
     }
     
     /**
@@ -728,8 +755,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
      */
     public JLabel createRowSelectionInfo()
     {
-    	final Dimension label_dim = new Dimension(480,30);
-    	final int max_listed = 8;
+    	final Dimension label_dim = new Dimension(360,30);
+    	final int max_listed = 7;
     	
     	class SelectionInfo extends JLabel implements ListSelectionListener
     	{
@@ -738,7 +765,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     			super("...");
     	        setOpaque(false);
     	        setLabelFor(TableScroll.this);
-    	        setFont(data_table.getFont().deriveFont(Font.ITALIC));
+    	        Font f0 = data_table.getFont();
+    	        setFont(f0.deriveFont(Font.ITALIC).deriveFont(0.8f*f0.getSize()));
     	        setMaximumSize(label_dim); 
     	        setMinimumSize(label_dim);
     	        setPreferredSize(label_dim);
@@ -751,7 +779,7 @@ public class TableScroll<TMODEL extends AbstractTableModel>
 				if (!e.getValueIsAdjusting())
 				{
 	                int num_selected = data_table.getSelectedRowCount();
-	                StringBuilder selection_info_text = new StringBuilder();
+	                StringBuilder selection_info_text = new StringBuilder("<html>");
 	                if (num_selected == 0)
 	                    selection_info_text.append("No rows selected.");
 	                else
@@ -780,7 +808,8 @@ public class TableScroll<TMODEL extends AbstractTableModel>
 							selection_info_text.append(")");
 						}
 	                }
-	                last_similar_families_command = null;		
+	                selection_info_text.append("</html>");
+	                resetSimilarCommand();
 					setText(selection_info_text.toString());
 				}
 			}
@@ -809,6 +838,15 @@ public class TableScroll<TMODEL extends AbstractTableModel>
     	column_renderers.remove(column);
     }
     
+    /**
+     * Sets the font for the scrolled table.
+     */
+    @Override
+    public void setFont(Font police) {
+    	super.setFont(police); // whatever that does for a scrollpane 
+    	if (data_table != null) data_table.setFont(police);
+    	if (header_table != null) header_table.setFont(police);
+    }
     
     
     /**

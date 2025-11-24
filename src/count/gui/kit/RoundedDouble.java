@@ -88,7 +88,8 @@ public class RoundedDouble extends Number implements Comparable<Number>
         
         value = Math.abs(value);
         
-        if (value < 0.0005)
+        if (value == 0) return " ";
+        else if (value < 0.0005)
             return ".";
         else if (value == (int)value)
             return sign+Integer.toString((int)value);
