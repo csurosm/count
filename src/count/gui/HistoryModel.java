@@ -74,7 +74,7 @@ class HistoryModel extends AnnotatedTableModel
 			col.reset();
 	}
 	
-	public void addAll(Collection<Column<?>> columns, Color color)
+	public void addAll(LineageColumns columns, Color color)
 	{
 		for (Column<?> C: columns) add(C, color);
 	}
@@ -282,6 +282,12 @@ class HistoryModel extends AnnotatedTableModel
 				max = Double.max(max, getValue(row).doubleValue());
 			return max;
 		}
+		public double getSum() {
+			double sum = 0.0;
+			for (int row=0; row<getRowCount(); row++)
+				sum += getValue(row).doubleValue();
+			return sum;
+		}
 		public void setColor(Color color)
 		{
 			this.color = color;
@@ -462,6 +468,15 @@ class HistoryModel extends AnnotatedTableModel
     	}
     }
     
+    public int getColumnIndex(String name) {
+    	int getColumn = -1;
+    	for (int c=0; c<getColumnCount() && getColumn==-1; c++) {
+    		String cname = getColumnName(c);
+    		if (cname.equals(name)) getColumn=c;
+    	}
+    	return getColumn;
+    }
+    
     /**
      * Specify column classes to use the correct comparator in sorting
      * 
@@ -588,5 +603,21 @@ class HistoryModel extends AnnotatedTableModel
 //    	System.out.println("#**HM.pT "+nF+"\tfamilies done");
     }
     
-    
+    /*
+     * Data structure for history reconstruction
+     */
+    /**
+     * Convenience class to spare on parametric typization; a placeholde 
+     */
+    protected static class LineageColumns extends ArrayList<Column<?>>
+    {
+    	protected LineageColumns(String name) {
+    		super();
+    		this.name = name;
+    	}
+    	
+    	protected final String name;
+    }
+
 }
+

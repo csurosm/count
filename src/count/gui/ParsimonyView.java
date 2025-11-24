@@ -143,6 +143,10 @@ public class ParsimonyView extends HistoryView
         final JFormattedTextField gps_text = ((JSpinner.DefaultEditor)spinner.getEditor()).getTextField();
         spinner.addChangeListener(e->gps_text.transferFocus()); // or else the cursor keeps blinking in there
 //        gps_text.setBackground(background_color);
+        
+        
+        ((JSpinner.DefaultEditor)spinner.getEditor()).getTextField().setColumns(3);
+        
         return spinner;
 	}
 	
@@ -186,8 +190,22 @@ public class ParsimonyView extends HistoryView
 			gain_spinner.setEnabled(true);
 			duplication_spinner.setEnabled(true);
 			loss_spinner.setEnabled(true);
+			
+			double score = column_family_score.getSum();
+			int gains = (int) column_family_gains.getSum();
+			int losses = (int) column_family_losses.getSum();
+			
+			StringBuilder info = new StringBuilder("<html><p>");
+			info.append("Score <b>").append(score).append("</b>");
+			info.append("; ").append(gains).append(" gains")
+			.append(", ").append(losses).append(" losses")
+			.append(" (").append(gains+losses).append(" events).");
+			info.append("</p></html>");
+			this.setScoringInfo(info.toString());
+			
 		}
 		colorHistoryColumn(table_model.firstHistoryColumn());
+		
 	}
 	
 	@Override
@@ -214,7 +232,7 @@ public class ParsimonyView extends HistoryView
 
 		Parsimony.Profile P = profiles[f];
 		int[] min_copies = P.computeSankoff(false);
-		table_family_score.setValue(f, P.getSankoffScore());
+		column_family_score.setValue(f, P.getSankoffScore());
 
 		int[] max_copies = P.computeSankoff(true);
 		
@@ -233,7 +251,7 @@ public class ParsimonyView extends HistoryView
     @Override
     public String toString()
     {
-        return "Parsimony @ "+DataFile.chopFileExtension(tree_data.getFile().getName());
+        return "Pars @ "+DataFile.chopCommonFileExtension(tree_data.getFile().getName());
     }
 	
 	

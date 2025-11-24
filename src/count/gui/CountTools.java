@@ -182,7 +182,7 @@ public class CountTools extends JToolBar implements ChangeListener
 	public JButton addSimulation(String name, ActionListener do_it)
 	{
 		Action simulation = CountActions.createSimulation(name, do_it);
-		return addAction(simulation, HAS_SELECTED_TABLE.and(HAS_SELECTED_RATES));
+		return addAction(simulation, HAS_SELECTED_RATES);
 	}
 	
 	public JButton addFilterRows(String name, ActionListener do_it)

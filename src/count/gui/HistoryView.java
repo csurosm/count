@@ -19,11 +19,16 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -44,26 +49,29 @@ import javax.swing.JProgressBar;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.JToggleButton;
+import javax.swing.RowFilter;
 import javax.swing.SwingWorker;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 
 import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;
+import count.gui.HistoryModel.LineageColumns;
 import count.gui.kit.ColoredValueRenderer;
+import count.gui.kit.CountActions;
 import count.gui.kit.RoundedDouble;
 import count.gui.kit.TableScroll;
 import count.io.CommandLine;
 import count.io.DataFile;
 import count.io.ExportableData;
-import count.model.SimulatedEvolution;
 
 import static count.gui.AnnotatedTablePanel.TABLE_FONT_SIZE;
 import static count.Count.THREAD_UNIT_TASK;
 import static count.Count.THREAD_PARALLELISM;
 /**
  * Template component (JSplitPane) to show ancestral reconstructions.
- * Once set up, the computation for opulating the tables is launched 
+ * Once set up, the computation for populating the tables is launched 
  * by {@link #computeAll()}. Extending classes define {@link #computeHistoriesPrepare()}, 
  * {@link #computeFamily(int)} and {@link #computeDone()}. 
  * 
@@ -108,7 +116,7 @@ public class HistoryView
 		this.has_copy_numbers = has_copy_numbers;
 		this.has_only_integers = has_only_integers;
 		this.table_model = new HistoryModel(phylo, table_data.getContent());
-		
+		this.isSimulated = false;
 		initTableModel();
 		initComponents();
 		
@@ -155,6 +163,7 @@ public class HistoryView
 	
 	private Box lineage_control;
 	
+	
 	protected Zoom<HistoryTreePanel> getTreeControl(){ return tree_control;}
 	
 	protected TableScroll<HistoryModel> getTableScroll(){ return table_scroll;}
@@ -185,14 +194,8 @@ public class HistoryView
 	private static final String FAMILY_CONTRACT	= "--";
 	private static final String MEMBER_MAX      = ":x";
 	
-	/*
-	 * Data structure for history reconstruction
-	 */
-	/**
-	 * Convenience class to spare on parametric typization.
-	 */
-	protected class LineageColumns extends ArrayList<HistoryModel.Column<?>>
-	{}
+	private static final String HEADER_GAINS = "Gains";
+	private static final String HEADER_LOSSES = "Losses";
 	
 	public HistoryTreePanel getTreePanel()
 	{
@@ -258,9 +261,24 @@ public class HistoryView
 	protected HistoryTreePanel.NodeData lineage_family_contract;
 	
 	/**
-	 * Profile probability
+	 * Profile probability, parsimony score, or simulation events
 	 */
-	protected HistoryModel.Column<RoundedDouble> table_family_score  = null;
+	protected HistoryModel.Column<RoundedDouble> column_family_score  = null;
+	
+	protected HistoryModel.Column<? extends Number> column_family_gains;
+	protected HistoryModel.Column<? extends Number> column_family_losses;
+	
+	/**
+	 * Label shown for scoring info, initially empty
+	 */
+	private JLabel scoring_info;
+	/**
+	 * Setter of scoring info for extending classes
+	 * @param text
+	 */
+	protected void setScoringInfo(String text) {
+		this.scoring_info.setText(text);
+	}
 	
 	private void initComponents()
 	{
@@ -268,9 +286,55 @@ public class HistoryView
 		{
             private FamilyScroll()
             {
-//                super(table_model,2);
-                super(table_model,table_model.firstHistoryColumn());
+                super(table_model,2);
+                
+                setCorner(LOWER_LEFT_CORNER, createFilterButton() );
+                
             }
+            
+            private JToggleButton createFilterButton() {
+            	
+            	String tooltip_unpressed = "Press to show only the currently selected families";
+            	final JToggleButton createFilterButton = new JToggleButton(
+            			//CountActions.createFilterRowsIcon(CountActions.SIZE_S)
+            			"Hide unselected"
+            			);
+            	createFilterButton.setToolTipText(tooltip_unpressed);
+            	ActionListener listener = new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+	            		TableRowSorter<? extends HistoryModel> sorter = FamilyScroll.this.getRowSorter();
+	            		if (createFilterButton.isSelected()) {
+	            			final Set<Integer> selected = new HashSet<>();
+	            			for (int f: getSelectedFamilies()) selected.add(f);
+	            			RowFilter<HistoryModel, Integer> filter 
+	            				= new RowFilter<HistoryModel, Integer>() {
+									@Override
+									public boolean include(Entry<? extends HistoryModel, ? extends Integer> entry) {
+										return selected.contains(entry.getIdentifier());
+									}
+	            			};
+	            			sorter.setRowFilter(filter);
+	            			String cmd = FamilyScroll.this.getLastSelectionCommand();
+	            			if (cmd==null)
+	            				createFilterButton.setToolTipText("Showing only selected families; press to uncover all");
+	            			else
+	            				createFilterButton.setToolTipText("Showing only families with "+cmd+"; press to uncover all");
+	            			//FamilyScroll.this.setSelectedModelRows(null);
+	            		} else {
+	            			sorter.setRowFilter(null);
+	            			createFilterButton.setToolTipText(tooltip_unpressed);
+	            		}
+	            		//System.out.println("#**HV.FS().button "+createFilterButton.isSelected());
+					}
+            	};
+            	createFilterButton.addActionListener(listener);
+            	
+            	return createFilterButton;
+            }
+            
+            
+            
             
             @Override
             protected int getPreferredColumnWidth(int idx)
@@ -282,7 +346,7 @@ public class HistoryView
                 	int num_nodes = table_model.getTree().getNumNodes();
                 	int w;
                 	if (num_nodes<100)
-                		w = 4*num_nodes/2;
+                		w = 2*num_nodes;
                 	else
                 	{
                 		w = num_nodes;
@@ -356,6 +420,9 @@ public class HistoryView
 		control_bar.removeAll();
 		
 		Box data_info = new Box(BoxLayout.PAGE_AXIS);
+		
+		
+		
 		JLabel selection_info= table_scroll.createRowSelectionInfo();
         computation_progress = new JProgressBar(0, table_data.getContent().getFamilyCount());
         computation_progress.setString("Preparing ./"+table_data.getContent().getFamilyCount());
@@ -363,6 +430,14 @@ public class HistoryView
         computation_progress.setBorderPainted(true);
 		computation_progress.setFont(selection_info.getFont());
 		computation_progress.setPreferredSize(new Dimension(selection_info.getWidth(), selection_info.getFont().getSize()));
+		
+		scoring_info = new JLabel("");
+		scoring_info.setFont(selection_info.getFont().deriveFont(Font.PLAIN));
+		scoring_info.setBorder(BorderFactory.createLoweredSoftBevelBorder());
+		scoring_info.setBackground(FAMILY_LL_COLOR.brighter());
+		scoring_info.setOpaque(true);
+		
+		data_info.add(scoring_info);
 		data_info.add(computation_progress);
 		data_info.add(selection_info);
 		control_bar.add(data_info);
@@ -387,9 +462,12 @@ public class HistoryView
 				if (widx+1<charts_wanted.size())
 				{
 					Box two_cb = new Box(BoxLayout.PAGE_AXIS);
-					two_cb.add(charts_wanted.get(widx++));
-					two_cb.add(charts_wanted.get(widx++));
+					JCheckBox first = charts_wanted.get(widx++);
+					two_cb.add(first);
+					JCheckBox second = charts_wanted.get(widx++);
+					two_cb.add(second);
 					button_box.add(two_cb);
+					second.setSelected(false);
 				}
 				if (widx<charts_wanted.size())
 				{
@@ -404,10 +482,23 @@ public class HistoryView
 			}
 		}
 		control_bar.add(Box.createHorizontalGlue());
-		control_bar.add(tree_panel.getScalingControl());
+		Box scalingbox = new Box(BoxLayout.PAGE_AXIS);
+		scalingbox.add(scalingbox.add(tree_panel.getHighlightEventsControl()));
+		scalingbox.add(tree_panel.getScalingControl());
+		control_bar.add(scalingbox);
+		
+//		control_bar.add(tree_panel.getHighlightEventsControl());
+//		control_bar.add(tree_panel.getScalingControl());
+		
 		control_bar.add(button_box);
 		control_bar.add(Box.createHorizontalGlue());
-		control_bar.add(tree_control.getSpinner());
+		
+		Box spinbox = new Box(BoxLayout.PAGE_AXIS);
+		spinbox.add(tree_control.getSpinner());
+		spinbox.add(tree_panel.createSaveImageButton());
+		control_bar.add(spinbox);
+		
+//		control_bar.add(tree_control.getSpinner());
 		
         selected_rows_display = new JTabbedPane();
 		selected_rows_display.addTab("Tree", tree_control);
@@ -415,7 +506,10 @@ public class HistoryView
 		JPanel bottom_table = new JPanel(new BorderLayout());
 		bottom_table.add(tree_panel.asTableScroll(), BorderLayout.CENTER);
 		lineage_control = new Box(BoxLayout.LINE_AXIS);
-		lineage_control.add(table_scroll.createRowSelectionInfo());
+		final JLabel mirrored_selection_info = new JLabel(selection_info.getText());
+		mirrored_selection_info.setFont(selection_info.getFont());
+		selection_info.addPropertyChangeListener("text", event->mirrored_selection_info.setText(event.getNewValue().toString()));
+		lineage_control.add(mirrored_selection_info);
 		bottom_table.add(lineage_control, BorderLayout.SOUTH);
 		
 //		String table_legend = "<p>The inferred counts are posterior expectations across all families."
@@ -466,7 +560,9 @@ public class HistoryView
 	{
 		return this.selected_rows_display;
 	}
+
 	
+
 	private HistoryTreePanel createLineageModel()
 	{
 		HistoryTreePanel P = new HistoryTreePanel(table_scroll);
@@ -475,11 +571,11 @@ public class HistoryView
 		if (has_copy_numbers && !is_binary_table)
 		{
 			lineage_member_count = P.newColumns("Copies "+MEMBER_COUNT+"", table_member_count);
-			JCheckBox count_cb = P.showNodeStatistics("Conserved copies", lineage_member_count);
+			JCheckBox count_cb = P.showNodeStatistics("Copies", lineage_member_count);
 			//count_cb.setForeground(FAMILY_PRESENT_COLOR);
 			lineage_member_birth = P.newColumns("Births "+MEMBER_BIRTH+"", table_member_birth);
 			lineage_member_death = P.newColumns("Deaths "+MEMBER_DEATH+"", table_member_death);
-			P.showChangeStatistics("Copy change", lineage_member_birth, lineage_member_death);;
+			P.showChangeStatistics("Change", lineage_member_birth, lineage_member_death);;
 		}
 		lineage_family_present = P.newColumns("Families "+FAMILY_PRESENT+"", table_family_present);
 		if (has_copy_numbers && !is_binary_table)
@@ -497,35 +593,37 @@ public class HistoryView
 		{
 			lineage_family_expand = P.newColumns("Expansions "+FAMILY_EXPAND+"", table_family_expand);
 			lineage_family_contract = P.newColumns("Contractions "+FAMILY_EXPAND+"", table_family_contract);
-			P.showChangeStatistics("Contraction/expansion", lineage_family_expand, lineage_family_contract);		
+			P.showChangeStatistics("Contraction/Expansion", lineage_family_expand, lineage_family_contract);		
 		}		
 		
 		return P;
 
 	}
 	
+	protected boolean isSimulated;
+	
 	/**
 	 * Creates and adds the columns to {@link #table_model} 
 	 */
-	private void initTableModel()
+	protected void initTableModel()
 	{
 		IndexedTree phylo = table_model.getTree();
 		int num_nodes = phylo.getNumNodes();
-		table_family_present = new LineageColumns(); // 
-		table_family_gain = new LineageColumns(); // gain
-		table_family_lose = new LineageColumns(); // loss
+		table_family_present = new LineageColumns(FAMILY_PRESENT); // 
+		table_family_gain = new LineageColumns(FAMILY_GAIN); // gain
+		table_family_lose = new LineageColumns(FAMILY_LOSE); // loss
 		
-		boolean is_simulated = table_model.getTable() instanceof SimulatedEvolution.Table;
+		//boolean is_simulated = table_model.getTable() instanceof SimulatedEvolution.Table;
 		
 		if (has_copy_numbers)
 		{
-			table_member_birth = new LineageColumns();
-			table_member_death = new LineageColumns();
+			table_member_birth = new LineageColumns(MEMBER_BIRTH);
+			table_member_death = new LineageColumns(MEMBER_DEATH);
 
-			table_family_multi = new LineageColumns();
-			table_member_count = new LineageColumns();
-			table_family_expand = new LineageColumns(); // expansion 
-			table_family_contract = new LineageColumns(); // contraction
+			table_family_multi = new LineageColumns(FAMILY_MULTI);
+			table_member_count = new LineageColumns(MEMBER_COUNT);
+			table_family_expand = new LineageColumns(FAMILY_EXPAND); // expansion 
+			table_family_contract = new LineageColumns(FAMILY_CONTRACT); // contraction
 
 			if (has_only_integers)
 			{
@@ -566,13 +664,13 @@ public class HistoryView
 				// posteriors or simulation
 				
 				// copy count columns
-				String eS = (is_simulated?"Number of ":"Expected number of ");
+				String eS = (isSimulated?"Number of ":"Expected number of ");
 				table_member_count.addAll(table_model.newDoubleColumns(MEMBER_COUNT, eS+"conserved ancestral copies", false));
 				table_member_birth.addAll(table_model.newDoubleColumns(MEMBER_BIRTH, eS+"gained ancestral copies", true));
 				table_member_death.addAll(table_model.newDoubleColumns(MEMBER_DEATH, eS+"lost ancestral copies", true));
 				
 				// family change counts
-				String pS = (is_simulated?"Indicator ":"Probability ");
+				String pS = (isSimulated?"Indicator ":"Probability ");
 				table_family_present.addAll(table_model.newDoubleColumns(FAMILY_PRESENT, pS+"of at least one copy", false));
 				table_family_multi.addAll(table_model.newDoubleColumns(FAMILY_MULTI, pS+"of more than one copies", false));
 				table_family_gain.addAll(table_model.newDoubleColumns(FAMILY_GAIN, pS+"that the family was acquired", true));
@@ -606,10 +704,10 @@ public class HistoryView
 			} else
 			{
 				// posteriors presence/absence
-				String pS = (is_simulated?"Presence probability":"Presence indicator");
+				String pS = (isSimulated?"Presence probability":"Presence indicator");
 				List<HistoryModel.Column<RoundedDouble>> fpL = table_model.newDoubleColumns(FAMILY_PRESENT,pS, false);
 				table_family_present.addAll(fpL);
-				String ppS = (is_simulated?"Posterior probability of ":"Indicator of ");
+				String ppS = (isSimulated?"Posterior probability of ":"Indicator of ");
 				table_family_gain.addAll(table_model.newDoubleColumns(FAMILY_GAIN, "gain", true));
 				table_family_lose.addAll(table_model.newDoubleColumns(FAMILY_LOSE, "loss", true));
 			}
@@ -619,44 +717,44 @@ public class HistoryView
 			if (has_copy_numbers)
 			{
 				// max in parsimony
-				table_member_max = new LineageColumns();
+				table_member_max = new LineageColumns(MEMBER_MAX);
 				List<HistoryModel.Column<Integer>> mcX = table_model.newIntColumns(MEMBER_MAX, "Maximum copy number", false);			
 				table_member_max.addAll(mcX);
 			}
-			table_family_score = table_model.newDoubleColumn("Score", "Parsimony score for history reconstruction");
+			column_family_score = table_model.newDoubleColumn("Score", "Parsimony score for history reconstruction");
 		} else
 		{
-			if (is_simulated)
+			if (isSimulated)
 			{
-				table_family_score = table_model.newDoubleColumn("Events", "Number of copy births and deaths");
+				column_family_score = table_model.newDoubleColumn("Events", "Number of copy births and deaths");
 			} else
 			{
-				table_family_score = table_model.newDoubleColumn("Rarity", "Negative log-likelihood (deciban= - 10 log_10(L)");
+				column_family_score = table_model.newDoubleColumn("Rarity", "Negative log-likelihood (deciban= - 10 log_10(L)");
 			}
 		}
 
-		HistoryModel.Column<?> tot_gain;
-		HistoryModel.Column<?> tot_lose;
+//		HistoryModel.Column<?> tot_gain;
+//		HistoryModel.Column<?> tot_lose;
 		
 		if (has_only_integers)
 		{
-			tot_gain = table_model.newSumColumn(table_family_gain, "Gains", "Number of lineages in which the family was gained.");
-			tot_lose = table_model.newSumColumn(table_family_lose, "Losses", "Number of lineages in which the family was lost.");
+			column_family_gains = table_model.newSumColumn(table_family_gain, HEADER_GAINS, "Number of lineages in which the family was gained (including gain at root).");
+			column_family_losses = table_model.newSumColumn(table_family_lose, HEADER_LOSSES, "Number of lineages in which the family was lost.");
 		} else
 		{
-			tot_gain = table_model.newSumColumn(table_family_gain, "Gains", "Expected number of lineages in which the family was gained.");
-			tot_lose = table_model.newSumColumn(table_family_lose, "Losses", "Expected number of lineages in which the family was lost.");			
+			column_family_gains = table_model.newSumColumn(table_family_gain, HEADER_GAINS, (isSimulated?"True":"Expected")+" number of lineages in which the family was gained.");
+			column_family_losses = table_model.newSumColumn(table_family_lose, HEADER_LOSSES, (isSimulated?"True":"Expected")+" number of lineages in which the family was lost.");			
 		}
-		table_model.add(table_family_score, FAMILY_LL_COLOR);
-		table_model.add(tot_gain, FAMILY_GAIN_COLOR);
-		table_model.add(tot_lose, FAMILY_LOSE_COLOR);
+		table_model.add(column_family_score, FAMILY_LL_COLOR);
+		table_model.add(column_family_gains, FAMILY_GAIN_COLOR);
+		table_model.add(column_family_losses, FAMILY_LOSE_COLOR);
 
 		if (has_copy_numbers && !table_data.getContent().isBinaryTable())
 		{
 			HistoryModel.Column<?> tot_expand = table_model.newSumColumn(table_family_expand, "Expansions", "Number of lineages in which the family expanded.");
 			HistoryModel.Column<?> tot_contract = table_model.newSumColumn(table_family_contract, "Contractions", "Number of lineages in which the family contracted");
 
-			List<HistoryModel.Column<?>> table_member_change=new ArrayList<>(num_nodes);
+			LineageColumns table_member_change=new LineageColumns(MEMBER_CHANGE); //<>(num_nodes);
 			if (has_only_integers)
 			{
 				// parsimony: difference is thisnode.count-parent.count
@@ -776,6 +874,9 @@ public class HistoryView
 	 */
 	private static final boolean COMPUTE_ALL_WITH_BLOCKING_QUEUE = true;
 	
+	
+	
+	
 	/**
 	 * Sets {@link #history_task} and launches execution
 	 * in the background on a working thread.
@@ -797,7 +898,7 @@ public class HistoryView
 				computeHistoriesPrepare();
 				
 				
-				if (executor != null && nF>THREAD_UNIT_TASK)
+				if (!isSimulated && executor != null && nF>THREAD_UNIT_TASK)
 				{
 					
 					// we don't use publish directly from the working threads, rather add to a thread-safe blocking queue
@@ -1026,7 +1127,7 @@ public class HistoryView
 					}
 
 				computation_cancel.setEnabled(false);
-				//computation_cancel.setVisible(false);
+				computation_cancel.setVisible(false);
 				//tree_control.removeControlAt(Integer.parseInt(computation_cancel.getActionCommand()));
 				computeDone();
 
@@ -1105,6 +1206,14 @@ public class HistoryView
 	public int[] getSelectedFamilies()
 	{
 		return table_scroll.getSelectedModelRows();
+	}
+	@Override
+	public String getLastSelectionCommand() {
+		return table_scroll.getLastSelectionCommand();
+	}
+	
+	public void setSelectedFamilies(int[] selected_model_rows) {
+		table_scroll.setSelectedModelRows(selected_model_rows);
 	}
 
 	@Override

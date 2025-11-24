@@ -215,7 +215,6 @@ public class AnnotatedTablePanel
         // sorting
         TableRowSorter<AnnotatedTableModel> sorter = new TableRowSorter<>(M);
         table_scroll.setRowSorter(sorter);
-
         Font tp_font_rm = table.getFont().deriveFont(0.8f);
         Font tp_font_it = tp_font_rm.deriveFont(Font.ITALIC);
 
@@ -304,7 +303,7 @@ public class AnnotatedTablePanel
         {
             return "[noname]";
         } else
-            return DataFile.chopFileExtension(data.getFile().getName());
+            return DataFile.chopCommonFileExtension(data.getFile().getName());
     }
 
 	@Override
@@ -313,6 +312,10 @@ public class AnnotatedTablePanel
 		return table_scroll.getSelectedModelRows();
 	}
 	
+	@Override
+	public String getLastSelectionCommand() {
+		return table_scroll.getLastSelectionCommand();
+	}
 	/*
 	 * Savable interface
 	 */

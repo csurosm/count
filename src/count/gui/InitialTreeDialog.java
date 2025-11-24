@@ -222,7 +222,7 @@ public class InitialTreeDialog extends JDialog
 	
 	private JComponent createUPGMABox()
 	{
-        upgmaB = new JRadioButton("UPGMA tree:");
+        upgmaB = new JRadioButton("UPGMA or NJ tree:");
         upgmaB.addActionListener(click->synchronizeFieldStates());
 
         
@@ -243,7 +243,7 @@ public class InitialTreeDialog extends JDialog
         upgma_box.add(Box.createHorizontalStrut(SPACE));
 
         upgma_methodCB = new JComboBox<>(UPGMA.ClusteringPolicy.values());
-        JLabel clusteringL = new JLabel("Clustering method");
+        JLabel clusteringL = new JLabel("Algorithm");
         clusteringL.setLabelFor(upgma_methodCB);
 
         upgma_box.add(clusteringL);

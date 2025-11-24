@@ -270,7 +270,7 @@ public class Session extends JSplitPane
 	
     public static final String getSessionKey(String file_name)
     {
-    	return DataFile.chopFileExtension(file_name);
+    	return DataFile.chopCommonFileExtension(file_name);
     }
     
     public String getSessionKey()
@@ -281,6 +281,7 @@ public class Session extends JSplitPane
     public String getSessionTitle()
     { 
     	StringBuilder session_name = new StringBuilder();
+    	
 // BUNDLE
 //    	session_name.append(trees_browser.getSelectedTree().toString());
 //    	RateVariationPanel rates_panel = rates_browser.getSelectedPrimaryItem();
@@ -296,9 +297,12 @@ public class Session extends JSplitPane
 	    	session_name.append(tree_panel_name);
     	}
     	JComponent rates_panel = model_browser.getSelectedPrimaryItem(BundleTree.RATES);
-    	if (rates_panel != null)
+    	if (rates_panel == null)
     	{
-    		session_name.append(":").append(rates_panel.toString());
+    		session_name.append("(no model)");
+    	} else 
+    	{
+    		session_name.append(", ").append(rates_panel.toString());
     	}
     	JComponent data_panel = data_browser.getSelectedPrimaryItem(BundleTree.TABLES);
 // BUNDLE
@@ -308,6 +312,7 @@ public class Session extends JSplitPane
     	}
     	if (session_name.length()==0)
     		session_name.append(getSessionKey());
+    	
     	return session_name.toString();
     }
     
@@ -800,10 +805,11 @@ public class Session extends JSplitPane
     public static interface FamilySelection
     {
     	public abstract int[] getSelectedFamilies();
+    	public abstract String getLastSelectionCommand();
     }
 
     /**
-     * Adds a data tabkle witjh the filtered families, Current selection in 
+     * Adds a data table witjh the filtered families, Current selection in 
      * {@link #data_browser} must have a {@link FamilySelection} associated component. 
      */
     public void showFilteredFamilies()
@@ -820,7 +826,16 @@ public class Session extends JSplitPane
         	DataFile<AnnotatedTable> table_data = table_entry.getTableData();
 // BUNDLE
         	AnnotatedTable filtered_table = table_data.getContent().filteredTable(selected);
-        	File filtered_file = new File((File)null, "filt:"+table_data.getFile().getName());
+        	String filtername;
+        	String selection_cmd = selection_panel.getLastSelectionCommand();
+        	if (selection_cmd==null) {
+        		filtername = "{filt."+filtered_table.getFamilyCount()+"}"+comp; //table_data.getFile().getName();
+        	} else {
+        		filtername = "{"+selection_cmd+"}"+comp; //+table_data.getFile().getName();
+        	}
+        	
+        	
+        	File filtered_file = new File((File)null, filtername);
         	DataFile<AnnotatedTable> filtered_data = new DataFile<>(filtered_table, filtered_file);
 // BUNDLE
 //        	AnnotatedTablePanel filtered_panel =  new AnnotatedTablePanel(filtered_data);
@@ -1038,6 +1053,7 @@ public class Session extends JSplitPane
     		
     		// TODO : use progress monitor on save
     		FileDialog dialog = new FileDialog(app, action_name+" \""+selected.toString()+"\"" , FileDialog.SAVE);
+    		dialog.setEnabled(true);
 			if (file_name!=null)
 				dialog.setName(file_name);
     		if (directory !=null)

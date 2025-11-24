@@ -36,6 +36,7 @@ import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.ListSelectionModel;
 
@@ -56,6 +57,8 @@ public class TreeEditDialog extends JDialog
     private static final String EDIT_GRAFT_BELOW = "Graft as a new child";
     private static final String EDIT_REROOT = "Root here";
     private static final String EDIT_FUSE = "Fuse into parent";
+    private static final String EDIT_NAME = "Name node";
+    
     private static final String EDIT_CANCEL = "Cancel selection";
     
     private final AppFrame main_application;
@@ -469,6 +472,17 @@ public class TreeEditDialog extends JDialog
 //                    
 //                    System.out.println("#*TED.TM.NA.aP "+TreeManipulator.this.getData().getContent().hasLength()+" -> "+copied_phylo.hasLength());
                     addCopy(modified_tree);
+                } else if (EDIT_NAME.equals(menu_text)) {
+                	TreePanel.DisplayedNode dnode = getNode(node);
+                	String cname = starting_phylo.getName(node);
+                	
+                	String ename = JOptionPane.showInputDialog(src, "Name node "+starting_phylo.getIdent(node), cname);
+                	if (ename!=null) {
+                		DataFile<Phylogeny> modified_tree = createCopy(TreeManipulator.this.getTreeData());
+                		Phylogeny copied_phylo = modified_tree.getContent();
+                		copied_phylo.getNode(node).setName(ename);
+                        addCopy(modified_tree);
+                	}
                 } else if (EDIT_CANCEL.equals(menu_text))
                 {
                     // do nothing
@@ -499,8 +513,17 @@ public class TreeEditDialog extends JDialog
                             JMenuItem fuse = new JMenuItem(EDIT_FUSE);
                             fuse.addActionListener(this);
                             popup_options.add(fuse);
+                            
                         }
-                    }                
+                    } 
+                    if (!starting_phylo.isLeaf(node) && false) { // names get copied from main tree ...
+                    	String cname = starting_phylo.getName(node);
+                    	if (cname == null || "".equals(cname)) {
+	                    	JMenuItem rename = new JMenuItem(EDIT_NAME);
+	                    	rename.addActionListener(this);
+	                    	popup_options.add(rename);
+                    	}
+                    }
                 } else // regrafting options
                 {
                     JMenuItem graft_above = new JMenuItem(EDIT_GRAFT_ABOVE);
@@ -524,5 +547,6 @@ public class TreeEditDialog extends JDialog
             }
         }        
     
+        
     } // TreeManipulator
 }

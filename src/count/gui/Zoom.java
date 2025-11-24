@@ -87,6 +87,7 @@ public class Zoom<PANEL extends TreePanel> extends JPanel
         this.add(tree_scroll, BorderLayout.CENTER);
         
         control_bar.add(Box.createHorizontalGlue());
+//        control_bar.add(tree_panel.createSaveImageButton());
         control_bar.add(zoom_spinner);
         this.add(control_bar, BorderLayout.SOUTH);
         
@@ -165,36 +166,36 @@ public class Zoom<PANEL extends TreePanel> extends JPanel
     	control_bar.repaint();
     }
     
-    public Component replaceControlAt(int idx, Component C)
-    {
-    	Component[] controls = control_bar.getComponents();
-    	control_bar.removeAll();
-    	int i=0;
-    	while (i<idx && i<controls.length)
-    		control_bar.add(controls[i++]);
-    	Component replace = controls[i++];
-    	control_bar.add(C);
-    	while (i<controls.length)
-    		control_bar.add(controls[i++]);
-    	control_bar.validate();
-    	control_bar.repaint();
-    	return replace;
-    }
-    
-    public Component removeControlAt(int idx)
-    {
-    	Component[] controls = control_bar.getComponents();
-    	control_bar.removeAll();
-    	int i=0;
-    	while (i<idx && i<controls.length)
-    		control_bar.add(controls[i++]);
-    	Component remove = controls[i++];
-    	while (i<controls.length)
-    		control_bar.add(controls[i++]);
-    	control_bar.validate();
-    	control_bar.repaint();
-    	return remove;
-    }
+//    public Component replaceControlAt(int idx, Component C)
+//    {
+//    	Component[] controls = control_bar.getComponents();
+//    	control_bar.removeAll();
+//    	int i=0;
+//    	while (i<idx && i<controls.length)
+//    		control_bar.add(controls[i++]);
+//    	Component replace = controls[i++];
+//    	control_bar.add(C);
+//    	while (i<controls.length)
+//    		control_bar.add(controls[i++]);
+//    	control_bar.validate();
+//    	control_bar.repaint();
+//    	return replace;
+//    }
+//    
+//    public Component removeControlAt(int idx)
+//    {
+//    	Component[] controls = control_bar.getComponents();
+//    	control_bar.removeAll();
+//    	int i=0;
+//    	while (i<idx && i<controls.length)
+//    		control_bar.add(controls[i++]);
+//    	Component remove = controls[i++];
+//    	while (i<controls.length)
+//    		control_bar.add(controls[i++]);
+//    	control_bar.validate();
+//    	control_bar.repaint();
+//    	return remove;
+//    }
     
     @Override 
     public String toString()

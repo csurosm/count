@@ -38,6 +38,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.GroupLayout;
 import javax.swing.InputVerifier;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -56,6 +57,7 @@ import count.ds.AnnotatedTable;
 import count.ds.IndexedTree;
 import count.gui.kit.CheckSelectAll;
 import count.gui.kit.InputVerifiers;
+import count.gui.kit.SmallIntegerSelector;
 import count.io.CommandLine;
 import count.io.DataFile;
 import count.io.ModelBundle;
@@ -64,17 +66,26 @@ import count.matek.NegativeBinomial;
 import count.matek.PointDistribution;
 import count.matek.Poisson;
 import count.matek.ShiftedGeometric;
+import count.model.GLDParameters;
 import count.model.GammaInvariant;
 import count.model.ML;
 import count.model.MLDistribution;
+import count.model.MLGamma;
 import count.model.MLRateVariation;
 import count.model.MixedRateModel;
+import count.model.MixedRatePosteriors;
 import count.model.RateVariationModel;
+import count.model.SimulatedEvolution;
 import count.model.StraightEM;
 import count.model.TreeWithRates;
 //donotimport count.model.DirectEM;
 //donotimport count.model.MLGamma;
 
+
+import static count.model.GLDParameters.PARAMETER_GAIN;
+import static count.model.GLDParameters.PARAMETER_LOSS;
+import static count.model.GLDParameters.PARAMETER_DUPLICATION;
+import static count.model.GLDParameters.PARAMETER_LENGTH;
 /**
  * A modal dialog to select starting model and optimization parameters. 
  * 
@@ -85,8 +96,10 @@ public class ModelSelectionDialog extends JDialog
 	
 	private static final boolean DEVELOPMENT_CODE = false;
 	
-	private static final int OPT_ROUNDS = 256;
-	private static final double OPT_EPS = 1.0/(1L<<26);
+	private static final boolean ENABLE_EM = false;
+	
+	private static final int OPT_ROUNDS = 4096;
+	private static final double OPT_EPS = 1.0/(1L<<23);
 	private static final int OPT_NUM_FAMILIES = 100;
 	
 	private static final boolean WANT_GENERAL_VARIATION = false; // if true, dup- and gain-rate discrete-Gamma variation is enabled
@@ -167,9 +180,11 @@ public class ModelSelectionDialog extends JDialog
     private JFormattedTextField roundT;
     private JFormattedTextField rnd_seedT;
 
-    private JRadioButton minCopies0;
-    private JRadioButton minCopies1;
-    private JRadioButton minCopies2;
+    private SmallIntegerSelector minCopiesCBB;
+    
+//    private JRadioButton minCopies0;
+//    private JRadioButton minCopies1;
+//    private JRadioButton minCopies2;
 
     /**
      * Approximate likelihood calculations
@@ -197,9 +212,18 @@ public class ModelSelectionDialog extends JDialog
     private ParameterField alpha_lossT;
     private ParameterField alpha_duplicationT;
     
+    /**
+     * Fields for RateVariationModel/LogisticShift parameters
+     */
     private List<ParameterField> cat_mod_lenT;
     private List<ParameterField> cat_mod_dupT;
     private List<ParameterField> cat_probT;
+    
+    private JRadioButton variation_gammaRB;
+    private JRadioButton variation_rvmRB;
+    
+    private JRadioButton[] commongainRB;
+    
 
     /**
      * Proportion of no-duplication and no-gain families
@@ -238,8 +262,7 @@ public class ModelSelectionDialog extends JDialog
     {
         this.models = new ArrayList<>();
         this.modelRB = new ArrayList<>();
-        this.init_rnd_seed = (new java.util.Random()).nextLong();
-
+        this.init_rnd_seed = (new java.util.Random()).nextLong() << 8 >>> 16; // middle 48 bits 
        
         IndexedTree main_tree;
         MixedRateModel alt_model=null;
@@ -301,9 +324,7 @@ public class ModelSelectionDialog extends JDialog
     {
     	initListeners();
         
-        approximateCB.setSelected(true);
-        approximate_thresholdT.setValue(12);
-        approximate_factorT.setValue(3.0);
+        
         
         // radio button initial choices
         modelRB.get(modelRB.size()-1).doClick();
@@ -311,8 +332,11 @@ public class ModelSelectionDialog extends JDialog
         
         
         model_dlRB.setEnabled(DEVELOPMENT_CODE);
-        model_glRB.setEnabled(DEVELOPMENT_CODE);
+        //model_glRB.setEnabled(DEVELOPMENT_CODE);
         model_plRB.setEnabled(DEVELOPMENT_CODE);
+        
+        model_dlRB.setVisible(model_dlRB.isEnabled());
+        model_plRB.setVisible(model_dlRB.isEnabled());
         
         uniform_gainCB.setEnabled(DEVELOPMENT_CODE);
         uniform_duplicationCB.setEnabled(DEVELOPMENT_CODE);
@@ -323,7 +347,7 @@ public class ModelSelectionDialog extends JDialog
 
         
         pack();
-        setBounds((int)(0.05*frameD.width),(int)(0.05*frameD.height),(int)(0.9*frameD.width),(int)(0.9*frameD.height));
+        setBounds((int)(0.01*frameD.width),(int)(0.01*frameD.height),(int)(0.98*frameD.width),(int)(0.98*frameD.height));
         setVisible(true);
 
         if (selected_model==-1)
@@ -341,6 +365,7 @@ public class ModelSelectionDialog extends JDialog
         
         
         rnd_seedT.addPropertyChangeListener("value", update->updateRandomInitialModel());
+        rnd_seedT.setValue(init_rnd_seed);
         
 //        approximateCB.setSelected(false);
 //        approximate_thresholdT.setValue(12);
@@ -378,7 +403,7 @@ public class ModelSelectionDialog extends JDialog
         DataFile<MixedRateModel> optimized_model = new DataFile<>(starting_model,optimized_model_file);        
         
         // setup optimization
-        ML opt;
+        ML opt=null;
 //        int num_threads = ((Number)threadsT.getValue()).intValue();
 //        Count.THREAD_PARALLELISM = num_threads;
         
@@ -389,87 +414,108 @@ public class ModelSelectionDialog extends JDialog
         {
         	if (starting_model instanceof GammaInvariant)
         	{
-        		throw new UnsupportedOperationException("No optimization for GammaInvariant model");
-//	        	MLGamma opt_gamma = new MLGamma((GammaInvariant)starting_model, data_file.getContent());
-//		    
-//		        boolean has_duplication = rates.hasDuplication();
-//		        boolean has_gain = rates.hasGain();
-//		        
-//		        if (has_gain)
-//		        {
-//		        	if (alpha_gainT.fixedCB.isSelected())
-//		        		opt_gamma.fixGainAlpha();
-//		        	if (!forbidden_gainCB.isSelected() || forbidden_gainT.fixedCB.isSelected())
-//		        		opt_gamma.fixForbiddenGain();
-//		        	
-//		        	if (uniform_gainCB.isSelected() && !lineage_gainP.fixed_parameters.isSelected())
-//		        	{
-//		        		opt_gamma.setUniformGain(true);
-//		        	} else
-//		        	{
-//			        	for (int node=0; node<lineage_gainP.numFields(); node++)
-//			        	{
-//			        		if (lineage_gainP.getField(node).fixedCB.isSelected())
-//			        			opt_gamma.fixGain(node);
-//			        	}
-//		        	}
-//		        }
-//		        if (has_duplication)
-//		        {
-//		        	if (alpha_duplicationT.fixedCB.isSelected())
-//		        		opt_gamma.fixDuplicationAlpha();
-//		        	if (!forbidden_duplicationCB.isSelected() || forbidden_duplicationT.fixedCB.isSelected())
-//		        		opt_gamma.fixForbiddenDuplication();
-//		        	
-//		        	if (uniform_duplicationCB.isSelected() && !lineage_duplicationP.fixed_parameters.isSelected())
-//		        	{
-//		        		opt_gamma.setUniformDuplication(true);
-//		        	} else
-//		        	{
-//			        	for (int node=0; node<lineage_duplicationP.numFields(); node++)
-//			        	{
-//			        		if (lineage_duplicationP.getField(node).fixedCB.isSelected())
-//			        			opt_gamma.fixDuplication(node);
-//			        	}
-//		        	}
-//		        }
-//		    	// loss
-//		    	if (alpha_lossT.fixedCB.isSelected())
-//		    		opt_gamma.fixLossAlpha();
-//		    	for (int node=0; node<lineage_lossP.numFields(); node++)
-//		    	{
-//		    		if (lineage_lossP.getField(node).fixedCB.isSelected())
-//		    			opt_gamma.fixLoss(node);
-//		    	}
-//		    	// length
-//		    	if (alpha_lengthT.fixedCB.isSelected())
-//		    		opt_gamma.fixLengthAlpha();
-//		    	for (int node=0; node<lineage_lengthP.numFields(); node++)
-//		    		if (lineage_lengthP.getField(node).fixedCB.isSelected())
-//		    			opt_gamma.fixLength(node);
-//		    	// root
-//		    	if (uniform_duplicationCB.isSelected() && uniform_gainCB.isSelected())
-//		    		opt_gamma.setStationaryRoot(has_gain || has_duplication);
-//		    	if (fixed_rootCB.isSelected())
-//		    	{
-//		    		int root = phylo.getRoot();
-//		    		opt_gamma.fixGain(root);
-//		    		opt_gamma.fixLoss(root);
-//		    		opt_gamma.fixDuplication(root);
-//		    		opt_gamma.fixLength(root);
-//		    	}
-//		    	
-//		    	opt = opt_gamma;
-        	} else
+        		int wanted_ncat = ((Number) num_catT.getValue()).intValue();
+        		int wanted_dcat = ((Number) gamma_duplicationT.getValue()).intValue();
+        		
+        		// cannot handle duplication rate variation
+        		wanted_dcat = 1;
+
+        		if (1==wanted_ncat*wanted_dcat) {
+        			RateVariationModel constant = new RateVariationModel(starting_model.getBaseModel());
+        			constant.initConstantRates();
+        			for (int g=0; g<commongainRB.length; g++) {
+        				if (commongainRB[g].isSelected())
+                			constant.setCommonGain(g);
+        			}
+        			starting_model = constant;
+        		} else {
+        			MLGamma opt_gamma = new MLGamma((GammaInvariant)starting_model, data_file.getContent());
+        			//MLGamma.PRINT_OPTIMIZATION_MESSAGES = true; // DEBUG
+        			
+			        boolean has_duplication = rates.hasDuplication();
+			        boolean has_gain = rates.hasGain();
+
+			        
+        			for (int g=0; g<commongainRB.length; g++) {
+        				if (commongainRB[g].isSelected())
+        					opt_gamma.setCommonGainType(g);
+        			}
+			        
+			        if (has_gain)
+			        {
+	//		        	if (alpha_gainT.fixedCB.isSelected())
+	//		        		opt_gamma.fixGainAlpha();
+	//		        	if (!forbidden_gainCB.isSelected() || forbidden_gainT.fixedCB.isSelected())
+	//		        		opt_gamma.fixForbiddenGain();
+	//		        	
+	//		        	if (uniform_gainCB.isSelected() && !lineage_gainP.fixed_parameters.isSelected())
+	//		        	{
+	//		        		opt_gamma.setUniformGain(true);
+	//		        	} else
+	//		        	{
+				        	for (int node=0; node<lineage_gainP.numFields(); node++)
+				        	{
+				        		if (lineage_gainP.getField(node).fixedCB.isSelected())
+				        			opt_gamma.fixGain(node,true);
+				        	}
+	//		        	}
+			        }
+			        if (has_duplication)
+			        {
+			        	if (alpha_duplicationT.fixedCB.isSelected())
+			        		opt_gamma.fixAlpha(PARAMETER_DUPLICATION, true);
+	//		        	if (!forbidden_duplicationCB.isSelected() || forbidden_duplicationT.fixedCB.isSelected())
+	//		        		opt_gamma.fixForbiddenDuplication();
+	//		        	
+	//		        	if (uniform_duplicationCB.isSelected() && !lineage_duplicationP.fixed_parameters.isSelected())
+	//		        	{
+	//		        		opt_gamma.setUniformDuplication(true);
+	//		        	} else
+	//		        	{
+				        	for (int node=0; node<lineage_duplicationP.numFields(); node++)
+				        	{
+				        		if (lineage_duplicationP.getField(node).fixedCB.isSelected())
+				        			opt_gamma.fixDuplication(node,true);
+				        	}
+	//		        	}
+			        }
+		    	// loss
+	//		    	if (alpha_lossT.fixedCB.isSelected())
+	//		    		opt_gamma.fixLossAlpha();
+//			    	for (int node=0; node<lineage_lossP.numFields(); node++)
+//			    	{
+//			    		if (lineage_lossP.getField(node).fixedCB.isSelected())
+//			    			opt_gamma.fixLoss(node,true);
+//			    	}
+			    	// length
+//			        // DEBUG
+//			    	System.out.println("#**MSD.sO "+opt_gamma.getClass().getSimpleName()+"\tfix-alphalen "+(alpha_lengthT.fixedCB.isSelected()));
+			    	if (alpha_lengthT.fixedCB.isSelected())
+			    		opt_gamma.fixAlpha(PARAMETER_LENGTH, true);
+			    	for (int node=0; node<lineage_lengthP.numFields(); node++)
+			    		if (lineage_lengthP.getField(node).fixedCB.isSelected())
+			    			opt_gamma.fixLoss(node,true);
+	//		    	// root
+	//		    	if (uniform_duplicationCB.isSelected() && uniform_gainCB.isSelected())
+	//		    		opt_gamma.setStationaryRoot(has_gain || has_duplication);
+			    	if (fixed_rootCB.isSelected())
+			    	{
+			    		int root = phylo.getRoot();
+			    		opt_gamma.fixGain(root,true);
+			    		opt_gamma.fixDuplication(root,true);
+			    		opt_gamma.fixLoss(root,true);
+			    	}
+			    	
+			    	opt = opt_gamma;
+	        	}
+        	}
+        	
+        	if (starting_model instanceof RateVariationModel)
         	{
-        		
-            	// starting_model is RateVariationModel
-        		assert (starting_model instanceof RateVariationModel);
-        		
         		MLRateVariation opt_rv = new MLRateVariation((RateVariationModel)starting_model, data_file.getContent());
-		    	for (int node=0; node<lineage_lossP.numFields(); node++)
+		    	for (int node=0; node<lineage_lengthP.numFields(); node++) // loss by length 
 		    	{
-	    			opt_rv.fixLoss(node, lineage_lossP.getField(node).fixedCB.isSelected());
+	    			opt_rv.fixLoss(node, lineage_lengthP.getField(node).fixedCB.isSelected());
 		    	}
 		    	// duplication
 		    	for (int node=0; node<lineage_duplicationP.numFields(); node++)
@@ -489,6 +535,8 @@ public class ModelSelectionDialog extends JDialog
 		    	
 		    	
 		    	opt = opt_rv;
+		    	
+		    	// MLRateVariation.PRINT_OPTIMIZATION_MESSAGES=true; // DEBUG
         	}
         } else if (opt_distributionRB.isSelected())
         {
@@ -509,25 +557,27 @@ public class ModelSelectionDialog extends JDialog
         	StraightEM opt_em = new StraightEM(rates, data_file.getContent());
         	for (int node=0; node<lineage_gainP.numFields(); node++)
         	{
-        		opt_em.fixNodeParameters(node, lineage_gainP.getField(node).fixedCB.isSelected() ||lineage_duplicationP.getField(node).fixedCB.isSelected() );
+        		opt_em.fixGain(node, lineage_gainP.getField(node).fixedCB.isSelected());
+        		opt_em.fixDuplication(node, lineage_duplicationP.getField(node).fixedCB.isSelected());
+        		opt_em.fixLoss(node, lineage_lengthP.getField(node).fixedCB.isSelected());
         	}
     		opt_em.fixNodeParameters(phylo.getRoot(), fixed_rootCB.isSelected());
         	
         	opt = opt_em;
         }
         
-        int min_observed_copies;
-    	if (minCopies0.isSelected())
-    	{
-    		min_observed_copies = 0;
-    	}
-    	else if (minCopies1.isSelected())
-    		min_observed_copies=1;
-    	else
-    	{
-    		assert (minCopies2.isSelected());
-    		min_observed_copies=2;
-    	}
+        int min_observed_copies = minCopiesCBB.getSelectedValue();
+//    	if (minCopies0.isSelected())
+//    	{
+//    		min_observed_copies = 0;
+//    	}
+//    	else if (minCopies1.isSelected())
+//    		min_observed_copies=1;
+//    	else
+//    	{
+//    		assert (minCopies2.isSelected());
+//    		min_observed_copies=2;
+//    	}
 		opt.setMinimumObservedCopies(min_observed_copies);
     	
         if (approximateCB.isSelected())
@@ -567,7 +617,7 @@ public class ModelSelectionDialog extends JDialog
         	cli_dialog.addOption(CommandLine.OPT_EPS,Double.toString(epsilon), "Convergence threshold for numerical optimization");
         	cli_dialog.addOption(CommandLine.OPT_ROUNDS, Integer.toString(num_steps), "Iteration threshold for numerical optimization (number of likelihood or gradient calculations)");
 
-        	if (init_rnd_seed != 0L)
+        	if (init_rnd_seed != 0L && selected_model==0)
         	{
         		cli_dialog.addOption(CommandLine.OPT_RND, Long.toString(init_rnd_seed), "Seed for initializing pseudorandom number generator");
         	}
@@ -603,20 +653,32 @@ public class ModelSelectionDialog extends JDialog
 //        	}
 
         	//if (opt instanceof MLGamma || opt instanceof MLDistribution)
+        	
         	{
         		count.matek.DiscreteDistribution root_prior = rates.getRootDistribution();
         		cli_dialog.addOption(CommandLine.OPT_MODEL_ROOT_PRIOR, 
         				CommandLine.encodeDistributionOption(root_prior), "Root prior distribution");
         	}
         	
-        	if (opt instanceof MLRateVariation)
-        	{
+        	if (opt instanceof MLRateVariation){
         		MixedRateModel sel = models.get(selected_model);
-        		int ncat = ((Number) num_catT.getValue()).intValue();
-        		if (sel.getNumClasses() != ncat)
-        		{
-        			cli_dialog.addOption(CommandLine.OPT_MODEL_LENGTH_CATEGORIES, Integer.toString(ncat), "Categories with length variation");
-        			cli_dialog.addOption(CommandLine.OPT_MODEL_DUPLICATION_CATEGORIES, Integer.toString(ncat), "Categories with duplication variation");
+        		int ncat = num_catT.intValue();
+        		int dcat = gamma_duplicationT.intValue();
+        		if (opt instanceof MLGamma) {
+        			GammaInvariant gamma_model = (GammaInvariant) sel;
+        			if ((selected_model==0 && 1<ncat*dcat) || gamma_model.getNumLengthGammaCategories() != ncat || gamma_model.getNumDuplicationGammaCategories()!=dcat) {
+            			cli_dialog.addOption(CommandLine.OPT_MODEL_LENGTH_CATEGORIES, Integer.toString(ncat), "Categories with length variation");
+            			cli_dialog.addOption(CommandLine.OPT_MODEL_DUPLICATION_CATEGORIES, Integer.toString(dcat), "Categories with duplication variation");
+        			}
+        		} else {
+	        		if ((selected_model==0 && 1<ncat*dcat)  || sel.getNumClasses() != ncat*dcat)
+	        		{
+	        			cli_dialog.addOption(CommandLine.OPT_MODEL_LENGTH_CATEGORIES, Integer.toString(ncat), "Categories with length variation");
+	        			cli_dialog.addOption(CommandLine.OPT_MODEL_DUPLICATION_CATEGORIES, Integer.toString(dcat), "Categories with duplication variation");
+	        		}
+        		}
+        		if (1<ncat*dcat) {
+        			cli_dialog.addOption(CommandLine.OPT_COMMON_GAIN, GLDParameters.paramName(((MLRateVariation)opt).getCommonGainType()), "Common gain scaling across categories");
         		}
         	}
         	
@@ -639,9 +701,14 @@ public class ModelSelectionDialog extends JDialog
         	
         	
         	cli_dialog.setVisible(true);
-
-        	return null;
-        } else
+        	
+        	int reason = cli_dialog.getClosedReason();
+        	if (reason == CommandBuilderDialog.EXEC_OPTION)
+        		want_command_line = false;
+        	else
+        		return null;
+        } 
+        
         {
 	    	RateOptimizationPanel opt_panel = new RateOptimizationPanel(optimized_model, opt);
 	    	opt_panel.setDescendantModel(selected_model != 0);
@@ -657,22 +724,59 @@ public class ModelSelectionDialog extends JDialog
     	initComponents(false, false);
     	MixedRateModel rates_model = askStartingModel();
     	if (rates_model==null) return null;
-    	
+
+    	Session sesh = app.getActiveSession();
+    	DataFile<MixedRateModel> rate_file;
     	File model_file;
         if (selected_model==0) // default null model
         {
             model_file = new File((File)null, "default");
+            rate_file = null;
         }
         else
         {
-// BUNDLE
-//            DataFile<GammaInvariant> rate_file = app.getActiveSession().getRatesBrowser().getSelectedPrimaryItem().getDataFile();
-            DataFile<MixedRateModel> rate_file = app.getActiveSession().getModelBrowser().getSelectedRatesEntry().getRatesData();
-// BUNDLE
+            rate_file = sesh.getModelBrowser().getSelectedRatesEntry().getRatesData();
             model_file = new File((File)null, rate_file.getFile().getName());
         }
+        
         DataFile<MixedRateModel> data_model = new DataFile<>(rates_model,model_file);        
-        DataFile<AnnotatedTable> data_table = app.getActiveSession().getSelectedData();
+        DataFile<AnnotatedTable> data_table = sesh.getSelectedData();
+        
+        if (want_command_line)
+        {
+        	CommandBuilderDialog cli_dialog = new CommandBuilderDialog(app, MixedRatePosteriors.class, false, true);
+
+        	if (approximateCB.isSelected())
+        	{
+                double relative = ((Number)approximate_factorT.getValue()).doubleValue();
+                int absolute = ((Number)approximate_thresholdT.getValue()).intValue();
+                
+            	cli_dialog.addOption(CommandLine.OPT_TRUNCATE, Integer.toString(absolute)+","+Double.toString(relative), "Truncation parameters for maximum assumed ancestral copies");
+        	}
+        	
+        	int min_copies = Integer.min(6, data_table.getContent().minCopies());
+        	
+        	cli_dialog.addOption(CommandLine.OPT_SURVIVAL, Boolean.toString(true), "Family presence by survival (count only if at least one descendant copy at the leaves)");
+        	cli_dialog.addOption(CommandLine.OPT_STATISTICS, Integer.toString(-1), "Statistics for a given node (if not negative): survival parameters, posterior counts of copy births and deaths");
+        	cli_dialog.addOption(CommandLine.OPT_HISTORY, Boolean.toString(false), "Detailed posterior statistics for each family");
+        	cli_dialog.addOption(CommandLine.OPT_MINCOPY, Integer.toString(min_copies), "Minimum copies in a family");
+        	
+        	ModelBundle.Entry tree_entry = sesh.getModelBrowser().getSelectedPrimaryEntry(BundleTree.TREES);        	
+            DataFile<AnnotatedTable> data_file = sesh.getSelectedData(); // maybe null
+        	cli_dialog.setTreeData(tree_entry.getTreeData());
+        	cli_dialog.setTableData(data_file);
+        	cli_dialog.setRatesData(rate_file);
+        	
+        	cli_dialog.setVisible(true);
+        	
+        	int reason = cli_dialog.getClosedReason();
+        	if (reason == CommandBuilderDialog.EXEC_OPTION)
+        		want_command_line = false;
+        	else
+        		return null;
+        }
+        
+        
     	PosteriorsView P = new PosteriorsView(data_model, data_table);
     	if (approximateCB.isSelected())
     	{
@@ -686,43 +790,76 @@ public class ModelSelectionDialog extends JDialog
     public SimulationView showSimulation()
     {
     	initComponents(false, true);
+        rnd_seedT.setValue(init_rnd_seed);
     	MixedRateModel rates_model = askStartingModel();
     	if (rates_model==null)
     		return null;
     	int num_families = ((Number)roundT.getValue()).intValue();
-    	int min_copies=0;
-    	if (minCopies1.isSelected())
-    		min_copies = 1;
-    	else if (minCopies2.isSelected())
-    		min_copies = 2;
+    	int min_copies = minCopiesCBB.getSelectedValue();
+//    	int min_copies=0;
+//    	if (minCopies1.isSelected())
+//    		min_copies = 1;
+//    	else if (minCopies2.isSelected())
+//    		min_copies = 2;
     	
     	long rnd_seed = ((Number)rnd_seedT.getValue()).longValue(); // ((Number)epsT.getValue()).longValue();
     	
+    	Session sesh = app.getActiveSession();
     	File model_file;
-        if (selected_model==0) // default null model
+    	DataFile<MixedRateModel> rate_file ;
+    	if (selected_model==0) // default null model
         {
             model_file = new File((File)null, "default");
+            rate_file = null;
         }
         else
         {
-// BUNDLE
-//            DataFile<GammaInvariant> rate_file = app.getActiveSession().getRatesBrowser().getSelectedPrimaryItem().getDataFile();
-            DataFile<MixedRateModel> rate_file = app.getActiveSession().getModelBrowser().getSelectedRatesEntry().getRatesData();
-// BUNDLE
+        	ModelBundle.Entry rates_entry = sesh.getModelBrowser().getSelectedPrimaryEntry(BundleTree.RATES);
+            rate_file = rates_entry.getRatesData();
             model_file = new File((File)null, rate_file.getFile().getName());
         }
-        DataFile<MixedRateModel> data_model = new DataFile<>(rates_model,model_file);        
-    	SimulationView S = new SimulationView(data_model, rnd_seed, num_families, min_copies);
     	
-//    	S.computeAll();
+        DataFile<MixedRateModel> data_model = new DataFile<>(rates_model,model_file);        
+    	
+        if (want_command_line)
+        {
+        	CommandBuilderDialog cli_dialog = new CommandBuilderDialog(app, SimulatedEvolution.class, false, true);
+
+            //int nthreads = ((Number)threadsT.getValue()).intValue();
+        	//cli_dialog.addOption(CommandLine.OPT_THREADS, Integer.toString(nthreads), "Number of CPU threads used in optimization");
+        	
+        	
+        	cli_dialog.addOption(CommandLine.OPT_RND,Long.toString(rnd_seed), "Random seed");
+        	cli_dialog.addOption(CommandLine.OPT_N, Integer.toString(num_families), "Number of observed random family profiles");
+        	cli_dialog.addOption(CommandLine.OPT_MINCOPY, Integer.toString(min_copies), "Minimum copies in a family");
+        	
+        	cli_dialog.addOption(CommandLine.OPT_STATISTICS, "true", "Report main profile statistics in the table: #DISTRIBUTION for number of lineages per family, #FAMILIES for families per lineage");
+        	cli_dialog.addOption(CommandLine.OPT_ANCESTRAL, "true", "Report true ancestral statistics summed across families");
+        	cli_dialog.addOption(CommandLine.OPT_HISTORY, "false", "Report the true history of each family");
+
+        	ModelBundle.Entry tree_entry = sesh.getModelBrowser().getSelectedPrimaryEntry(BundleTree.TREES);        	
+            DataFile<AnnotatedTable> data_file = sesh.getSelectedData(); // maybe null
+        	cli_dialog.setTreeData(tree_entry.getTreeData());
+        	cli_dialog.setTableData(data_file);
+        	cli_dialog.setRatesData(rate_file);
+        	
+        	cli_dialog.setVisible(true);
+        	
+        	int reason = cli_dialog.getClosedReason();
+        	if (reason == CommandBuilderDialog.EXEC_OPTION)
+        		want_command_line = false;
+        	else
+        		return null;
+        }    	
+    	
+        SimulationView S = new SimulationView(data_model, rnd_seed, num_families, min_copies);
+    	
     	return S;
     }
     
     
     private void initComponents(boolean want_optimization, boolean want_simulation)
     {
-        // model structure tab
-        Box structureB = new Box(BoxLayout.PAGE_AXIS);
         JComponent initial_modelB = createInitialModelBox();
         modelRB.get(0).setVisible(want_optimization);
 
@@ -731,47 +868,111 @@ public class ModelSelectionDialog extends JDialog
         JComponent lineage_variationB = createLineageVariationBox();
         JComponent root_priorB = createRootPriorBox();
         JComponent family_variationB = createFamilyVariationBox();
-        
-        // model parameters tab
-        Box parametersB = new Box(BoxLayout.PAGE_AXIS);
-        
-        if (want_optimization)
-        {
-        	structureB.add(initial_modelB);
-        	structureB.add(model_typeB);
-            structureB.add(lineage_variationB);
-            structureB.add(root_priorB);
-            structureB.add(family_variationB);
-            structureB.add(createAlgorithmBox(want_optimization, want_simulation));
+        JComponent algoB = createAlgorithmBox(want_optimization, want_simulation);
+        JComponent structureComp;
+    	JComponent parametersComp;
+        // model structure tab
+    	if (USE_GROUP_LAYOUT) {
+    		JPanel structureP = new JPanel();
+    		JPanel parametersP = new JPanel();
+    		
+    		GroupLayout glp = new GroupLayout(parametersP);
+    		parametersP.setLayout(glp);
+    		GroupLayout.SequentialGroup vgp = glp.createSequentialGroup();
+    		GroupLayout.ParallelGroup pgp = glp.createParallelGroup();
+    		
+    		if (want_optimization) {
+        		GroupLayout gls = new GroupLayout(structureP);
+        		structureP.setLayout(gls);
+        		
+        		GroupLayout.SequentialGroup hg = gls.createSequentialGroup();
+        		GroupLayout.ParallelGroup pg = gls.createParallelGroup(GroupLayout.Alignment.LEADING);
+        		pg.addComponent(initial_modelB)
+        			.addComponent(model_typeB);
+        		if (DEVELOPMENT_CODE) pg.addComponent(lineage_variationB);
+        		pg.addComponent(root_priorB)
+        			.addComponent(family_variationB)
+        			.addComponent(algoB);
+        		hg.addGroup(pg);
+        		
+        		GroupLayout.SequentialGroup vg = gls.createSequentialGroup();
+        		vg.addComponent(initial_modelB)
+        			.addComponent(model_typeB);
+        		if (DEVELOPMENT_CODE) vg.addComponent(lineage_variationB);
+        		vg.addComponent(root_priorB)
+        			.addComponent(family_variationB)
+        			.addComponent(algoB);
+        		gls.setHorizontalGroup(hg);
+        		gls.setVerticalGroup(vg);
+        		
+        		structureComp = structureP;
+    		} else {
+    			pgp.addComponent(algoB)
+    				.addComponent(initial_modelB)
+    				.addComponent(family_variationB);
+    			vgp.addComponent(algoB)
+				.addComponent(initial_modelB)
+				.addComponent(family_variationB);
+    		}
+    		JComponent rparamBox = createRootPriorParameterBox();
+    		JComponent lspecBox = createLineageSpecificParameterBox();
+    		pgp.addComponent(rparamBox).addComponent(lspecBox);
+    		vgp.addComponent(rparamBox).addComponent(lspecBox);
+    		glp.setHorizontalGroup(glp.createSequentialGroup().addGroup(pgp));
+    		glp.setVerticalGroup(vgp);
+    		
+    		structureComp = structureP;
+    		parametersComp = parametersP;
+    	} else {
+	        Box structureB = new Box(BoxLayout.PAGE_AXIS);
+	        
+	        // model parameters tab
+	        Box parametersB = new Box(BoxLayout.PAGE_AXIS);
+	        
+	        if (want_optimization)
+	        {
+	        	structureB.add(initial_modelB);
+	        	structureB.add(model_typeB);
+	            if (DEVELOPMENT_CODE) structureB.add(lineage_variationB);
+	            structureB.add(root_priorB);
+	            structureB.add(family_variationB);
+	            structureB.add(algoB);
+	        }
+	        else
+	        {
+	        	parametersB.add(algoB);
+	        	parametersB.add(initial_modelB);
+	        	parametersB.add(family_variationB);
+	        }
+
+	        parametersB.add(createRootPriorParameterBox());
+	        parametersB.add(createLineageSpecificParameterBox());
+	        
+	        structureComp = structureB;
+	        parametersComp = parametersB;
+    	}
+        for (JRadioButton rb: commongainRB) {
+        	rb.setEnabled(want_optimization);
         }
-        else
-        {
-        	parametersB.add(createAlgorithmBox(want_optimization, want_simulation));
-        	parametersB.add(initial_modelB);
-        	parametersB.add(family_variationB);
-        }
-        
         // parametersB.add(
         gamma_variationB = createGammaFamilyVariationParameterBox()
         //)
         ;
         
         
-        parametersB.add(createRootPriorParameterBox());
-        parametersB.add(createLineageSpecificParameterBox());
 
         JTabbedPane tabs = new JTabbedPane();
         if (want_optimization)
         {
-	        tabs.addTab("Model type & algorithm", structureB);
-	    	tabs.addTab("Model parameters", new JScrollPane(parametersB));
+	        tabs.addTab("Model type & algorithm", structureComp);
+	    	tabs.addTab("Model parameters", new JScrollPane(parametersComp));
         } else
         {
-	    	tabs.addTab("Algorithm & model parameters", new JScrollPane(parametersB));
+	    	tabs.addTab("Algorithm & model parameters", new JScrollPane(parametersComp));
         }
         // last tab : 
         
-        // TODO 
+        
         tabs.addTab("Rate variation", createRateVariationModelParameterBox(0));
         
         this.main_tabbed_pane = tabs;
@@ -779,8 +980,7 @@ public class ModelSelectionDialog extends JDialog
         setLayout(new BorderLayout());
         add(tabs, BorderLayout.CENTER);
         add(createButtonPanel(),BorderLayout.PAGE_END);
-        if (!want_optimization)
-        	cliB.setVisible(false);
+        //cliB.setVisible(want_optimization || want_simulation);
         
     }
     
@@ -894,7 +1094,11 @@ public class ModelSelectionDialog extends JDialog
 //        }
         
         num_catT.addPropertyChangeListener("value", update->this.setRateVariationModelFields());
-    
+        gamma_duplicationT.addPropertyChangeListener("value", update->this.setRateVariationModelFields());
+        variation_gammaRB.addActionListener(click->this.setRateVariationModelFields());
+        variation_rvmRB.addActionListener(click->this.setRateVariationModelFields());
+        
+        
     }
     
     private boolean hasRateVariation()
@@ -930,8 +1134,33 @@ public class ModelSelectionDialog extends JDialog
     	if (selected_model!=-1)
     	{
     		assert (modelRB.get(selected_model).isSelected());
-    		MixedRateModel model=models.get(selected_model);
+    		MixedRateModel model=models.get(selected_model);    		
     		TreeWithRates base_rates = model.getBaseModel();
+    		
+    		boolean want_gamma = variation_gammaRB.isSelected();
+    		if (want_gamma) {
+    			if (!(model instanceof GammaInvariant)) {
+    				GammaInvariant gamma_model = new GammaInvariant(base_rates,1,1,1,1); 
+    				// classes will be set
+    				model = gamma_model;
+    				models.set(selected_model, model);
+    			}
+    		} else 
+    		{
+    			RateVariationModel rvm_model;
+    			if (model instanceof GammaInvariant) {
+    				rvm_model = RateVariationModel.convert(RateVariationModel.LogisticShift.class, (GammaInvariant)model);
+    				model = rvm_model;
+    				models.set(selected_model, model);
+    			} else {
+    				rvm_model = (RateVariationModel) model;
+    			}
+    			for (int rbi=0; rbi<commongainRB.length; rbi++) {
+    				JRadioButton rb = commongainRB[rbi];
+    				if (rb.isSelected()) rvm_model.setCommonGain(rbi);
+    			}
+    		}
+    		
     		for (int node=0; node<lineage_lengthP.numFields(); node++)
     		{
     			double len = lineage_lengthP.getField(node).doubleValue();
@@ -978,8 +1207,7 @@ public class ModelSelectionDialog extends JDialog
     		}
     		base_rates.setRootDistribution(root_prior);
     		
-    		// 
-    		
+//    		System.out.println("#**MSD.cFVIM model "+model);
     		if (model instanceof GammaInvariant)
     		{
     			GammaInvariant gamma_model = (GammaInvariant) model;
@@ -987,10 +1215,16 @@ public class ModelSelectionDialog extends JDialog
     			gamma_model.setGainForbidden(forbidden_gainT.doubleValue());
     			gamma_model.setDuplicationForbidden(forbidden_duplicationT.doubleValue());
 	
-	            int cat_length = num_catT.intValue();
 	            int cat_gain = gamma_gainT.intValue();
 	            int cat_loss = gamma_lossT.intValue();
 	            int cat_duplication = gamma_duplicationT.intValue();
+	            int cat_length = num_catT.intValue();
+	            
+//	    		System.out.println("#**MSD.cFVIM GI cg "+cat_gain
+//	    				+"\tcl "+cat_loss
+//	    				+"\tcd "+cat_duplication
+//	    				+"\tce "+cat_length);
+
 	            gamma_model.setClasses(cat_gain, cat_loss, cat_duplication, cat_length);
 	
 	            gamma_model.setLengthAlpha(alpha_lengthT.doubleValue());
@@ -1056,7 +1290,7 @@ public class ModelSelectionDialog extends JDialog
     {
         startB = new JButton("OK");
         cancelB = new JButton("Cancel");
-        cliB = new JButton("Command-line interface");
+        cliB = new JButton("Command-line interface ▶");
         Box button_box = new Box(BoxLayout.LINE_AXIS);
         button_box.add(Box.createHorizontalGlue());
         button_box.add(cancelB);
@@ -1127,8 +1361,8 @@ public class ModelSelectionDialog extends JDialog
 
         ButtonGroup model_typeG = new ButtonGroup();
         model_typeG.add(model_gldRB);
-        model_typeG.add(model_dlRB);
         model_typeG.add(model_glRB);
+        model_typeG.add(model_dlRB);
         model_typeG.add(model_plRB);
 
         JPanel model_typeP = new JPanel();
@@ -1151,12 +1385,12 @@ public class ModelSelectionDialog extends JDialog
             model_typeP.add(model_gldRB);
 
             gc.gridy++;
-            layout.setConstraints(model_dlRB,gc);
-            model_typeP.add(model_dlRB);
-
-            gc.gridx++;
             layout.setConstraints(model_glRB,gc);
             model_typeP.add(model_glRB);
+
+            gc.gridx++;
+            layout.setConstraints(model_dlRB,gc);
+            model_typeP.add(model_dlRB);
 
             gc.gridx=0;
             gc.gridy++;
@@ -1269,19 +1503,21 @@ public class ModelSelectionDialog extends JDialog
         rootP.add(poissonB);
         ++gc.gridx;
         
-        JRadioButton geomB = new JRadioButton("Shifted geometric");
-        root_distributionB.put(ShiftedGeometric.class, geomB);
-        layout.setConstraints(geomB, gc);
-        rootG.add(geomB);
-        rootP.add(geomB);
-        ++gc.gridx;
-        
-        JRadioButton pointB = new JRadioButton("Bernoulli");
-        root_distributionB.put(PointDistribution.class, pointB);
-        layout.setConstraints(pointB, gc);
-        rootG.add(pointB);
-        rootP.add(pointB);
-        ++gc.gridx;
+        if (DEVELOPMENT_CODE) {
+	        JRadioButton geomB = new JRadioButton("Shifted geometric");
+	        root_distributionB.put(ShiftedGeometric.class, geomB);
+	        layout.setConstraints(geomB, gc);
+	        rootG.add(geomB);
+	        rootP.add(geomB);
+	        ++gc.gridx;
+	        
+	        JRadioButton pointB = new JRadioButton("Bernoulli");
+	        root_distributionB.put(PointDistribution.class, pointB);
+	        layout.setConstraints(pointB, gc);
+	        rootG.add(pointB);
+	        rootP.add(pointB);
+	        ++gc.gridx;
+        }
 
 //        JRadioButton stationaryB = new JRadioButton("Stationary");
 //        root_distributionB.put(DiscreteDistribution.class, stationaryB);
@@ -1301,6 +1537,41 @@ public class ModelSelectionDialog extends JDialog
         return rootP;
     }
     
+    private JComponent createCommonGainBox() {
+    	Box createCommonGainBox = new Box(BoxLayout.LINE_AXIS);
+
+    	createCommonGainBox.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Common gain relative to",javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont()));
+    	
+    	JRadioButton lossRB = new JRadioButton("Loss");
+    	lossRB.setToolTipText("Classes share the same gain-loss param. γ (dup-loss κ=γp/q; gain r=γp)");
+    	
+    	JRadioButton gainRB = new JRadioButton("Gain");
+    	gainRB.setToolTipText("Classes share the same gain param. r (=κq if duplication)");
+    	
+    	JRadioButton dupRB = new JRadioButton("Duplication");
+    	dupRB.setToolTipText("Classes share the same gain-duplication param. κ (if duplication) or r (if no duplication); not recommended b/c of numerical instability as q goes to 0;"
+    			+ "	default for Gamma");
+    	
+    	commongainRB = new JRadioButton[3];
+    	commongainRB[PARAMETER_GAIN] = gainRB;
+    	commongainRB[PARAMETER_LOSS] = lossRB;
+    	commongainRB[PARAMETER_DUPLICATION] = dupRB;
+    	
+    	ButtonGroup commongaingBG = new ButtonGroup();
+    	commongaingBG.add(lossRB);
+    	commongaingBG.add(gainRB);
+    	commongaingBG.add(dupRB);
+    	
+    	commongainRB[RateVariationModel.DEFAULT_COMMON_GAIN].setSelected(true);
+    	
+    	createCommonGainBox.add(lossRB);
+    	createCommonGainBox.add(gainRB);
+    	createCommonGainBox.add(dupRB);
+    	
+    	
+    	return createCommonGainBox;
+    }
+    
     /**
      * Panel with fields and check boxes for selecting rate variation across families.
      * Initializes {@link #gamma_duplicationT}, {@link #gamma_gainT}, {@link #num_catT}
@@ -1313,68 +1584,95 @@ public class ModelSelectionDialog extends JDialog
      */
     private JComponent createFamilyVariationBox()
     {
-        num_catT = new ParameterField(NumberFormat.getIntegerInstance());
-        num_catT.setInputVerifier(InputVerifiers.getPositiveInstance());
-        num_catT.setColumns(2);
-        num_catT.setToolTipText("Number of categories  (1 means variation disabled)");
-
-        num_catT.setEditable(DEVELOPMENT_CODE);
-        //num_catT.setEnabled(DEVELOPMENT_CODE);
-        
-        
         //num_catT.setFocusLostBehavior(JFormattedTextField.COMMIT_OR_REVERT);
         gamma_gainT = new ParameterField(NumberFormat.getIntegerInstance());
         gamma_gainT.setInputVerifier(InputVerifiers.getPositiveInstance());
         gamma_gainT.setColumns(2);
-        gamma_gainT.setToolTipText("Number of discrete Gamma categories for gain rate (1 means variation disabled)");
+        gamma_gainT.setToolTipText("Number of discrete categories for gain rate (1 means variation disabled)");
+        gamma_gainT.setValue(1);
+        
+        gamma_lossT = new ParameterField(NumberFormat.getIntegerInstance());
+        gamma_lossT.setInputVerifier(InputVerifiers.getPositiveInstance());
+        gamma_lossT.setColumns(2);
+        gamma_lossT.setToolTipText("Number of discrete categories for loss rate (1 means variation disabled): ignored in Gamma model");
+        gamma_lossT.setValue(1);
 
         gamma_duplicationT = new ParameterField(NumberFormat.getIntegerInstance());
         gamma_duplicationT.setInputVerifier(InputVerifiers.getPositiveInstance());
         gamma_duplicationT.setColumns(2);
-        gamma_duplicationT.setToolTipText("Number of discrete Gamma categories for duplication rate (1 means variation disabled)");
+        gamma_duplicationT.setToolTipText("Number of discrete categories for duplication rate (1 means variation disabled)");
+        gamma_duplicationT.setValue(1);
+        
 
-        gamma_lossT = new ParameterField(NumberFormat.getIntegerInstance());
-        gamma_lossT.setInputVerifier(InputVerifiers.getPositiveInstance());
-        gamma_lossT.setColumns(2);
-        gamma_lossT.setToolTipText("Number of discrete Gamma categories for loss rate (1 means variation disabled)");
+        num_catT = new ParameterField(NumberFormat.getIntegerInstance());
+        num_catT.setInputVerifier(InputVerifiers.getPositiveInstance());
+        num_catT.setColumns(2);
+        num_catT.setToolTipText("Number of "
+        		+(WANT_GENERAL_VARIATION?"(length) ":"")
+        		+"categories  (1 means variation disabled)");
+        num_catT.setValue(1);
+
+        num_catT.setEditable(WANT_GENERAL_VARIATION);
 
         JLabel gamma_lengthL = new JLabel("");
-        JLabel gamma_gainL = new JLabel("Gamma categories");
-        JLabel gamma_duplicationL = new JLabel("Gamma categories");
-        JLabel gamma_lossL = new JLabel("Gamma categories");
+        JLabel gamma_gainL = new JLabel(""); //new JLabel("Gamma categories");
+        JLabel gamma_duplicationL = new JLabel(""); //new JLabel("Gamma categories");
+        JLabel gamma_lossL = new JLabel(""); //new JLabel("Gamma categories");
 
-        JLabel variation_lengthL = new JLabel("Number of categories");
-        JLabel variation_lossL = new JLabel("Loss rate");
-        JLabel variation_gainL = new JLabel("Gain rate");
-        JLabel variation_duplicationL = new JLabel("Duplication rate");
+        
+        JLabel variation_lengthL = new JLabel("Number of main (length) categories");
+        JLabel variation_lossL = new JLabel("Loss rate categories");
+        JLabel variation_gainL = new JLabel("Gain rate categories");
+        JLabel variation_duplicationL = new JLabel("Duplication rate categories");
 
+        // no loss rate variation
         gamma_lossT.setEditable(false);
-        gamma_lossL.setVisible(false);
         gamma_lossT.setVisible(false);
-        variation_lossL.setVisible(false);
+        gamma_lossL.setVisible(gamma_lossT.isVisible());
+        variation_lossL.setVisible(gamma_lossT.isVisible());
 
 
         forbidden_gainCB = new JCheckBox("No-gain category");
         forbidden_duplicationCB = new JCheckBox("No-duplication category");
         
         
-        gamma_gainT.setVisible(WANT_GENERAL_VARIATION);
+        gamma_gainT.setEditable(false);
+        gamma_gainT.setVisible(false);
         gamma_gainL.setVisible(gamma_gainT.isVisible());
+        forbidden_gainCB.setVisible(false);
+        variation_gainL.setVisible(gamma_gainT.isVisible());
+        
         gamma_duplicationT.setVisible(WANT_GENERAL_VARIATION);
         gamma_duplicationL.setVisible(gamma_duplicationT.isVisible());
-        forbidden_gainCB.setVisible(WANT_GENERAL_VARIATION);
-        forbidden_duplicationCB.setVisible(WANT_GENERAL_VARIATION);
-        variation_gainL.setVisible(WANT_GENERAL_VARIATION);
-        variation_duplicationL.setVisible(WANT_GENERAL_VARIATION);
+        
+        forbidden_duplicationCB.setVisible(false);
+        variation_duplicationL.setVisible(gamma_duplicationT.isVisible());
+        
+        variation_gammaRB = new JRadioButton("Gamma variation");
+        variation_gammaRB.setToolTipText("Rate variation across families: discrete Gamma prior for rate multipliers (only length categories are supported)");
+        variation_gammaRB.setSelected(true);
+        
+        variation_rvmRB = new JRadioButton("Logistic variation");
+        variation_rvmRB.setToolTipText("Rate variation across families: logistic shift in each category");
+        ButtonGroup variationBG = new ButtonGroup();
+        variationBG.add(variation_gammaRB);
+        variationBG.add(variation_rvmRB);
+        
+        JComponent commongainC = createCommonGainBox();
 
         JPanel family_variationP = new JPanel();
         family_variationP.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Rate variation across families",javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont().deriveFont(Font.BOLD)));
         {
+        	final int LABEL_FILL = GridBagConstraints.VERTICAL;
+        	final int FIELD_FILL = GridBagConstraints.HORIZONTAL;
+        	final int BUTTON_FILL = GridBagConstraints.VERTICAL;
+        	
+        	
             GridBagLayout layout = new GridBagLayout();
             GridBagConstraints gc = new GridBagConstraints();
             family_variationP.setLayout(layout);
 
-            gc.fill = GridBagConstraints.HORIZONTAL;
+            
             gc.gridy = 0;
             gc.gridx = 0;
             gc.gridheight=1;
@@ -1383,51 +1681,54 @@ public class ModelSelectionDialog extends JDialog
             gc.weightx = 0.1;
             gc.weighty = 0.1;
 
-            gc.fill=GridBagConstraints.NONE;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(variation_lengthL,gc);
             family_variationP.add(variation_lengthL);
             gc.gridx++;
             gc.anchor = GridBagConstraints.EAST;
-            gc.fill=GridBagConstraints.NONE;
+            gc.fill=FIELD_FILL;
             layout.setConstraints(num_catT, gc);
             family_variationP.add(num_catT);
             gc.gridx++;
             gc.anchor = GridBagConstraints.WEST;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(gamma_lengthL,gc);
             family_variationP.add(gamma_lengthL);
 
 
             gc.gridx=0;
             gc.gridy++;
-            gc.fill = GridBagConstraints.NONE;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(variation_lossL, gc);
             family_variationP.add(variation_lossL);
             gc.gridx++;
             gc.anchor = GridBagConstraints.EAST;
-            gc.fill = GridBagConstraints.NONE;
+            gc.fill=FIELD_FILL;
             layout.setConstraints(gamma_lossT, gc);
             family_variationP.add(gamma_lossT);
             gc.gridx++;
             gc.anchor = GridBagConstraints.WEST;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(gamma_lossL,gc);
             family_variationP.add(gamma_lossL);
 
             gc.gridx=0;
             gc.gridy++;
-            gc.fill = GridBagConstraints.NONE;
             layout.setConstraints(variation_gainL, gc);
             family_variationP.add(variation_gainL);
             gc.gridx++;
             gc.anchor = GridBagConstraints.EAST;
-            gc.fill = GridBagConstraints.NONE;
+            gc.fill=FIELD_FILL;
             layout.setConstraints(gamma_gainT, gc);
             family_variationP.add(gamma_gainT);
             gc.gridx++;
+            gc.fill=LABEL_FILL;
             gc.anchor = GridBagConstraints.WEST;
             layout.setConstraints(gamma_gainL,gc);
             family_variationP.add(gamma_gainL);
 
             gc.gridx++;
+            gc.fill=BUTTON_FILL;
             layout.setConstraints(forbidden_gainCB,gc);
             family_variationP.add(forbidden_gainCB);
 
@@ -1438,24 +1739,46 @@ public class ModelSelectionDialog extends JDialog
 
             gc.gridx=0;
             gc.gridy++;
-            gc.fill=GridBagConstraints.NONE;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(variation_duplicationL, gc);
             family_variationP.add(variation_duplicationL);
             gc.gridx++;
             gc.anchor = GridBagConstraints.EAST;
-            gc.fill = GridBagConstraints.NONE;
+            gc.fill=FIELD_FILL;
             layout.setConstraints(gamma_duplicationT, gc);
             family_variationP.add(gamma_duplicationT);
             gc.gridx++;
             gc.anchor = GridBagConstraints.WEST;
+            gc.fill=LABEL_FILL;
             layout.setConstraints(gamma_duplicationL,gc);
             family_variationP.add(gamma_duplicationL);
 
             gc.gridx++;
+            gc.fill=BUTTON_FILL;
             layout.setConstraints(forbidden_duplicationCB,gc);
             family_variationP.add(forbidden_duplicationCB);
 
+            
+            int bottom = gc.gridy;
+            gc.gridy=0;
+            gc.gridx++;
+            layout.setConstraints(variation_gammaRB, gc);
+            family_variationP.add(variation_gammaRB);
+            gc.gridx++;
+            layout.setConstraints(variation_rvmRB, gc);
+            family_variationP.add(variation_rvmRB);
+            
+            gc.gridx++;
+            gc.gridwidth = 3;
+            layout.setConstraints(commongainC, gc);
+            family_variationP.add(commongainC);
+            
+            gc.gridy=bottom;
+            
+            
+            
             gc.gridheight=gc.gridy+1;
+            gc.gridwidth = 1;
             gc.gridx++;
             gc.gridy=0;
             gc.weightx=1.0;
@@ -1466,6 +1789,10 @@ public class ModelSelectionDialog extends JDialog
         }
         return family_variationP;
     }
+    
+    private static final boolean USE_GROUP_LAYOUT = true;
+    private static final boolean USE_BOX_LAYOUT = false;
+    
     /**
      * Panel with fields for convergence criteria.
      * Initializes {@link #epsT} and {@link #roundT}.
@@ -1486,9 +1813,20 @@ public class ModelSelectionDialog extends JDialog
 		NumberFormat rndF =  NumberFormat.getIntegerInstance();
         rnd_seedT = new JFormattedTextField(rndF);
         rnd_seedT.setColumns(16);
-        rnd_seedL = new JLabel("Random seed");   
+        //rnd_seedT.setMaximumSize(rnd_seedT.getPreferredSize());
+        rnd_seedL = new JLabel("Seed");   
         rnd_seedL.setLabelFor(rnd_seedT);
     	
+        Box rndBox = new Box(BoxLayout.LINE_AXIS);
+        rndBox.add(rnd_seedL);
+        rndBox.add(Box.createHorizontalGlue());
+        rndBox.add(Box.createHorizontalStrut(2));
+        rndBox.add(rnd_seedT);
+        rndBox.add(Box.createHorizontalGlue());
+        if (!want_simulation)
+        	rndBox.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Randomization", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+        
+        
     	if (want_simulation)
     	{
     		NumberFormat epsF =  NumberFormat.getIntegerInstance();
@@ -1504,10 +1842,11 @@ public class ModelSelectionDialog extends JDialog
             //epsT.addPropertyChangeListener("value",this);
             epsT.setInputVerifier(InputVerifiers.getNonnegativeInstance());
             epsT.setColumns(16);
+            
             epsL = new JLabel("Convergence threshold on the likelihood");
     	}
         epsL.setLabelFor(epsT);
-        
+        //epsT.setMaximumSize(epsT.getPreferredSize());
         
         
 
@@ -1520,50 +1859,117 @@ public class ModelSelectionDialog extends JDialog
         		want_simulation?"Simulated families":
         		"Maximum number of optimization rounds");
         roundL.setLabelFor(roundT);
+        //roundT.setMaximumSize(roundT.getPreferredSize());
         
-        rnd_seedT.setValue(init_rnd_seed);
+//        rnd_seedT.setValue(init_rnd_seed);
         if (want_simulation)
         {
         	if (data_file == null)
         		roundT.setValue(OPT_NUM_FAMILIES);
         	else
         		roundT.setValue(data_file.getContent().getFamilyCount());
-        	epsT.setValue(init_rnd_seed);
+        	//epsT.setValue(init_rnd_seed);
         }
 
-        minCopies0 = new JRadioButton("0");
-        minCopies1 = new JRadioButton("1");
-        minCopies2 = new JRadioButton("2");
+        JComponent stoppingComp;
+        if (USE_GROUP_LAYOUT ) {
+        	JPanel stoppingP = new JPanel();
+        	GroupLayout gl = new GroupLayout(stoppingP);
+        	GroupLayout.SequentialGroup hg = gl.createSequentialGroup();
+        	GroupLayout.SequentialGroup vg = gl.createSequentialGroup();
+        	if (want_optimization) {
+	        	hg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING)
+	    			.addComponent(roundL)
+	    			.addComponent(epsL));
+	        	hg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING,false)
+	        		.addComponent(roundT)
+	        		.addComponent(epsT));
+	        	vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
+	        		.addComponent(roundL).addComponent(roundT));
+	        	vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
+	        		.addComponent(epsL).addComponent(epsT));
+	        	
+	        	stoppingP.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Stopping", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+        	} else if (want_simulation) {
+        		hg.addComponent(roundL).addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING, false).addComponent(roundT))
+        			.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING, false).addComponent(rndBox));
+        		vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
+        			.addComponent(roundL).addComponent(roundT).addComponent(rndBox));
+        		stoppingP.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Random table", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+        	}
+        	gl.setHorizontalGroup(hg);
+        	gl.setVerticalGroup(vg);
+        	stoppingP.setLayout(gl);
+        	stoppingComp = stoppingP;
+        } else {
+	        Box stoppingBox = new Box(BoxLayout.PAGE_AXIS);
+	        if (want_optimization) {
+	        	Box roundBox = new Box(BoxLayout.LINE_AXIS);
+	        	roundBox.add(roundL);
+	        	roundBox.add(Box.createHorizontalStrut(2));
+	        	roundBox.add(roundT);
+	        	roundBox.add(Box.createHorizontalGlue());
+	        	stoppingBox.add(roundBox);
+	        	Box epsBox = new Box(BoxLayout.LINE_AXIS);
+	        	epsBox.add(epsL);
+	        	epsBox.add(Box.createHorizontalStrut(2));
+	        	epsBox.add(epsT);
+	        	epsBox.add(Box.createHorizontalGlue());
+	        	stoppingBox.add(epsBox);
+	        	stoppingBox.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Stopping", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+	        } else if (want_simulation) {
+	        	Box nfamBox = new Box(BoxLayout.LINE_AXIS);
+	        	nfamBox.add(roundL);
+	        	nfamBox.add(Box.createHorizontalStrut(2));
+	        	nfamBox.add(roundT);
+	        	nfamBox.add(Box.createHorizontalGlue());
+	        	stoppingBox.add(nfamBox);
+	        	stoppingBox.add(rndBox);
+	        	stoppingBox.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Random table", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+	        }
+	        stoppingComp = stoppingBox;
+        }
+        
+        
+//        minCopies0 = new JRadioButton("0");
+//        minCopies1 = new JRadioButton("1");
+//        minCopies2 = new JRadioButton("2");
         
         int min_copies;
-        if (want_simulation)
-        	min_copies = 2;
+        if (data_file == null )
+        	min_copies = 1;
         else
     	{
     		min_copies = data_file.getContent().minCopies();
     	}
-        ButtonGroup minCopiesG = new ButtonGroup();
-        minCopiesG.add(minCopies0);
-        minCopiesG.add(minCopies1);
-        minCopiesG.add(minCopies2);
-        minCopies1.setEnabled(min_copies>0);
-        minCopies2.setEnabled(min_copies>1);
-        JLabel minCopiesL = new JLabel("Family observation threshold on minimum copies");
+//        ButtonGroup minCopiesG = new ButtonGroup();
+//        minCopiesG.add(minCopies0);
+//        minCopiesG.add(minCopies1);
+//        minCopiesG.add(minCopies2);
+//        minCopies1.setEnabled(min_copies>0);
+//        minCopies2.setEnabled(min_copies>1);
+        JLabel minCopiesL = new JLabel("Family minimum copies");
         //= new JLabel("Minimum total number of copies for likelihood correction");
+        
+        minCopiesCBB = new SmallIntegerSelector(0,min_copies);
+        minCopiesL.setLabelFor(minCopiesCBB);
         Box minCopiesB = new Box(BoxLayout.LINE_AXIS);
         minCopiesB.add(minCopiesL);
-        minCopiesB.add(minCopies0);
-        minCopiesB.add(minCopies1);
-        minCopiesB.add(minCopies2);
-        if (min_copies==0)
-        	minCopies0.setSelected(true);
-        else if (min_copies==1 || want_simulation)
-        	minCopies1.setSelected(true);
-        else
-        {
-        	assert (min_copies>=2);
-        	minCopies2.setSelected(true);
-        }
+//        minCopiesB.add(minCopies0);
+//        minCopiesB.add(minCopies1);
+//        minCopiesB.add(minCopies2);
+        minCopiesB.add(minCopiesCBB);
+        minCopiesB.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Observation bias", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f))); //BorderFactory.createTitledBorder(, "Observation bias", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
+//        if (min_copies==0)
+//        	minCopies0.setSelected(true);
+//        else if (min_copies==1)
+//        	minCopies1.setSelected(true);
+//        else
+//        {
+//        	assert (min_copies>=2);
+//        	minCopies2.setSelected(true);
+//        }
+        
         
 //        NumberFormat bracketF = new DecimalFormat("0.############");
 //        bracketF.setParseIntegerOnly(false);
@@ -1576,27 +1982,29 @@ public class ModelSelectionDialog extends JDialog
         NumberFormat approximate_likelihood_factorF = new DecimalFormat("0.0###########");
         approximate_likelihood_factorF.setParseIntegerOnly(false);
         approximate_factorT = new JFormattedTextField(approximate_likelihood_factorF);
-        approximate_factorT.setColumns(16);
+        approximate_factorT.setColumns(12);
+        //approximate_factorT.setMaximumSize(approximate_factorT.getPreferredSize());
         JLabel approximate_factorL = new JLabel("Truncation: relative threshold");
         approximate_factorL.setLabelFor(approximate_factorT);
 
         NumberFormat approximate_likelihood_thresholdF = NumberFormat.getIntegerInstance();
         approximate_thresholdT = new JFormattedTextField(approximate_likelihood_thresholdF);
         approximate_thresholdT.setInputVerifier(InputVerifiers.getNonnegativeInstance());
-        approximate_thresholdT.setColumns(10);
+        approximate_thresholdT.setColumns(7);
+        //approximate_thresholdT.setMaximumSize(approximate_thresholdT.getPreferredSize());
         JLabel approximate_thresholdL = new JLabel("Truncation: absolute threshold");
         approximate_thresholdL.setLabelFor(approximate_thresholdT);
-
-        approximate_autoCB = new JCheckBox("Automatic");
+        
+        approximate_autoCB = new JCheckBox("Automatic thresholds");
         approximate_autoCB.setToolTipText("Truncation is set automatically for desired precision (faster computation)");
         approximate_autoCB.addChangeListener(e->
 	        {
 	        	boolean approxOK = approximateCB.isSelected();
 	        	boolean autoOK = approxOK && approximate_autoCB.isSelected();
-                approximate_thresholdT.setEnabled(approxOK && !autoOK);
                 approximate_thresholdT.setEditable(approxOK && !autoOK);
-                approximate_factorT.setEnabled(approxOK && !autoOK);
-                approximate_factorT.setEditable(approxOK && !autoOK);
+                approximate_thresholdT.setEnabled(approximate_thresholdT.isEditable());
+                approximate_factorT.setEditable(approximate_thresholdT.isEditable());
+                approximate_factorT.setEnabled(approximate_factorT.isEditable());
 	        	
 	        });
         
@@ -1605,12 +2013,69 @@ public class ModelSelectionDialog extends JDialog
             {
                 boolean approxOK = approximateCB.isSelected();
 	        	boolean autoOK = approxOK && approximate_autoCB.isSelected();
-                approximate_thresholdT.setEnabled(approxOK && !autoOK);
                 approximate_thresholdT.setEditable(approxOK && !autoOK);
-                approximate_factorT.setEnabled(approxOK && !autoOK);
-                approximate_factorT.setEditable(approxOK && !autoOK);
+                approximate_thresholdT.setEnabled(approximate_thresholdT.isEditable());
+                approximate_factorT.setEditable(approximate_thresholdT.isEditable());
+                approximate_factorT.setEnabled(approximate_factorT.isEditable());
                 approximate_autoCB.setEnabled(approxOK);
             });
+        approximate_autoCB.setSelected(false);
+        approximate_autoCB.setVisible(want_optimization);
+        
+        
+        approximateCB.setSelected(want_optimization);
+        approximate_thresholdT.setValue(2);
+        approximate_factorT.setValue(3.0);
+        
+        
+        
+        JComponent truncateComp;
+        if (USE_GROUP_LAYOUT) {
+        	JPanel truncateP = new JPanel();
+        	GroupLayout gl = new GroupLayout(truncateP);
+        	GroupLayout.SequentialGroup hg = gl.createSequentialGroup();
+        	GroupLayout.SequentialGroup vg = gl.createSequentialGroup();
+        	
+        	hg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING)
+        			.addComponent(approximateCB)
+        			.addComponent(approximate_thresholdL)
+        			.addComponent(approximate_factorL));
+        	hg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING,false)
+        			.addComponent(approximate_autoCB)
+        			.addComponent(approximate_thresholdT)
+        			.addComponent(approximate_factorT));
+        	
+        	vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
+        			.addComponent(approximateCB).addComponent(approximate_autoCB));
+        	vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
+        			.addComponent(approximate_thresholdL).addComponent(approximate_thresholdT));
+        	vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)	
+        				.addComponent(approximate_factorL).addComponent(approximate_factorT));
+        	gl.setHorizontalGroup(hg);
+        	gl.setVerticalGroup(vg);
+        	truncateP.setLayout(gl);
+        	truncateComp = truncateP;
+        } else {
+	        Box truncateBox = new Box(BoxLayout.PAGE_AXIS);
+	        
+	        Box truncateAutoBox = new Box(BoxLayout.LINE_AXIS);
+	        truncateAutoBox.add(approximateCB);
+	        truncateAutoBox.add(approximate_autoCB);
+	        truncateBox.add(truncateAutoBox);
+	        Box truncateAbsoluteBox = new Box(BoxLayout.LINE_AXIS);
+	        truncateAbsoluteBox.add(approximate_thresholdL);
+	        //truncateAbsoluteBox.add(Box.createHorizontalGlue());
+	        truncateAbsoluteBox.add(approximate_thresholdT);
+	        Box truncateRelativeBox = new Box(BoxLayout.LINE_AXIS);
+	        truncateRelativeBox.add(approximate_factorL);
+	        truncateRelativeBox.add(approximate_factorT);
+	        //truncateRelativeBox.add(Box.createHorizontalGlue());
+	        truncateBox.add(truncateAbsoluteBox);
+	        truncateBox.add(truncateRelativeBox);
+	        truncateComp = truncateBox;
+        }
+        if (!want_simulation)
+        	truncateComp.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Approximate likelihood",javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
         
         opt_ratesRB = new JRadioButton("BFGS");
         opt_ratesRB.setSelected(true);
@@ -1625,29 +2090,37 @@ public class ModelSelectionDialog extends JDialog
         optG.add(opt_emRB);
         
         
+        Box algoBox = new Box(BoxLayout.LINE_AXIS);
+        algoBox.add(opt_ratesRB);
+        if (ENABLE_EM) algoBox.add(opt_emRB);
+        algoBox.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Numerical optimization algorithm",javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
         
-        opt_ratesRB.addChangeListener(e->
-        	{
-        		boolean want_rates = opt_ratesRB.isSelected();
-        		approximate_autoCB.setEnabled(want_rates);
-        		if (!want_rates) approximate_autoCB.setSelected(false);
-        	});
+//        opt_ratesRB.addChangeListener(e->
+//        	{
+//        		boolean want_rates = opt_ratesRB.isSelected();
+//        		approximate_autoCB.setEnabled(want_rates);
+//        		if (!want_rates) approximate_autoCB.setSelected(false);
+//        	});
         
         NumberFormat threadsF = NumberFormat.getIntegerInstance();
         threadsT = new JFormattedTextField(threadsF);
         threadsT.setInputVerifier(InputVerifiers.getPositiveInstance());            
 
-        threadsT.setColumns(6);
+        threadsT.setColumns(3);
+        threadsT.setMaximumSize(threadsT.getPreferredSize());
         threadsT.setToolTipText("Number of threads used in calculations for command-line execution");
         threadsT.setValue(Count.THREAD_PARALLELISM);
         JLabel threadsL = new JLabel("Multithreading");
         threadsL.setLabelFor(threadsT);
         Box threadsB = new Box(BoxLayout.LINE_AXIS);
         threadsB.add(threadsL);
-        threadsB.add(Box.createHorizontalStrut(12));
+        threadsB.add(Box.createHorizontalStrut(2));
         threadsB.add(threadsT);
+        threadsB.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Parallelized calculations", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,getFont().deriveFont(getFont().getSize2D()*0.9f)));
 
         JPanel convergenceP = new JPanel();
+        Box convergenceB = new Box(BoxLayout.LINE_AXIS);
+        
         String panel_title;
         if (want_simulation)
         {
@@ -1658,32 +2131,31 @@ public class ModelSelectionDialog extends JDialog
         }
         
         
-        String optimization_instructions = "<p><em>There are multiple numerical optimization methods implemented for "
-        		+ "likelihood maximization. BFGS (Davidon-Fletcher-Powell)_uses the gradient to find "
-        		+ "a local maximum, and may work over the rate parameters, or over distribution "
-        		+ "parameters if only one rate class is used. (The latter is faster and more robust, but does not "
-        		+ "generalize to multiple rate classes. Alternatively, Expectation-Maximization (EM) is possible if there is only "
-        		+ "one class, which is the fastest but less robust numerically. "
-        		+ "For BFGS optimization, <b>truncation</b> sets a threshold on maximum "
+        String optimization_instructions = "<p><em>"
+//        		+ "There are multiple numerical optimization methods implemented for "
+//        		+ "likelihood maximization. "
+        		+ "BFGS (Davidon-Fletcher-Powell) optimization uses the gradient to find "
+        		+ "a local maximum."
+        		+ "<b>Truncation</b> sets a threshold on maximum "
         		+ "ancestral copy number by multiplying the maximum copy number at the "
         		+ "descendant leaves with the <b>relative</b> value, and choosing the maximum "
-        		+ "between the product and the given absolute threshold. "
+        		+ "between the product and the given absolute threshold. (Use truncation only if you need it on profiles that are too big.)"
         		+ "Without truncation, the likelihoods and gradients are computed exactly "
         		+ "to numerical precision. With auto-truncation, the best setting is computed automatically for the desired precision."
         		+ "The <b>convergence</b> threshold for BFGS is on "
-        		+ "the relative value of the partial derivatives."
-        		+ "For EM,  <b>truncation</b> is mandatory and defines the "
-        		+ "ancestral copy number threshold as <var>m</var>+<var>a</var>+<var>r</var>×sqrt(1+<var>m</var>) "
-        		+ "where <var>m</var> is the maximum copy number at the leaves, "
-        		+ "and <var>r</var>,<var>a</var> are the specified relative and absolute "
-        		+ "values. The <b>convergence</b> threshold for EM is on the relative change of the "
-        		+ "log-likelihood. "
+        		+ "the (maximum) absolute value of the partial derivatives."
+//        		+ "For EM,  <b>truncation</b> is mandatory and defines the "
+//        		+ "ancestral copy number threshold as <var>m</var>+<var>a</var>+<var>r</var>×sqrt(1+<var>m</var>) "
+//        		+ "where <var>m</var> is the maximum copy number at the leaves, "
+//        		+ "and <var>r</var>,<var>a</var> are the specified relative and absolute "
+//        		+ "values. The <b>convergence</b> threshold for EM is on the relative change of the "
+//        		+ "log-likelihood. "
         		+ "<b>Multithreading</b> speeds up the computations; default value is "
         		+ "three-quarter of your available vCPUs."
         		+ "</em></p>"
         		+ "<p><em>Best practices: "
-        		+ "(1) Start with a random model + expectation-maximization at limited truncation (e.g., relative 3.0 and absolute 3), a few (200-500) iterations should suffice; "
-        		+ "(2) refine using BFGS with auto-truncation and stricter convergence (in the order of the square root of machine precision, say 1e-8) and a few thousand iterations."
+        		+ "(1) Record the random seed for the initial model for reproducibility."
+        		+ "(2) Launch BFGS with maximum precision; hyou can take snapshots of the optimized model if you are impatient."
         		+ "(3) If the optimization finishes with the maximum number of iterations, then the model can converge more, and you can relaunch BFGS."
         		+ "Otherwise, the model is converged to a (local) optimum. "
         		+  "You can repeat the procedure "
@@ -1695,14 +2167,101 @@ public class ModelSelectionDialog extends JDialog
         
         JEditorPane optimization_explain = new JEditorPane("text/html", optimization_instructions);
         optimization_explain.setEditable(false);
+        JScrollPane scrolled_explain = new JScrollPane(optimization_explain);  
         
         convergenceP.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),panel_title,javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont().deriveFont(Font.BOLD)));
+        convergenceB.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),panel_title,javax.swing.border.TitledBorder.LEFT,javax.swing.border.TitledBorder.TOP,getFont().deriveFont(Font.BOLD)));
+
+        convergenceB.setBackground(convergenceP.getBackground());
+        convergenceB.setOpaque(true);
+        
+        
+        if (USE_BOX_LAYOUT) {
+	        if (want_optimization){
+	        	Box optRunB = new Box(BoxLayout.PAGE_AXIS);
+	        	optRunB.add(algoBox);
+	        	optRunB.add(stoppingComp);
+	        	optRunB.add(minCopiesB);
+	
+	        	Box speedB = new Box(BoxLayout.PAGE_AXIS);
+	        	speedB.add(threadsB);
+	        	speedB.add(truncateComp);
+	        	
+	        	convergenceB.add(optRunB);
+	        	convergenceB.add(speedB);
+	
+	        	Box howB = new Box(BoxLayout.PAGE_AXIS);
+	        	//howB.add(algoBox);
+	        	howB.add(rndBox);
+	        	howB.add(Box.createVerticalStrut(128));
+	        	
+	        	convergenceB.add(howB);
+	        	
+	        	Box withExplain = new Box(BoxLayout.PAGE_AXIS);
+	        	withExplain.setBorder(convergenceB.getBorder());
+	        	convergenceB.setBorder(null);
+	        	withExplain.add(convergenceB);
+	        	withExplain.add(scrolled_explain);
+	        	convergenceB = withExplain;
+	        } else if (want_simulation) {
+	        	convergenceB.add(stoppingComp);
+	        	convergenceB.add(minCopiesB);
+	        } else {
+	        	convergenceB.add(truncateComp);
+	        }
+        } else if (USE_GROUP_LAYOUT) {
+        	GroupLayout gl = new GroupLayout(convergenceP);
+        	convergenceP.setLayout(gl);
+        	gl.setAutoCreateContainerGaps(true);
+        	gl.setAutoCreateGaps(true);
+    		GroupLayout.SequentialGroup hg = gl.createSequentialGroup();
+    		GroupLayout.SequentialGroup vg = gl.createSequentialGroup();
+        	
+        	// optimization:
+        	//    algoBox    	threadsB   	rndBox
+        	//    stoppingBox   truncateBox
+        	//    minCopiesB 
+        	//    
+        	// simulation:
+        	//    stoppingBox	minCopiesB
+        	// posteriors:
+        	//    truncateBox
+
+        	if (want_optimization) {
+        		hg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(algoBox).addComponent(stoppingComp).addComponent(minCopiesB))
+        			.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING,false).addComponent(threadsB).addComponent(truncateComp).addComponent(rndBox));
+        		vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(algoBox).addComponent(threadsB))
+        			.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(stoppingComp).addComponent(truncateComp))
+        			.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(minCopiesB).addComponent(rndBox));
+        		gl.setHorizontalGroup(hg);
+        		gl.setVerticalGroup(vg);
+        		JPanel withExplain = new JPanel();
+        		withExplain.setLayout(new BorderLayout());
+        		withExplain.add(convergenceP, BorderLayout.CENTER);
+        		withExplain.add(scrolled_explain, BorderLayout.SOUTH);
+        		convergenceP = withExplain;
+        	} else if (want_simulation) {
+        		hg.addComponent(stoppingComp).addComponent(minCopiesB);
+        		vg.addGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(stoppingComp).addComponent(minCopiesB));
+        		gl.setHorizontalGroup(hg);
+        		gl.setVerticalGroup(vg);
+        	} else {
+        		hg.addComponent(truncateComp);
+        		vg.addComponent(truncateComp);
+        		gl.setHorizontalGroup(hg);
+        		gl.setVerticalGroup(vg);
+        	}
+        } else 
         {
+        	final int LABEL_FILL = GridBagConstraints.VERTICAL;
+        	final int FIELD_FILL = GridBagConstraints.HORIZONTAL;
+        	final int BUTTON_FILL = GridBagConstraints.VERTICAL;
+        	
             GridBagLayout layout = new GridBagLayout();
             GridBagConstraints gc = new GridBagConstraints();
             convergenceP.setLayout(layout);
 
-            gc.fill = GridBagConstraints.HORIZONTAL;
+            gc.fill = LABEL_FILL;
             gc.gridy = 0;
             gc.gridx = 0;
             gc.gridheight=1;
@@ -1710,185 +2269,253 @@ public class ModelSelectionDialog extends JDialog
             gc.anchor = GridBagConstraints.WEST;
             gc.weightx = 0.1;
             gc.weighty = 0.1;
-            layout.setConstraints(threadsL, gc);
-            convergenceP.add(threadsL);
-            gc.gridx++;
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            layout.setConstraints(threadsT, gc);
-            convergenceP.add(threadsT);
             
-            threadsT.setVisible(want_optimization);
-            threadsL.setVisible(threadsT.isVisible());
+            
+//            layout.setConstraints(threadsL, gc);
+//            convergenceP.add(threadsL);
+//            
+//            
+//            gc.gridx++;
+//            gc.fill = FIELD_FILL;
+//            layout.setConstraints(threadsT, gc);
+//            convergenceP.add(threadsT);
+            
+//            threadsT.setVisible(want_optimization);
+//            threadsL.setVisible(threadsT.isVisible());
+
+            gc.gridwidth = 2;
+            gc.fill= GridBagConstraints.HORIZONTAL;
+            layout.setConstraints(threadsB, gc);
+            convergenceP.add(threadsB);
+            gc.gridwidth = 1;
+            threadsB.setVisible(want_optimization);
+            ++gc.gridx;
+            
             
             ++gc.gridx;
-            gc.fill = GridBagConstraints.HORIZONTAL;
+            gc.fill =LABEL_FILL;
             
             if (want_optimization)
             {
-            	layout.setConstraints(rnd_seedL, gc);
-            	convergenceP.add(rnd_seedL);
-                ++gc.gridx;
-                layout.setConstraints(rnd_seedT, gc);
-                convergenceP.add(rnd_seedT);
-                ++gc.gridx;
+//            	layout.setConstraints(rnd_seedL, gc);
+//            	convergenceP.add(rnd_seedL);
+//                ++gc.gridx;
+//                gc.fill=FIELD_FILL;
+//                layout.setConstraints(rnd_seedT, gc);
+//                convergenceP.add(rnd_seedT);
+//                ++gc.gridx;
+            	gc.fill = GridBagConstraints.HORIZONTAL;
+            	gc.gridwidth = 2;
+            	layout.setConstraints(rndBox, gc);
+            	convergenceP.add(rndBox);
+            	gc.gridx += gc.gridwidth;
+            	gc.gridwidth = 1;
             }
             
             
-            
-            gc.gridy++;
+            gc.gridy++; // gc.gridy==1
 
             
             gc.gridx = 2;
-            layout.setConstraints(roundL,gc);
-            convergenceP.add(roundL);
-            roundL.setVisible(want_optimization || want_simulation);
+            
+            if (want_optimization || want_simulation) {
+            	gc.gridwidth = 2;
+            	gc.gridheight = 2;
+            	gc.fill = GridBagConstraints.HORIZONTAL;
+            	layout.setConstraints(stoppingComp, gc);
+            	convergenceP.add(stoppingComp);
 
-            ++ gc.gridy; //gc.gridy=1;
-            if (want_simulation)
-            {
-	            layout.setConstraints(rnd_seedL,gc);
-	            convergenceP.add(rnd_seedL);
-            } else 
-            {
-	            layout.setConstraints(epsL,gc);
-	            convergenceP.add(epsL);
-	            epsL.setVisible(want_optimization || want_simulation);
+            	gc.gridy++;
+            	gc.gridx++;
+            	gc.gridwidth = 1;
+            	gc.gridheight = 1;
+            } else {
+//	            gc.fill =LABEL_FILL;
+//	            layout.setConstraints(roundL,gc);
+//	            convergenceP.add(roundL);
+//	
+//	            ++ gc.gridy; //gc.gridy==2;
+//	            if (want_simulation)
+//	            {
+//		            layout.setConstraints(rnd_seedL,gc);
+//		            convergenceP.add(rnd_seedL);
+//	            } else 
+//	            {
+//		            layout.setConstraints(epsL,gc);
+//		            convergenceP.add(epsL);
+//	            }
+//	        
+//	            
+//	
+//	            gc.gridx++;
+//	            --gc.gridy; //gc.gridy==1;
+//	            gc.anchor = GridBagConstraints.WEST;
+//	            gc.fill = FIELD_FILL;
+//	//            gc.weightx=0.0;
+//	            layout.setConstraints(roundT,gc);
+//	            convergenceP.add(roundT);
+//	
+//	            ++gc.gridy; //gc.gridy==2;
+//	            if (want_simulation)
+//	            {
+//	                layout.setConstraints(rnd_seedT,gc);
+//	                convergenceP.add(rnd_seedT);
+//	            } else
+//	            {
+//	                layout.setConstraints(epsT,gc);
+//	                convergenceP.add(epsT);
+//	            }
+//	            
+//	            roundL.setVisible(want_optimization || want_simulation);
+//	            epsL.setVisible(want_optimization || want_simulation);
+//	            roundT.setVisible(roundL.isVisible());
+//	            epsT.setVisible(epsL.isVisible());
             }
-        
+            
             
 
-            gc.gridx++;
-            --gc.gridy; //gc.gridy=0;
-            gc.anchor = GridBagConstraints.WEST;
-//            gc.fill=GridBagConstraints.NONE;
-//            gc.weightx=0.0;
-            layout.setConstraints(roundT,gc);
-            convergenceP.add(roundT);
-            roundT.setVisible(roundL.isVisible());
-
-            ++gc.gridy; //gc.gridy=1;
-            if (want_simulation)
-            {
-                layout.setConstraints(rnd_seedT,gc);
-                convergenceP.add(rnd_seedT);
-            } else
-            {
-                layout.setConstraints(epsT,gc);
-                convergenceP.add(epsT);
-                epsT.setVisible(epsL.isVisible());
-            }
-            
-
-            ++gc.gridy; //gc.gridy=2;
+            ++gc.gridy; //gc.gridy==3;
             gc.gridx--;
             gc.gridwidth = 2;
-            layout.setConstraints(minCopiesB, gc);
-            convergenceP.add(minCopiesB);
+            gc.gridheight = 1;
+            gc.fill = GridBagConstraints.HORIZONTAL;
+            
+            if (want_simulation) {
+            	gc.gridx += 2;
+            	gc.gridy -= 2;
+                layout.setConstraints(minCopiesB, gc);
+                convergenceP.add(minCopiesB);
+                gc.gridx -= 2;
+                gc.gridy -= 2;
+            } else {
+	            layout.setConstraints(minCopiesB, gc);
+	            convergenceP.add(minCopiesB);
+            }
             minCopiesB.setVisible(want_optimization || want_simulation);
 //            layout.setConstraints(minCopiesB, gc);
 //            convergenceP.add(minCopiesB);
 
             --gc.gridy;
-            --gc.gridy;
-            // gc.gridy=0;
+            --gc.gridy; // gc.gridy == 1
             
             gc.gridx=0;
+            
+            
+            
             //++gc.gridx;
-            gc.gridwidth = 1;
-            gc.gridheight = 1;
-            gc.fill = GridBagConstraints.NONE;
+//            gc.gridwidth = 1;
+//            gc.gridheight = 1;
+//            gc.weightx = 0.1;
+//            gc.weighty = 0.1;
+//            layout.setConstraints(approximateCB, gc);
+//            convergenceP.add(approximateCB);
+//            approximateCB.setVisible(!want_simulation);
+//            
+//            ++gc.gridx;
+//            layout.setConstraints(approximate_autoCB, gc);
+//            convergenceP.add(approximate_autoCB);
+//            --gc.gridx;
+//            
+////            gc.gridx++;
+////            layout.setConstraints(threadsB, gc);
+////            convergenceP.add(threadsB);
+////            --gc.gridx;
+////            threadsB.setVisible(want_optimization);
+//            
+//            gc.gridwidth=1;
+//            gc.weightx=0.1;
+//            ++gc.gridy; // gc.gridy=2
+//            gc.fill =LABEL_FILL;
+//            layout.setConstraints(approximate_factorL, gc);
+//            convergenceP.add(approximate_factorL);
+//
+//            ++gc.gridx;
+////            gc.weightx=0.0;
+//            gc.fill = FIELD_FILL;
+//            layout.setConstraints(approximate_factorT,gc);
+//            convergenceP.add(approximate_factorT);
+//
+//            --gc.gridx;
+//            ++gc.gridy; // gc.gridy=3
+//            gc.weightx=0.1;
+//            gc.fill =LABEL_FILL;
+//            layout.setConstraints(approximate_thresholdL, gc);
+//            convergenceP.add(approximate_thresholdL);
+//
+//            ++gc.gridx;
+////            gc.weightx=0.0;
+//            gc.fill = FIELD_FILL;
+//            layout.setConstraints(approximate_thresholdT, gc);
+//            convergenceP.add(approximate_thresholdT);
+//            
+//            
+//            approximate_factorL.setVisible(!want_simulation);
+//            approximate_factorT.setVisible(approximate_factorL.isVisible());
+//            approximate_thresholdL.setVisible(approximate_factorL.isVisible());
+//            approximate_thresholdT.setVisible(approximate_thresholdL.isVisible());
+            
+            
+            gc.gridwidth = 2;
+            gc.gridheight = 3;
             gc.weightx = 0.1;
             gc.weighty = 0.1;
-            layout.setConstraints(approximateCB, gc);
-            convergenceP.add(approximateCB);
-            approximateCB.setVisible(!want_simulation);
-            
-            ++gc.gridx;
-            layout.setConstraints(approximate_autoCB, gc);
-            convergenceP.add(approximate_autoCB);
-            approximate_autoCB.setVisible(want_optimization);
-            --gc.gridx;
-            
-//            gc.gridx++;
-//            layout.setConstraints(threadsB, gc);
-//            convergenceP.add(threadsB);
-//            --gc.gridx;
-//            threadsB.setVisible(want_optimization);
-            
-            gc.gridwidth=1;
-            gc.weightx=0.1;
-            ++gc.gridy; // gc.gridy=1
             gc.fill = GridBagConstraints.HORIZONTAL;
-            layout.setConstraints(approximate_factorL, gc);
-            convergenceP.add(approximate_factorL);
-            approximate_factorL.setVisible(!want_simulation);
-
-            ++gc.gridx;
-//            gc.weightx=0.0;
-//            gc.fill=GridBagConstraints.NONE;
-            layout.setConstraints(approximate_factorT,gc);
-            convergenceP.add(approximate_factorT);
-            approximate_factorT.setVisible(approximate_factorL.isVisible());
-
-            --gc.gridx;
-            ++gc.gridy; // gc.gridy=2
-            gc.weightx=0.1;
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            layout.setConstraints(approximate_thresholdL, gc);
-            convergenceP.add(approximate_thresholdL);
-            approximate_thresholdL.setVisible(approximate_factorL.isVisible());
-
-            ++gc.gridx;
-//            gc.weightx=0.0;
-//            gc.fill=GridBagConstraints.NONE;
-            layout.setConstraints(approximate_thresholdT, gc);
-            convergenceP.add(approximate_thresholdT);
-            approximate_thresholdT.setVisible(approximate_thresholdL.isVisible());
-
+            layout.setConstraints(truncateComp, gc);
+            convergenceP.add(truncateComp);
+            truncateComp.setVisible(!want_simulation);
+            
+            
             gc.gridx = 4;
-            --gc.gridy; 
-            --gc.gridy; // gc.gridy = 0;
 
-            gc.fill = GridBagConstraints.HORIZONTAL;
             gc.gridheight=1;
             gc.gridwidth=1;
             gc.anchor = GridBagConstraints.WEST;
             gc.weightx = 0.1;
             gc.weighty = 0.1;
             
-            --gc.gridy;
-            JLabel algoL = new JLabel("Numerical optimization algorithm");
-            layout.setConstraints(algoL, gc);
-            convergenceP.add(algoL);
-            algoL.setVisible(want_optimization);
-            ++gc.gridy;
-            
-            
-            layout.setConstraints(opt_ratesRB, gc);
-            convergenceP.add(opt_ratesRB);
-            gc.gridy++; // gc.gridy=1
-            layout.setConstraints(opt_distributionRB, gc);
-            convergenceP.add(opt_distributionRB);
-            gc.gridy++; // gc.gridy=2
-            layout.setConstraints(opt_emRB,  gc);
-            convergenceP.add(opt_emRB);
-            
-            opt_ratesRB.setVisible(want_optimization);
-            opt_distributionRB.setVisible(DEVELOPMENT_CODE && opt_ratesRB.isVisible());
-            //opt_distributionRB.setEnabled(DEVELOPMENT_CODE); 
-            opt_emRB.setVisible(opt_ratesRB.isVisible());
-
-            // last column 
-            int last_column = 5; //want_optimization?5:4;
-            
-            gc.gridx = 0;
-            gc.gridy += 2; // gc.gridy=4
-            gc.gridwidth=last_column;
-            gc.fill = GridBagConstraints.BOTH;
-            layout.setConstraints(optimization_explain, gc);
-            convergenceP.add(optimization_explain);
-            optimization_explain.setVisible(want_optimization);
-            
+            gc.gridy = 1;
+            if (want_optimization) {
+//            gc.fill = LABEL_FILL;;
+//            JLabel algoL = new JLabel("Numerical optimization algorithm");
+//            layout.setConstraints(algoL, gc);
+//            convergenceP.add(algoL);
+//            algoL.setVisible(want_optimization);
+//            ++gc.gridy;
+//            
+//            gc.fill = BUTTON_FILL;
+//            layout.setConstraints(opt_ratesRB, gc);
+//            convergenceP.add(opt_ratesRB);
+//            gc.gridy++; // gc.gridy=1
+//            layout.setConstraints(opt_distributionRB, gc);
+//            convergenceP.add(opt_distributionRB);
+//            gc.gridy++; // gc.gridy=2
+//            layout.setConstraints(opt_emRB,  gc);
+//            convergenceP.add(opt_emRB);
+//            
+//            opt_ratesRB.setVisible(want_optimization);
+//            opt_distributionRB.setVisible(DEVELOPMENT_CODE && opt_ratesRB.isVisible());
+//            //opt_distributionRB.setEnabled(DEVELOPMENT_CODE); 
+//            opt_emRB.setVisible(opt_ratesRB.isVisible());
+            	gc.fill = GridBagConstraints.HORIZONTAL;
+            	gc.gridheight = 2;
+            	layout.setConstraints(algoBox, gc);
+            	convergenceP.add(algoBox);
+            	
+	            // last column 
+	            int last_column = 5; //want_optimization?5:4;
+	            
+	            gc.gridx = 0;
+	            gc.gridy = 4;
+	            gc.gridwidth=last_column;
+	            gc.gridheight = 1;
+	            gc.fill = GridBagConstraints.BOTH;
+	            gc.weightx = 1;
+	            gc.weighty = 1;
+	            
+	            
+	            layout.setConstraints(scrolled_explain, gc);
+	            convergenceP.add(scrolled_explain);
+            }
             
 //            gc.gridx=last_column;
 //            gc.gridy=0;
@@ -1912,7 +2539,12 @@ public class ModelSelectionDialog extends JDialog
 //            convergenceP.add(fillerY);
             
         }
-        return convergenceP;
+        
+        
+        if (USE_BOX_LAYOUT)
+            return convergenceB;
+        else
+        	return convergenceP;
     }
     
     /**
@@ -1922,31 +2554,49 @@ public class ModelSelectionDialog extends JDialog
      */
     private void setRateVariationModelFields()
     {
-    	// TODO update with number of categories
-    	// TODO handle legacy of GammaInvariant 
     	MixedRateModel sel = models.get(selected_model);
-		// System.out.println("#**MSD.sRVMF select "+selected_model+"\t"+sel.getClass());
-    	if (sel instanceof GammaInvariant)
-    	{
-    		//  nothing to do 
-    		
-    	}
-    	if (sel instanceof RateVariationModel)
-    	{
-        	RateVariationModel model = (RateVariationModel)sel;
     	
+//		System.out.println("#**MSD.sRVMF select "+selected_model+"\t"+sel.getClass());
+    	boolean want_gamma = variation_gammaRB.isSelected();
+    	Number catN = (Number) num_catT.getValue();
+    	int wanted_ncat = (catN==null?sel.getNumClasses():catN.intValue());
+    	Number dcatN = (Number) gamma_duplicationT.getValue(); // may be null if we set length bf duplication
+    	int wanted_dcat = (dcatN==null?1:dcatN.intValue());
+    	
+    	if (want_gamma)
+    	{
+    		main_tabbed_pane.setComponentAt(main_tabbed_pane.getTabCount()-1,gamma_variationB);
+    		
+//    		if (!(sel instanceof GammaInvariant)) {
+//    			alpha_gainT.setValue(1.0);
+//    			alpha_lossT.setValue(1.0);
+//    			alpha_duplicationT.setValue(1.0);
+//    			alpha_lengthT.setValue(1.0);
+//    			
+//    		}
+	        variation_gammaRB.setEnabled(1<wanted_ncat*wanted_dcat);
+	        variation_rvmRB.setEnabled(variation_gammaRB.isEnabled() && sel instanceof RateVariationModel && DEVELOPMENT_CODE);
+    	} else 
+    	{
+    		RateVariationModel model = (RateVariationModel)sel;
         	int model_ncat = model.getNumClasses();
+
+        	variation_rvmRB.setEnabled(1<wanted_ncat || 1<wanted_dcat);
+	        variation_gammaRB.setEnabled(variation_rvmRB.isEnabled() && 1==model_ncat);
+
 	    	int ncat = cat_probT.size();
 	    	
-	    	int wanted_ncat = ((Number) num_catT.getValue()).intValue();
+	    	
 	    	if (wanted_ncat != ncat)
 	    	{
 	    		JComponent varB = this.createRateVariationModelParameterBox(wanted_ncat);
 	        	main_tabbed_pane.setComponentAt(main_tabbed_pane.getTabCount()-1, varB);	    		
 	        	ncat = wanted_ncat;
+	        	
+	        	
 	    	}
 	
-	    	// System.out.println("#**MSD.sRVMF ncat "+ncat+"\tmodel "+model_ncat);
+//	    	System.out.println("#**MSD.sRVMF ncat "+ncat+"\tmodel "+model_ncat+"\tdcat "+wanted_dcat);
 	    	
 	    	double sum_p = 0.0;
 	    	Random RND = null;
@@ -1977,10 +2627,16 @@ public class ModelSelectionDialog extends JDialog
 	    		{
 	    			RateVariationModel.Category C = model.getCategory(k);
 	    			modlen = C.getModLength();
-	    			moddup = C.getModDuplication();
+	    			
+	    			if (wanted_dcat == 1) moddup=0.0;
+	    			else moddup = C.getModDuplication();
+	    			
 	    			p = scale_model * Math.exp(C.getLogCatProbability());
 	    		} else
 	    		{
+	    			// model_ncat<= k <ncat
+	    			// we distribute (ncat-model_ncat)/ncat 
+	    			
 	    			if (k==0)
 	    			{
 	    				modlen = 0.0;
@@ -1989,9 +2645,11 @@ public class ModelSelectionDialog extends JDialog
 	    			{
 		    			if (RND==null) RND =new Random();
 		    			modlen = Math.log(-Math.log(RND.nextDouble())); // log of exponential(1)
-		    			moddup = Math.log(-Math.log(RND.nextDouble()));
+		    			if (wanted_dcat == 1) moddup=0.0;
+		    			else 
+		    				moddup = Math.log(-Math.log(RND.nextDouble()));
 	    			}
-	    			p = (1.0-sum_p)/(ncat-k);
+	    			p = 1.0/ncat;
 	    		}
 	    		cat_probT.get(k).setValue(p);
 	    		cat_mod_lenT.get(k).setValue(modlen);
@@ -2106,19 +2764,23 @@ public class ModelSelectionDialog extends JDialog
         alpha_lengthT.setInputVerifier(InputVerifiers.getPositiveInstance());
         alpha_lengthT.setColumns(16);
         alpha_lengthT.parameter_text="Gamma distribution shape parameter for length variation across families";
-
+        alpha_lengthT.setValue(1.0);
+        
         alpha_gainT = new ParameterField(alphaF, 1.0, "Fixed");
         alpha_gainT.setInputVerifier(InputVerifiers.getPositiveInstance());
         alpha_gainT.setColumns(16);
         alpha_gainT.parameter_text="Gamma distribution shape parameter for gain rate variation across families";
+        alpha_gainT.setValue(1.0);
         alpha_duplicationT = new ParameterField(alphaF, 1.0, "Fixed");
         alpha_duplicationT.setInputVerifier(InputVerifiers.getPositiveInstance());
         alpha_duplicationT.setColumns(16);
         alpha_duplicationT.parameter_text="Gamma distribution shape parameter for duplication rate variation across families";
+        alpha_duplicationT.setValue(1.0);
         alpha_lossT = new ParameterField(alphaF, 1.0, "Fixed");
         alpha_lossT.setInputVerifier(InputVerifiers.getPositiveInstance());
         alpha_lossT.setColumns(16);
         alpha_lossT.parameter_text="Gamma distribution shape parameter for loss rate variation across families";
+        alpha_lossT.setValue(1.0);
 
         JLabel variation_lengthL = new JLabel("Edge length");
         JLabel variation_gainL = new JLabel("Gain rate");
@@ -2148,17 +2810,20 @@ public class ModelSelectionDialog extends JDialog
         forbidden_gainT.freezeParameter();
         forbidden_duplicationT.freezeParameter();
         
+        variation_lossL.setVisible(false);
+        alpha_lossL.setVisible(false);
+        alpha_lossT.setVisible(false);
         
-        alpha_gainT.setVisible(WANT_GENERAL_VARIATION);
+        alpha_gainT.setVisible(false);
         variation_gainL.setVisible(alpha_gainT.isVisible());
         alpha_gainL.setVisible(alpha_gainT.isVisible());
-        alpha_duplicationT.setVisible(WANT_GENERAL_VARIATION);
-        alpha_duplicationL.setVisible(alpha_gainT.isVisible());
-        variation_duplicationL.setVisible(WANT_GENERAL_VARIATION);
-        
-        forbidden_gainT.setVisible(WANT_GENERAL_VARIATION);
+        forbidden_gainT.setVisible(false);
         forbidden_gainL.setVisible(forbidden_gainT.isVisible());
-        forbidden_duplicationT.setVisible(WANT_GENERAL_VARIATION);        
+        
+        alpha_duplicationT.setVisible(WANT_GENERAL_VARIATION);
+        alpha_duplicationL.setVisible(alpha_duplicationT.isVisible());
+        variation_duplicationL.setVisible(alpha_duplicationT.isVisible());
+        forbidden_duplicationT.setVisible(false);
         forbidden_duplicationL.setVisible(forbidden_duplicationT.isVisible());
         
         JPanel rate_variationP = new JPanel();
@@ -2208,9 +2873,6 @@ public class ModelSelectionDialog extends JDialog
             rate_variationP.add(alpha_lossT.fixedCB);
             gc.gridx++;
 
-            variation_lossL.setVisible(false);
-            alpha_lossL.setVisible(false);
-            alpha_lossT.setVisible(false);
 
             gc.gridx=0;
             gc.gridy++;
@@ -2239,6 +2901,8 @@ public class ModelSelectionDialog extends JDialog
             layout.setConstraints(forbidden_gainT.fixedCB, gc);
             rate_variationP.add(forbidden_gainT.fixedCB);
 
+            
+                        
             gc.gridx=0;
             gc.gridy++;
             gc.fill = GridBagConstraints.HORIZONTAL;
@@ -2275,6 +2939,14 @@ public class ModelSelectionDialog extends JDialog
             layout.setConstraints(fillerX,gc);
             rate_variationP.add(fillerX);
         }
+        
+        // fill default values
+        alpha_gainT.setValue(1.0);
+        alpha_lossT.setValue(1.0);
+        alpha_duplicationT.setValue(1.0);
+        alpha_lengthT.setValue(1.0);
+        forbidden_gainT.setValue(0.0);
+        forbidden_duplicationT.setValue(0.0);
 
 
         return rate_variationP;
@@ -2626,16 +3298,21 @@ public class ModelSelectionDialog extends JDialog
         if (params.length>1)
             root_bT.setValue(params[1]);
 
-        
-        if (model instanceof GammaInvariant)
+//        System.out.println("#**MSD.sSM model "+model);
+        boolean isgamma = model instanceof GammaInvariant;
+        GammaInvariant gamma_model =isgamma?(GammaInvariant)model:null;
+        		
+        if (isgamma)
         {
-        	GammaInvariant gamma_model = (GammaInvariant)model;
+        	assert (1<gamma_model.getNumActiveClasses());
+        	
+	        variation_gammaRB.setSelected(true);
 	        
 	        // fill rate variation parameters
-	        num_catT.setValue(gamma_model.getNumLengthGammaCategories());
-	        gamma_duplicationT.setValue(WANT_GENERAL_VARIATION?gamma_model.getNumDuplicationGammaCategories():1);
 	        gamma_gainT.setValue(WANT_GENERAL_VARIATION?gamma_model.getNumGainGammaCategories():1);
 	        gamma_lossT.setValue(WANT_GENERAL_VARIATION?gamma_model.getNumLossGammaCategories():1);
+	        gamma_duplicationT.setValue(WANT_GENERAL_VARIATION?gamma_model.getNumDuplicationGammaCategories():1);
+	        num_catT.setValue(gamma_model.getNumLengthGammaCategories());
 	
 	        if (gamma_model.getDuplicationForbidden()>0.0 && WANT_GENERAL_VARIATION)
 	        	forbidden_duplicationCB.setSelected(true);
@@ -2646,23 +3323,45 @@ public class ModelSelectionDialog extends JDialog
 	        alpha_duplicationT.setValue(gamma_model.getDuplicationAlpha());
 	        alpha_gainT.setValue(gamma_model.getGainAlpha());
 	        alpha_lossT.setValue(gamma_model.getLossAlpha());
+	        gamma_duplicationT.setEnabled(WANT_GENERAL_VARIATION);
+	        gamma_duplicationT.setEditable(WANT_GENERAL_VARIATION);
 	
 	        forbidden_duplicationT.setValue(WANT_GENERAL_VARIATION?gamma_model.getDuplicationForbidden():0.0);
 	        forbidden_gainT.setValue(WANT_GENERAL_VARIATION?gamma_model.getGainForbidden():0.0);
+
+	        
+	        commongainRB[PARAMETER_DUPLICATION].setSelected(true);
+	        
 	        main_tabbed_pane.setComponentAt(main_tabbed_pane.getTabCount()-1, gamma_variationB);
-	        num_catT.setValue(model.getNumClasses());
+	        
+	        //num_catT.setValue(model.getNumClasses());
         }
         else
         {
+        	int ncat = model.getNumClasses();
+	        variation_rvmRB.setSelected(true);
         	// RateVariationModel
-        	assert (model instanceof RateVariationModel);
+	        RateVariationModel rvm = (RateVariationModel) model;
+	        commongainRB[rvm.getCommonGainType()].setSelected(true);
 
         	JComponent varB = this.createRateVariationModelParameterBox(model.getNumClasses());
         	main_tabbed_pane.setComponentAt(main_tabbed_pane.getTabCount()-1, varB);
         	
-        	num_catT.setValue(model.getNumClasses());
+        	num_catT.setValue(ncat);
+        	if (WANT_GENERAL_VARIATION) {
+        		gamma_duplicationT.setValue(1);
+        		gamma_duplicationT.setEnabled(true);
+        		gamma_duplicationT.setEditable(WANT_GENERAL_VARIATION);
+        	}
+        	
+        	
+        		
             //System.out.println("#*MSD.sSM "+idx+"\tncat "+model.getNumClasses());
         }
+        
+    	num_catT.setEnabled(WANT_GENERAL_VARIATION);
+    	num_catT.setEditable(WANT_GENERAL_VARIATION);
+    	    	
     	this.setRateVariationModelFields(); // not enough by property change listener 
         
         // fill lineage specific parameters
@@ -2703,9 +3402,10 @@ public class ModelSelectionDialog extends JDialog
             	else
             		rates.setRandom(new Random(init_seed));
             	this.init_rnd_seed = init_seed;
-            	int num_nodes =  rates.getTree().getNumNodes();
-            	for (int u=0; u<num_nodes; u++)
-            		rates.initNodeParameters(u);
+            	rates.initNodeParameters();
+//            	int num_nodes =  rates.getTree().getNumNodes();
+//            	for (int u=0; u<num_nodes; u++)
+//            		rates.initNodeParameters(u);
             	
             	this.setSelectedModel(selected_model);
             }
@@ -2730,8 +3430,6 @@ public class ModelSelectionDialog extends JDialog
         	opt_emRB.setEnabled(true);
         	opt_distributionRB.setEnabled(true);
         }
-        
-    	
     }
     
     /**
@@ -2849,6 +3547,27 @@ public class ModelSelectionDialog extends JDialog
 //		synchronizeOptimizationOptions();
 		
     }
+    
+//    private void synchronizeModelVariationType() {
+//    	// if selected model has 1< classes, then type cannot be changed 
+//    	// if selected model has 1 
+//    	
+//    	
+//    	
+//		MixedRateModel model  = models.get(selected_model);
+//		int ncat;
+//		if (model instanceof GammaInvariant) {
+//			ncat = ((GammaInvariant) model).getNumActiveClasses();
+//			variation_gammaRB.setEnabled(true);
+//			variation_rvmRB.setEnabled(WANT_GENERAL_VARIATION);
+//		} else {
+//			ncat = model.getNumClasses();
+//		}
+//		if (ncat==1) {
+//		} else {
+//			
+//		}
+//    }
 
     /**
      * Updates the displayed value of the distribution mean ({@link #root_meanT})
@@ -3440,6 +4159,12 @@ public class ModelSelectionDialog extends JDialog
             if (!isEditable())
                 appendDisabledText(field_tooltip);
             return field_tooltip.toString();
+        }
+        
+        @Override 
+        public void setToolTipText(String t) {
+        	super.setToolTipText(t);
+        	this.parameter_text = t;
         }
 
         @Override

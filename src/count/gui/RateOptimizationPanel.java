@@ -54,7 +54,7 @@ public class RateOptimizationPanel extends RateVariationPanel
     private static final int HISTORY_LENGTH = 50;
     private static final int GRAPH_WIDTH = 200;
     private static final int GRAPH_HEIGHT = 72;
-    private static final int STAGE_WIDTH = 300;
+    private static final int STAGE_WIDTH = 240;
     private static final int COUNTER_WIDTH = 120;
     private static final int COUNTER_HEIGHT = 48;
 	
@@ -152,6 +152,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 	        {
 //	        	worker_thread.interrupt();
 	        	this.cancel(true);
+	        	track_stage.setText("<html>Cancelling ...</html>");
 	        	updateDisplay(true);
 
 	        } else if (ACTION_SNAPSHOT.equals(cmd))
@@ -206,7 +207,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 	        Font tp_font_rm = new Font("Serif", Font.PLAIN, font_size);
 	        Font tp_font_it = new Font("Serif", Font.ITALIC, 7*font_size/6);
 
-	        track_stage = new JLabel("Optimizing model parameters ("+factory.getClass().getSimpleName()+")");
+	        track_stage = new JLabel("<html>Optimizing model parameters ("+factory.getClass().getSimpleName()+")</html>");
 	        track_stage.setFont(tp_font_it);
 	        //track_stage.setBackground(Color.WHITE);   //new Color(255,255,192)); // pale yellow
 	        track_stage.setOpaque(true);
@@ -229,7 +230,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 	        			{
 	        				phase = e.getNewValue().toString();
 	        			}
-	        			track_stage.setText(phase);
+	        			track_stage.setText("<html>"+phase+"</html>");
 	        		});
 	        
 	        track_rounds = new CounterBox("Round ", Integer.toString(max_iter));
@@ -284,9 +285,13 @@ public class RateOptimizationPanel extends RateVariationPanel
 				return X;
 			} catch (Throwable t)
 			{
-				t.printStackTrace();
-				throw new RuntimeException(t);
+//				t.printStackTrace();
+//				throw new RuntimeException(t);
+				app.getExceptionHandler().handle(t, "Numerical error during optimization");
+				this.cancel(true);
+				return Double.NaN;
 			}
+			
 		}
 		
 		@Override
@@ -325,7 +330,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 			snapshot_button.setVisible(false);
 			cancel_button.setEnabled(false);
 			cancel_button.setVisible(false);
-			track_stage.setText("Optimization "+(isCancelled()?"canceled prematurely.":"done."));
+			track_stage.setText("<html>Optimization "+(isCancelled()?"<b>cancelled</b>.":"<b>done</b>.</html>"));
 			track_convergence.glow(GLOW_FROZEN_COLOR, 0.0);
 			track_drop.glow(GLOW_FROZEN_COLOR, 0.0);
 			updateDisplay(true); // recompute layout
@@ -355,8 +360,12 @@ public class RateOptimizationPanel extends RateVariationPanel
 		control_bar.removeAll();
 		control_bar.add(tracker_box);
 		control_bar.add(Box.createHorizontalGlue());
-		control_bar.add(optimization_task.snapshot_button);
-		control_bar.add(optimization_task.cancel_button);
+		Box buttonBox = new Box(BoxLayout.PAGE_AXIS);
+		buttonBox.add(optimization_task.snapshot_button);
+		buttonBox.add(optimization_task.cancel_button);
+		control_bar.add(buttonBox);
+//		control_bar.add(optimization_task.snapshot_button);
+//		control_bar.add(optimization_task.cancel_button);
 		control_bar.add(Box.createHorizontalGlue());
 		for (Component w: control_widgets)
 			control_bar.add(w);
@@ -365,22 +374,22 @@ public class RateOptimizationPanel extends RateVariationPanel
 		repaint();
 	}
     
-    private void updateDisplay(boolean recompute_layout)
-    {
-    	Zoom<RatesTreePanel> ratesZ = getRatesPanel();
-    	RatesTreePanel ratesP = ratesZ.getTreePanel();
-    	if (recompute_layout)
-    		ratesP.calculateNodeLocations();
-    	else
-    		ratesP.setValidBoundingBoxes(false);
-    	
-    	RatesTable ratesT = getRatesTable();
-    	int selected_node = ratesT.getSelectedModelRow(); // fireTableDataChanged clears row selection
-    	((RatesTable.Model)ratesT.getModel()).fireTableDataChanged();
-    	if (selected_node != -1) ratesT.setSelectedModelRow(selected_node);
-    	repaint();
-    		
-    }
+//    private void updateDisplay(boolean recompute_layout)
+//    {
+//    	Zoom<RatesTreePanel> ratesZ = getRatesPanel();
+//    	RatesTreePanel ratesP = ratesZ.getTreePanel();
+//    	if (recompute_layout)
+//    		ratesP.calculateNodeLocations();
+//    	else
+//    		ratesP.setValidBoundingBoxes(false);
+//    	
+//    	RatesTable ratesT = getRatesTable();
+//    	int selected_node = ratesT.getSelectedModelRow(); // fireTableDataChanged clears row selection
+//    	((RatesTable.Model)ratesT.getModel()).fireTableDataChanged();
+//    	if (selected_node != -1) ratesT.setSelectedModelRow(selected_node);
+//    	repaint();
+//    		
+//    }
     
     void snapshot()
     {
@@ -397,7 +406,7 @@ public class RateOptimizationPanel extends RateVariationPanel
 	    	copy_rates = ((RateVariationModel)current_rates).copy();
 	    }
 	
-	    File snapshot_file = new File((File)null,DataFile.chopFileExtension(current_file.getFile().getName())+"#"+Integer.toString(round));
+	    File snapshot_file = new File((File)null,DataFile.chopCommonFileExtension(current_file.getFile().getName())+"#"+Integer.toString(round));
 	    DataFile<MixedRateModel> copy_file = new DataFile<>(copy_rates, snapshot_file);
 	    Session our_sesh = Session.getSession(this);
 	    our_sesh.addRates(copy_file, false);

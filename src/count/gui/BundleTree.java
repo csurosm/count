@@ -28,11 +28,13 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import javax.swing.Box;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
+import javax.swing.ToolTipManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -71,6 +73,8 @@ import count.model.MixedRateModel;
  */
 public class BundleTree extends JTree
 {
+	private static boolean REPORT_COLORS_STDOUT = false;
+	
 	/**
 	 * Instantiation with an empty or non-empty bundle. For a non-empty bundle, 
 	 * follow up with {@link #copyBundleStructure()}.
@@ -95,7 +99,8 @@ public class BundleTree extends JTree
         setEditable(false);
         getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         
-        this.setCellRenderer(new EntryRenderer());
+        setCellRenderer(new EntryRenderer());
+        ToolTipManager.sharedInstance().registerComponent(this); // no tooltips by default
 	}
 	
 
@@ -435,6 +440,13 @@ public class BundleTree extends JTree
 						PV.setCalculcationWidthThresholds(absolute, relative);
 					}
 					node.setHistoryComponent(PV);
+//					System.out.println("#**BT.sC node "+node+"\tpv "+PV
+//							+"\ttruncate "+PV.getCalculationWidthAbsolute()+","+PV.getCalculationWidthRelative()
+//							+"\ttree "+tree_data
+//							+"\ttable "+mapped_data
+//							+"\trates "+rates_data
+//					); 
+					
 //					PV.computeAll();
 				} else if (DolloView.class.getName().equals(type))
 				{
@@ -456,7 +468,7 @@ public class BundleTree extends JTree
 					node.setHistoryComponent(D);
 //					decorateByMainTree(D.getTreePanel());
 //					D.computeAll();
-				} else if (SimulationView.class.equals(type))
+				} else if (SimulationView.class.getName().equals(type))
 				{
 					String rates_id = enode.getAttributeValue(CountXML.ATT_RATES);
 					Entry rnode = bundle.getEntry(rates_id);
@@ -473,6 +485,10 @@ public class BundleTree extends JTree
 					
 					SimulationView S = new SimulationView(rates_data, rnd_seed, rowcount, mincopy); 
 					node.setHistoryComponent(S);
+//					// DEBUG
+//					System.out.println("#**BT.sC node "+node+"\tsimview "+S);
+			
+					
 //					S.computeAll();
 					// replace parent as well
 					AnnotatedTablePanel Stable = S.asTable();
@@ -485,6 +501,29 @@ public class BundleTree extends JTree
 				{
 					// what is this?
 				}
+				HistoryView H = (HistoryView) node.getComponent();
+				String list_control_string = enode.getAttributeValue(CountXML.ATT_CONTROLS);
+				if (list_control_string != null) {
+					String[] wanted_controls = list_control_string.split(",");
+					H.getTreeControl().getTreePanel().setControlsByName(wanted_controls);
+				}
+				String list_selected = enode.getAttributeValue(CountXML.ATT_SELECTION);
+				if (list_selected!=null) {
+					int[] selected_rows;
+					if ("all".equals(list_selected)) {
+						int nFam = H.getTableScroll().getDataTable().getRowCount();
+						selected_rows = new int[nFam];
+						for (int j=0; j<selected_rows.length; j++)
+							selected_rows[j] = j;
+					} else {
+						String[] selected_rows_str = list_selected.split(",");
+						selected_rows = new int[selected_rows_str.length];
+						for (int j=0; j<selected_rows.length; j++)
+							selected_rows[j]= Integer.parseInt(selected_rows_str[j]);
+					}
+					H.setSelectedFamilies(selected_rows);
+				}
+				
 				
 				//((HistoryView) node.getComponent()).setPhyleticProfileColoring(getLeafColors());
 			} else // data not null
@@ -535,8 +574,35 @@ public class BundleTree extends JTree
 		if (!enode.isRoot() && !enode.isTableEntry()) return; // none of its descendants are, either
 		
 		JComponent item = node.getComponent();
-		if (item != null && item instanceof HistoryView)
+		if (item instanceof HistoryView)
 		{
+			HistoryView Hitem = (HistoryView) item;	
+			int[] selected_rows = Hitem.getSelectedFamilies();
+			StringBuffer selected_list = new StringBuffer();
+			if (selected_rows.length == Hitem.getTableScroll().getDataTable().getRowCount()) {
+				selected_list.append("all");
+			} else {
+				for (int s=0; s<selected_rows.length; s++) {
+					if (0<s) selected_list.append(",");
+					selected_list.append(selected_rows[s]);
+				}
+			}
+			enode.setAttribute(CountXML.ATT_SELECTION, selected_list.toString());
+			
+			StringBuffer selected_charts = new StringBuffer();
+			List<JCheckBox> Hcontrols = Hitem.getTreePanel().getAllControls();
+			
+			for (JCheckBox cb: Hcontrols) {
+				if (cb.isSelected()) {
+					if (selected_charts.length()!=0) selected_charts.append(",");
+					selected_charts.append(cb.getName());
+				}
+			}
+			
+			
+			enode.setAttribute(CountXML.ATT_CONTROLS, selected_charts.toString());
+			
+			
 			if (item instanceof ParsimonyView)
 			{
 				ParsimonyView Pitem = (ParsimonyView) item;
@@ -555,6 +621,8 @@ public class BundleTree extends JTree
 				int absolute = Pitem.getCalculationWidthAbsolute();
 				if (!Double.isInfinite(relative))
 					enode.setAttribute(CountXML.ATT_TRUNCATE, Integer.toString(absolute)+","+Double.toString(relative));
+				
+				
 			} else if (item instanceof SimulationView)
 			{
 				SimulationView Sitem = (SimulationView) item;
@@ -562,7 +630,11 @@ public class BundleTree extends JTree
 				enode.setAttribute(CountXML.ATT_ROWCOUNT, Integer.toString(enode.getParent().getTableData().getContent().getFamilyCount()));
 				enode.setAttribute(CountXML.ATT_MINCOPY, Integer.toString(Sitem.getMinimumObserved()));
 			}
+			
 		}
+		
+		
+		
 		for (int ci = 0; ci<node.getChildCount(); ci++)
 		{
 			Node child = (Node)node.getChildAt(ci);
@@ -577,15 +649,15 @@ public class BundleTree extends JTree
      * @param node subtree root
      * @param min_hue min hue for subtree
      * @param max_hue max hue for subtree
-     * @param heights calculation needs this node height array; reset at first call with tree root 
+     * @param sizes calculation needs this node height array; reset at first call with tree root 
      * @param colors terminal hues; reset at first call with tree root
      */
-    private static float[] initHues(Phylogeny tree, int node, float min_hue, float max_hue, int[] heights, float[] colors)
+    private static float[] initHues(Phylogeny tree, int node, float min_hue, float max_hue, int[] sizes, float[] colors)
     {
     	if (tree.isRoot(node)) // first call
     	{
     		colors = new float[tree.getNumLeaves()];
-			heights = TreeTraversal.getHeights(tree);
+			sizes = TreeTraversal.getSubtreeSizes(tree);// TreeTraversal.getHeights(tree);
     	}
     	if (tree.isLeaf(node))
     	{
@@ -599,8 +671,9 @@ public class BundleTree extends JTree
     		while (ci < nc)
     		{
     			int child = tree.getChild(node, ci);
-    			float wt = heights[child]+1f; // weighing by subtree heights
-    			wt = 1f; // better separation for clade colors 
+    			float wt= sizes[child]; // weighing by subtree size
+    			//wt = 1f; // better separation for clade colors 
+    			wt = (float)Math.sqrt(wt+1f); 
     			tot_wt += 
     			child_wt[ci] = wt;
     			ci++;
@@ -617,7 +690,7 @@ public class BundleTree extends JTree
     			tot_wt += child_wt[ci];
     			float maxc = min_hue * (1f-tot_wt)+max_hue*tot_wt;
     			int child = tree.getChild(node, ci);
-    			colors = initHues(tree, child, minc, maxc, heights,colors);
+    			colors = initHues(tree, child, minc, maxc, sizes,colors);
     			minc = maxc;
     			ci++;
     		}
@@ -634,6 +707,7 @@ public class BundleTree extends JTree
 	        control_bar.removeAll();
 	        control_bar.add(panel.createLayoutChooser());
 	        control_bar.add(Box.createHorizontalGlue());
+	        control_bar.add(panel.createSaveImageButton()); // save as PNG
 	        control_bar.add(getSpinner());
 	        this.tree_data = tree_data;
 		}
@@ -799,7 +873,34 @@ public class BundleTree extends JTree
 //    	return getMainTree;
 //	}
 	
-	public void decorateByMainTree(TreePanel panel)
+	public static void printHsb(float hue, float saturation, float value) {
+
+	    int h = (int)(hue * 6);
+	    float f = hue * 6 - h;
+	    float p = value * (1 - saturation);
+	    float q = value * (1 - f * saturation);
+	    float t = value * (1 - (1 - f) * saturation);
+
+	    float r,g,b;
+	    
+	    switch (h) {
+	      case 0: r=value; g=t; b=p; break;
+	    	  //return rgbToString(value, t, p);
+	      case 1: r=p; g=value; b=p; break;
+	    	  //return rgbToString(q, value, p);
+	      case 2: r=p; g=value; b=t; break;
+	    	  //return rgbToString(p, value, t);
+	      case 3: r=p; g=q; b=value; break;
+	    	  //return rgbToString(p, q, value);
+	      case 4: r=t; g=p; b=value; break;
+	    	  //return rgbToString(t, p, value);
+	      case 5: r=value; g=p; b=q; break;
+	    	  // return rgbToString(value, p, q);
+	      default: r=0f; g=0f; b=0f; break;
+	    }
+	}	
+	
+	public Color[] decorateByMainTree(TreePanel panel)
 	{
 		if (tree_comparator == null)
 		{
@@ -819,6 +920,8 @@ public class BundleTree extends JTree
         TreeComparator.NodeMap node_map = tree_comparator.map(tree);
         int[] original_index = node_map.toReference();
         int node=0;
+        
+        Color[] decorateByMainTree = new Color[num_leaves];
         while (node < num_leaves)
         {
         	int j = original_index[node];
@@ -827,6 +930,9 @@ public class BundleTree extends JTree
             float hue = node_hues[node] = terminal_hues[j];
             
             Color col = Color.getHSBColor(hue, 1.0f, BRIGHTNESS);
+            decorateByMainTree[node] = col;	
+            
+            
             BoxIcon leaf_icon = new BoxIcon(pt_size, true); // filled
             leaf_icon.setDrawColor(TreePanel.TREE_UNSELECTED_LEAF_COLOR);
             leaf_icon.setFillColor(col);
@@ -840,6 +946,14 @@ public class BundleTree extends JTree
             D.setIcon(true, selected_leaf_icon);
             D.setIcon(false, leaf_icon);
         	
+            if (REPORT_COLORS_STDOUT)
+	        	System.out.printf("#BT.dBMT.COLOR\t[ %.3f %.3f %.3f]\t%% %s\n"
+	        			, col.getRed()/255.0
+	        			, col.getGreen()/255.0
+	        			, col.getBlue()/255.0
+	        			, tree.toString(node)
+	        			);
+            
         	node++;
         }
         while (node < num_nodes)
@@ -894,13 +1008,20 @@ public class BundleTree extends JTree
             D.setIcon(false, node_unsel);
             
             
-            
+            if (REPORT_COLORS_STDOUT)
+	        	System.out.printf("#BT.dBMT.COLOR\t[ %.3f %.3f %.3f]\t%% %s\n"
+	        			, col.getRed()/255.0
+	        			, col.getGreen()/255.0
+	        			, col.getBlue()/255.0
+	        			, tree.toString(node)
+	        			);
             
             
             ++node;
         }
+        return decorateByMainTree;
 	}
-	
+		
 	
 	public Color[] getLeafColors()
 	{
@@ -965,8 +1086,11 @@ public class BundleTree extends JTree
 		 */
 		protected void setHistoryComponent(HistoryView history_view)
 		{
-			decorateByMainTree(history_view.getTreePanel());
+			Color[] leafColors = decorateByMainTree(history_view.getTreePanel());
+			history_view.setPhyleticProfileColoring(leafColors);
 			setComponent(history_view);
+			history_view.repaint();
+//			System.out.println("#***BT.N.sHC "+toString()+"\thv "+history_view);
 			try
 			{
 				history_view.computeAll();
@@ -1078,7 +1202,6 @@ public class BundleTree extends JTree
 			Node child = new Node(eitem);
 //			this.insert(child, this.getChildCount());
 			tree_model.insertNodeInto(child, this, this.getChildCount());
-//			BundleTree.this.decorateByMainTree(comp.getTreePanel());
 			child.setHistoryComponent(comp);
 			return child;
 		}
@@ -1155,15 +1278,18 @@ public class BundleTree extends JTree
             if (enode.isTreeEntry())
             {
             	setIcon(tree_icon);
+            	setToolTipText("Phylogeny");
             } else if (enode.isRatesEntry())
             {
             	setIcon(rates_icon);
+            	setToolTipText("Probabilistic model");
             } else if (enode.isTableEntry())
             {
             	DataFile<AnnotatedTable> table_data = enode.getTableData();
             	if (table_data.getContent()==null)
             	{
             		setIcon(history_icon);
+            		setToolTipText("Ancestral reconstruction");
             	} else 
             	{
             		Entry eparent = enode.getParent();
@@ -1176,9 +1302,11 @@ public class BundleTree extends JTree
             		if (isbinary)
             		{
             			setIcon(isfiltered?binary_filtered_table_icon:binary_table_icon);
+                		setToolTipText("Presence-absence table");
             		} else
             		{
             			setIcon(isfiltered?filtered_table_icon:table_icon);
+                		setToolTipText(isfiltered?"Filtered phylogenetic profiles":"Table of integer-valued phylogenetic profiles");
             		}
             	} 
             }

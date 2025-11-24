@@ -15,6 +15,8 @@ package count.gui;
  * limitations under the License.
  */
 
+import static count.gui.AnnotatedTablePanel.TABLE_FONT_SIZE;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -69,7 +71,7 @@ class HistoryTreePanel extends TreePanel
 		this.node_charts = new ArrayList<>();
 		
         setRootStem(0); 
-        setBoundingBoxSeparation(2);
+        //setBoundingBoxSeparation(1);
         
         Insets padding = getPadding();
         padding.left = 2*getNormalFontSize();
@@ -80,6 +82,7 @@ class HistoryTreePanel extends TreePanel
 	
 	private final TableScroll<HistoryModel> table_scroll;
 	private JCheckBox same_scale;
+	private JCheckBox highlight_events;
 	private SelectionTotals selection_totals;
 	private TableScroll<SelectionTotals> totals_scroll;
 	
@@ -89,7 +92,7 @@ class HistoryTreePanel extends TreePanel
 	
 	private int chart_width = 0;
 	private int chart_offset = 0;
-    private int min_chart_width = 80;
+    private int min_chart_width = 160;
 	
     /**
      * Convenience method to access the tree through {@link #table_scroll}.
@@ -106,8 +109,15 @@ class HistoryTreePanel extends TreePanel
 					setValidBoundingBoxes(false);
 					repaint();
 				});
-
+		same_scale.setName(same_scale.getText());
+		
 		selection_totals = new SelectionTotals();
+		
+		highlight_events = new JCheckBox("Main events");
+		highlight_events.addChangeListener(e->repaint());
+		highlight_events.setSelected(true);
+		highlight_events.setToolTipText("If set, negligible amounts are not shown in the charts.");
+		highlight_events.setName(highlight_events.getText());
 	}
 	
 	public TableScroll<? extends TableModel> asTableScroll()
@@ -134,6 +144,10 @@ class HistoryTreePanel extends TreePanel
 			totals_scroll.setRowSorter(sorter);
 			totals_scroll.synchronizeModelSelection(this.getSelectionModel());
 			
+			Font tbfont = new Font("Serif",Font.PLAIN,TABLE_FONT_SIZE);
+			totals_scroll.setFont(tbfont);
+//			totals_scroll.getDataTable().setFont(tbfont);
+//			totals_scroll.getHeaderTable().setFont(tbfont);
 		}
 		return totals_scroll;
 	}
@@ -250,9 +264,47 @@ class HistoryTreePanel extends TreePanel
 		return checks;
 	}
 	
+	public List<JCheckBox> getAllControls(){
+		//System.out.println("#**HTP.gAC start ");
+
+		List<JCheckBox> getAllControls = getChartControls();
+		//System.out.println("#**HTP.gAC charts "+getAllControls.toString());
+		getAllControls.add(getScalingControl());
+		getAllControls.add(getHighlightEventsControl());
+		
+		//System.out.println("#**HTP.gAC all "+getAllControls.toString());
+		
+		return getAllControls;
+	}
+	
+	public void setControlsByName(String[] to_be_set) {
+		List<JCheckBox> our_controls = getAllControls();
+		boolean[] wanted = new boolean[our_controls.size()];
+		for (String name: to_be_set) {
+			for (int j=0; j<our_controls.size(); j++) {
+				if (name.equals(our_controls.get(j).getName())) {
+					wanted[j]=true; break;
+				}
+			}
+		}
+		for (int j=0; j<our_controls.size(); j++) {
+			our_controls.get(j).setSelected(wanted[j]);
+		}
+	}
+	
 	public JCheckBox getScalingControl()
 	{
 		return same_scale;
+	}
+	
+	/**
+	 * We don't know what this is good for yet; triggers repaint.
+	 * 
+	 * @return
+	 */
+	public JCheckBox getHighlightEventsControl()
+	{
+		return highlight_events;
 	}
 	
 	private class SelectionTotals extends AbstractTableModel 
@@ -540,6 +592,7 @@ class HistoryTreePanel extends TreePanel
 			this.name = name;
 			is_wanted = new JCheckBox(name);
 			is_wanted.setSelected(false);
+			is_wanted.setName(name);
 		}
 		final NodeData primary;
 		final String name;
@@ -554,8 +607,20 @@ class HistoryTreePanel extends TreePanel
 			return (chart_width-labelR.getWidth())/max;
 		}
 		
+		protected String toString(double value, double tooSmall) {
+			String toString = RoundedDouble.toString(value);
+			tooSmall = Double.max(0.1, tooSmall); // RoundedDouble cuts off at 0.001
+			if (highlight_events.isSelected() 
+					&& value < tooSmall
+					&& value != 0.0) {
+
+				toString = ".";
+			}
+			return toString;
+		}
+		
 		protected void paintChart(Graphics2D g2, double scaling, int chart_x)
-		{
+		{			
 			IndexedTree phylo = getTree();
 			Color old_color = g2.getColor();
 	        Font old_font = g2.getFont();
@@ -566,7 +631,8 @@ class HistoryTreePanel extends TreePanel
 	        
 			int maxw=0;
 			int maxy=0;
-			for (int node=0; node<phylo.getNumNodes(); node++)
+			final int num_nodes = phylo.getNumNodes();
+			for (int node=0; node<num_nodes; node++)
 			{
 				DisplayedNode N = getNode(node);
 				int Ny = (int)(N.getY()+N.getOffsetY())-label_font_size; // align with node label
@@ -581,7 +647,18 @@ class HistoryTreePanel extends TreePanel
 					g2.setColor(N.getIcon(true).getFillColor());
 					g2.fillRect(chart_x, Ny, valw, label_font_size);
 					g2.setColor(Color.BLACK);
-					DrawString.drawLeft(g2, RoundedDouble.toString(value), chart_x+valw+1, Ny+label_font_size);
+					//String leaf_mark = phylo.isLeaf(node)?"=":"";
+					String value_str = toString(value, 0.5/num_nodes);
+					int value_x = chart_x+valw+1;
+					int value_y = Ny+label_font_size;
+					
+					DrawString.drawLeft(g2, value_str, value_x, value_y);
+					if (phylo.isLeaf(node))
+					{
+						if (0<value) DrawString.drawRight(g2, "*", chart_x, value_y);
+						//Rectangle2D valR = DrawString.getBoundingBoxForRotatedString(g2, value_str, value_x, value_y, 0.0, 0.0f);      
+						//g2.draw(valR);
+					}
 				}
 			}
 			// X and Y axis
@@ -616,7 +693,8 @@ class HistoryTreePanel extends TreePanel
 	        
 			int maxw=0;
 			int maxy=0;
-			for (int node=0; node<phylo.getNumNodes(); node++)
+			int num_nodes = phylo.getNumNodes();
+			for (int node=0; node<num_nodes; node++)
 			{
 				DisplayedNode N = getNode(node);
 				int Ny = (int)(N.getY()+N.getOffsetY()-label_font_size); // align with node label
@@ -636,7 +714,7 @@ class HistoryTreePanel extends TreePanel
 					g2.fillRect(chart_x, Ny+label_font_size-label_font_size/2, valw, label_font_size/2);
 					g2.fillRect(chart_x, Ny, val2w, label_font_size/2);
 					g2.setColor(Color.BLACK);
-					DrawString.drawLeft(g2, RoundedDouble.toString(value), chart_x+valw+1, Ny+label_font_size);
+					DrawString.drawLeft(g2, toString(value, 0.5/num_nodes), chart_x+valw+1, Ny+label_font_size);
 				}
 			}
 			g2.setColor(Color.BLACK);
@@ -655,6 +733,7 @@ class HistoryTreePanel extends TreePanel
 	private class ChartChange extends Chart
 	{
 		final NodeData increase;
+
 		ChartChange(String name, NodeData increase, NodeData decrease)
 		{
 			super(name, decrease);
@@ -696,7 +775,8 @@ class HistoryTreePanel extends TreePanel
 			int max_decreaseW=0;
 			int max_increaseW=0;
 			int maxY=0;
-			for (int node=0; node<phylo.getNumNodes(); node++)
+			int num_nodes = phylo.getNumNodes();
+			for (int node=0; node<num_nodes; node++)
 			{
 				DisplayedNode N = getNode(node);
 				
@@ -712,7 +792,7 @@ class HistoryTreePanel extends TreePanel
 					g2.setColor(N.getIcon(true).getFillColor());
 					g2.drawRect(axisX, Ny, plusW, h);
 					g2.setColor(Color.BLACK);
-					DrawString.drawLeft(g2, RoundedDouble.toString(plus), axisX+plusW+1, Ny+label_font_size);
+					DrawString.drawLeft(g2, toString(plus, 0.5/num_nodes), axisX+plusW+1, Ny+label_font_size);
 					max_increaseW = Integer.max(max_increaseW, plusW);
 				}
 				if (Double.isFinite(minus) && minus!=0.0)
@@ -721,7 +801,7 @@ class HistoryTreePanel extends TreePanel
 					g2.setColor(N.getIcon(true).getFillColor());
 					g2.drawRect(axisX-minusW, Ny, minusW, h);
 					g2.setColor(Color.BLACK);
-					DrawString.drawRight(g2, RoundedDouble.toString(minus), axisX-minusW-1, Ny+label_font_size);
+					DrawString.drawRight(g2, toString(minus, 0.5/num_nodes), axisX-minusW-1, Ny+label_font_size);
 					max_decreaseW = Integer.max(max_decreaseW, minusW);
 				}
 

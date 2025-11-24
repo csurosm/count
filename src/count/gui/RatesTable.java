@@ -180,7 +180,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         		return new RoundedDouble(rates_model.getDuplicationParameter(node));
         	++this_col;
         	if (column == this_col)
-        		return new RoundedDouble(rates_model.getUniversalGainParameter(node));
+        		return new RoundedDouble(rates_model.getLinearGainParameter(node));
         	++this_col;
         	if (column == this_col)
         		return new RoundedDouble(factory.getLossParameter(node));
@@ -189,7 +189,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         		return new RoundedDouble(factory.getDuplicationParameter(node));
         	++this_col;
         	if (column == this_col)
-        		return new RoundedDouble(factory.getUniversalGainParameter(node));
+        		return new RoundedDouble(factory.getLinearGainParameter(node)); // factory.getUniversalGainParameter(node));
         	
         	
         	throw new IllegalArgumentException(".getValueAt --- column index must be 0.."+this_col+" [got "+column+"]");        	
@@ -220,7 +220,7 @@ public class RatesTable extends TableScroll<RatesTable.Model>
 
         	++this_col;
             if (column==this_col)
-                return "Loss rate";
+                return "Length";
         	++this_col;
             if (column==this_col)
                 return "Duplication rate";
@@ -298,13 +298,13 @@ public class RatesTable extends TableScroll<RatesTable.Model>
         	}
         	++this_col;
             if (column==this_col)
-                return "Total loss rate";
+                return "Edge length/total loss rate (μt)";
         	++this_col;
             if (column==this_col)
-                return "Relative duplication rate";
+                return "Relative duplication rate (λ/μ)";
         	++this_col;
             if (column==this_col)
-                return "Gain rate";
+                return "Gain rate (γ if λ=0, κ if 0<λ)";
         	++this_col;
             if (column==this_col)
                 return "Probability that a copy has no descendants at the leaves within the subtree";
@@ -313,10 +313,10 @@ public class RatesTable extends TableScroll<RatesTable.Model>
                 return "Loss parameter: probability that a copy from the parent is lost here";
         	++this_col;
             if (column==this_col)
-                return "Duplication parameter for the geometric distribtion of descendants from 1 parental copy (inparalogs)";
+                return "Duplication parameter for the geometric distribution of descendants from 1 parental copy (inparalogs)";
         	++this_col;
             if (column==this_col)
-                return "Gain parameter for copies gained from outside (xenologs)";
+                return "Linear gain parameter for copies gained from outside (xenologs)";
         	++this_col;
             if (column==this_col)
                 return "Survival loss parameter for conserved (non-extinct) copies";

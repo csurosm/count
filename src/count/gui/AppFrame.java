@@ -117,11 +117,15 @@ public class AppFrame extends JFrame
         
         menu_bar = new MenuBar();
         this.setJMenuBar(menu_bar);
-        setIconImage(getCountIcon().getImage());        
+        
+        ImageIcon icon = getCountIcon();
+        setIconImage(icon.getImage());  // when minimized
 
-        setBounds(25,25,
-            (int)Toolkit.getDefaultToolkit().getScreenSize().getWidth()-50,
-            (int)Toolkit.getDefaultToolkit().getScreenSize().getHeight()-150);
+        int smargin = 10;
+        
+        setBounds(smargin,smargin,
+            (int)Toolkit.getDefaultToolkit().getScreenSize().getWidth()-2*smargin,
+            (int)Toolkit.getDefaultToolkit().getScreenSize().getHeight()-2*smargin);
         
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
@@ -275,14 +279,20 @@ public class AppFrame extends JFrame
 			+ "as a multiset of families their genes belong to. "
 			+ "Such a table is tab-delimited text file that "
 			+ "starts with a header line that "
-			+ "lists the taxon names as column headers. "
+			+ "lists the taxon names as column headers (attention for underscore <tt>_</tt>:  they are converted to space in unquoted taxon names from the tree file as per Newick-format specification). "
 			+ "The first column has the family names. "
-			+ "Additional columns can be loaded as family annotation columns. "
-			+ "You can either <b>load a table</b> in that format, or "
+			+ "Additional columns can be loaded as family <b>annotation</b> columns"
+			+ "(Menu: Open annotated table ... keep annotations); but they are ignored "
+			+ "by default (Load table button or menu). "
+			+ "You can either <b>open a table</b> in that format, or "
 			+ "<b>import a table</b>. from COG-style csv files or MCL clustering output. "
 			+ "You can derive further tables by <b>filtering the rows</b> of "
 			+ "an existing table (double-click on a cell for condition on values in that column), "
 			+ "or by converting it to a <b>binary</b> presence-absence table."
+			+ " In order to conveniently filter by a threshold (e.g., minimum/maximum for number of copies/lineages, or ancestral presence),"
+			+ " sort the table by clicking on the header of the given column."
+			+ ""
+			+ ""
 			+ "</li>"
 			+ ""
 //			+ "<h4>Phylogenies</h4>"
@@ -292,7 +302,9 @@ public class AppFrame extends JFrame
 			+ "function. (Tres can be built with a simple UPGMA procedure from "
 			+ "profiles, or set to random or star topology. "
 			+ "Edit operations include rerooting, edge-contraction, and "
-			+ "subtree-prune-and-regraft.) </li>"
+			+ "subtree-prune-and-regraft.) Terminal nodes are colored the same way across "
+			+ "different phylogenies in the same session."
+			+ "</li>"
 			+ ""
 //			+ "<h4>Rate models</h4>"
 			+ "<li>Rate <span style=\"color:rgb(128,0,0)\"><b>models</b></span> equip the selected phylogeny's edges with "
@@ -308,7 +320,8 @@ public class AppFrame extends JFrame
 			+ "on how the homolog families were constructed: "
 			+ "whether they have a minimum of 0 (if even the families without any members are known), "
 			+ "1 (if the table covers all genes from all genomes), "
-			+ "or 2 members (if families correspond to alignments)."
+			+ "2 members (if families correspond to alignments),"
+			+ "or even 3 or 4 if families are also used for gene-tree-species-tree reconciliation."
 			+ "<br />"
 			+ "Make sure you filter your table for observation bias on the membership count (<tt>#mem</tt>): "
 			+ "families with at least 1 member, or families with at least 2 members "
@@ -325,16 +338,21 @@ public class AppFrame extends JFrame
 			+ "If you have a rate model, then you can also reconstruct the "
 			+ "ancestral genomes by <b>posteriors</b>, giving probabilities and "
 			+ "expectations for family memberships; the reconstruction includes correction "
-			+ "for the observation bias of minimum copies.</li>"
+			+ "for the observation bias of minimum copies."
+			+ "<br/>"
+			+"Model optimization, ancestral reconstruction and simulations can be launched from the <b>command line interface</b>:"
+			+ " use the command-building wizard from the Count GUI (look for the CLI button in the popup dialogs). "
+			+ "</li>"
 			+ ""
 //			+ "<h4>Saving your data</h4>"
 			+ "<li>You can <b>save</b> phylogenies, rate models, and tables, or "
 			+ "<b>export</b> ancestral reconstructions. "
 			+ "With the exception of phylogenies, "
-			+ "all other data is in tab-delimited files. "
+			+ "all other data are in tab-delimited files. "
 			+ "You can also <b>save all</b>  all your sessions "
 			+ "if you want to come back to them later."
 			+ "(The sessions are saved in an XML-format file.)"
+			+" You can also export tree images in a <b>PNG</b> file (see the button in the lower right corner of tree displays)."
 			+ "</li>"
 			+ "<li><b>Tooltips</b> give further instructions and informations "
 			+ "on the displayed elements in the GUI. "
@@ -342,6 +360,7 @@ public class AppFrame extends JFrame
 			+ "<ul>"
 			+ "<li>optimization with rate variation across families (rate categories) is not supported</li>"
 			+ "<li>optimization with homogeneous rates (same duplication or gain across lineages) is not supported</li>"
+			+ "<li>phylogenies with ternary or higher-degree nodes can be used only with min. copy 0, 1, or 2.</li>"
 			+ "<li>help menu is not available</li>"
 			+"</ul>"
 			+ "</li>"
@@ -454,7 +473,10 @@ public class AppFrame extends JFrame
         "<em>Numerical Recipes in C: The Art of Scientific Computing</em> " +
         "[W. H. Press, S. A. Teukolsky, W. V. Vetterling and B. P. Flannery; " +
         "Second edition, Cambridge University Press, 1997].</li>" +
-        "<li>Some icons are from the Java Look and Feel Graphics Repository, licensed under the Oracle Binary Code License Agreement for Java SE.</li></ul>"+
+        "<li>... but not the flawed line search algorithm in BFGS. Line search is our "
+        + "own code for the algorithm of Mor&eacute; and Thuente \"Line search algorithms with guaranteed sufficient decrease\" (1994) and Fletcher  "
+        + " <em>Practical Methods of Opotimization</em>, 2nd ed. Wiley &amp; Sons (1987).</li>"
+        + "<li>Some icons are from the Java Look and Feel Graphics Repository, licensed under the Oracle Binary Code License Agreement for Java SE.</li></ul>"+
         "<h2>References</h2>"+
         "<p>Please <b>cite</b> Count as "+UsersGuide.COUNT_REFERENCE+"</p>" +
         "<p>Algorithmic ideas uderlying the Count package were described in the following publications.</p>" +
@@ -462,7 +484,7 @@ public class AppFrame extends JFrame
         UsersGuide.METHOD_REFERENCES+
         "</ul>" +
 //        "<p>Montr&eacute;al/Budapest/Ann Arbor/Hong Kong/Nha Trang/Bengaluru/Amsterdam/Szentendre/Szeged, 2010-2023</p>";
-        "<p>Montr&eacute;al, 2010–2024</p>";
+        "<p>Montr&eacute;al, 2010–2025</p>";
 
     	JEditorPane EP = new JEditorPane("text/html",ABOUT_TEXT);
         EP.setEditable(false);
@@ -505,9 +527,9 @@ public class AppFrame extends JFrame
     	createToolBar.addSeparator();
     	bouton = createToolBar.addLoadTree("Load tree", e->doLoadTree());
     	bouton.setToolTipText("Load an alternative phylogeny into the current session");
-    	bouton = createToolBar.addEditTree("Edit tree", e->doEditTree());
-    	bouton.setToolTipText("Build a tree by hand: prune-and-regraft, contract edges, or reroot");
-    	bouton = createToolBar.addBuildTree("Build tree", e->doBuildTree());
+    	bouton = createToolBar.addEditTree("Edit", e->doEditTree());
+    	bouton.setToolTipText("Edit a tree by hand: prune-and-regraft, contract edges, or reroot");
+    	bouton = createToolBar.addBuildTree("Build", e->doBuildTree());
     	bouton.setToolTipText("Infer a phylogeny from the copy numbers or randomly");
     	createToolBar.addSeparator(gap);
     	
@@ -516,13 +538,13 @@ public class AppFrame extends JFrame
     	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(false));
     	bouton.setToolTipText("Load a copy-number table, keep columns with corresponding taxa in tree");
 
-    	bouton = createToolBar.addImportTable("Import table", e->doImportTableData());
+    	bouton = createToolBar.addImportTable("Import", e->doImportTableData());
     	bouton.setToolTipText("Load copy-number data from membership (COG) or clustering (MCL) data file.");
     	
-    	bouton = createToolBar.addSimulation("Simulate table", e->getActiveSession().doSimulation());
+    	bouton = createToolBar.addSimulation("Simulate", e->getActiveSession().doSimulation());
     	bouton.setToolTipText("Create a copy-number table by simulating evolution with the selected rate model");
     	createToolBar.addSeparator();
-    	bouton = createToolBar.addFilterRows("Filter rows", e->getActiveSession().showFilteredFamilies());
+    	bouton = createToolBar.addFilterRows("Filter", e->getActiveSession().showFilteredFamilies());
     	bouton.setToolTipText("Extract the selected families into a new table");
     	bouton = createToolBar.addBinaryTable("Binary", e->getActiveSession().showBinaryProfiles());
     	bouton.setToolTipText("Convert to presence-absence table");
@@ -530,7 +552,7 @@ public class AppFrame extends JFrame
     	
     	bouton=createToolBar.addLoadRates("Load model", e->doLoadRates());
     	bouton.setToolTipText("Load a rate model");
-    	bouton = createToolBar.addOptimizeRates("Optimize model", e->getActiveSession().doOptimize());
+    	bouton = createToolBar.addOptimizeRates("Optimize", e->getActiveSession().doOptimize());
     	bouton.setToolTipText("Set model parameters by numerical optimization");
 
     	createToolBar.addSeparator();
@@ -704,7 +726,7 @@ public class AppFrame extends JFrame
     	{
     		data_menu.removeAll();
     		
-    		JMenuItem data_load_table = new JMenuItem(CountActions.createLoadTable("Open table... (keep only the columns with matching leaf names)",e->doLoadTable(false) ));
+    		JMenuItem data_load_table = new JMenuItem(CountActions.createLoadTable("Load table... (keep only the columns with matching leaf names)",e->doLoadTable(false) ));
 //            JMenuItem data_load_table = new JMenuItem("Open table... (keep only the columns with matching leaf names)");
 //            data_load_table.addActionListener(e->doLoadTable(false));
             data_load_table.setAccelerator(
@@ -984,6 +1006,11 @@ public class AppFrame extends JFrame
         final String file_name = dialog.getFile();
         final String directory = dialog.getDirectory();
         
+        this.doLoadSessions(directory, file_name);
+    }
+    
+    
+    public void doLoadSessions(String directory, String file_name) {
         if (file_name != null)
         {
             final JDialog wait_until_loaded = new JDialog(this,"Loading sessions",true);

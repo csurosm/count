@@ -25,8 +25,11 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JComboBox;
 import javax.swing.JEditorPane;
+import javax.swing.JLabel;
 import javax.swing.JRadioButton;
+import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.event.TableModelEvent;
 
@@ -35,6 +38,7 @@ import count.ds.IndexedTree;
 import count.ds.ProfileTable;
 import count.gui.kit.ColoredValueRenderer;
 import count.gui.kit.RoundedDouble;
+import count.gui.kit.SmallIntegerSelector;
 import count.gui.kit.TableScroll;
 import count.io.DataFile;
 import count.matek.Logarithms;
@@ -57,6 +61,8 @@ public class PosteriorsView extends HistoryView
 	 */
 	private static final double EVIDENCE_SCALE = -10.0/Math.log(10.0);
 	
+	private static final String EVIDENCE_SCALE_UNIT = "deciban";
+	
 	private static final boolean FAMILY_PRESENCE_BY_SURVIVAL = true;
 	
 	public PosteriorsView(DataFile<? extends MixedRateModel> rates_data, DataFile<AnnotatedTable> table_data)
@@ -68,6 +74,15 @@ public class PosteriorsView extends HistoryView
 		this.posteriors = new MixedRatePosteriors(rates_data.getContent(), table_data.getContent());
 		initDataStructures();
 		initComponents();
+		
+//		System.out.println("#**PV()"+this+"\ttable "+table_data+"\trates "+rates_data
+//				+"\ttrunc "+posteriors.getCalculationWidthAbsolute()+","+posteriors.getCalculationWidthRelative()
+//				+"\tminobs "+posteriors.getMinimumObserved()
+//				+"\tsingLL "+posteriors.getSingletonLL()
+//				+"\tsamenames "+ Arrays.equals(table_data.getContent().getTaxonNames(), rates_data.getContent().getBaseModel().getTree().getLeafNames())
+//				+"\t"+Arrays.toString(table_data.getContent().getTaxonNames())
+//				+"\t"+Arrays.toString(rates_data.getContent().getBaseModel().getTree().getLeafNames()));
+		
 	}
 	
 	private final DataFile<? extends MixedRateModel> rates_data;
@@ -75,7 +90,9 @@ public class PosteriorsView extends HistoryView
 	
 	private List<HistoryModel.Column<RoundedDouble>> table_family_class;
 	
-	private List<MinCopies> min_copiesRB;
+	private SmallIntegerSelector min_copiesCBB;
+	
+//	private List<MinCopies> min_copiesRB;
 	
 //	private IndexedTree getTree()
 //	{
@@ -131,9 +148,9 @@ public class PosteriorsView extends HistoryView
     			int[] selected_rows = table_scroll.getSelectedModelRows();
     			posteriors.setMinimumObserved(n);
     			setUnobservedCorrections();
-    			Color max_color = table_family_score.getColor();
-    			double min = table_family_score.getMinimum();
-    			double max = table_family_score.getMaximum();
+    			Color max_color = column_family_score.getColor();
+    			double min = column_family_score.getMinimum();
+    			double max = column_family_score.getMaximum();
 				ColoredValueRenderer renderer
 				= new ColoredValueRenderer(Color.WHITE,max_color,min,max);
 				table_scroll.setColumnRenderer(table_model.firstHistoryColumn(), renderer);
@@ -150,75 +167,115 @@ public class PosteriorsView extends HistoryView
 	private Component createMincopiesControl()
 	{
         Box minCopiesB = new Box(BoxLayout.LINE_AXIS);
-        minCopiesB.setBorder(BorderFactory.createTitledBorder("Family correction"));
+        minCopiesB.setBorder(BorderFactory.createTitledBorder("Correction"));
+        
+//        int data_min_copies = table_data.getContent().minCopies();
+//        MinCopies minCopies0 = new MinCopies(0);
+//        MinCopies minCopies1 = new MinCopies(1);
+//        MinCopies minCopies2 = new MinCopies(2);
+//        
+//        min_copiesRB = new ArrayList<>();
+//        min_copiesRB.add(minCopies0);
+//        min_copiesRB.add(minCopies1);
+//        min_copiesRB.add(minCopies2);
+//        
+//        
+//        ButtonGroup minCopiesG = new ButtonGroup();
+//        minCopiesG.add(minCopies0);
+//        minCopiesG.add(minCopies1);
+//        minCopiesG.add(minCopies2);
+//        minCopies1.setEnabled(data_min_copies>0);
+//        minCopies2.setEnabled(data_min_copies>1);
+//
+//        minCopiesB.add(minCopies0);
+//        minCopiesB.add(minCopies1);
+//        minCopiesB.add(minCopies2);
+//        if (data_min_copies==0)
+//        	minCopies0.setSelected(true);
+//        else if (data_min_copies==1)
+//        	minCopies1.setSelected(true);
+//        else
+//        {
+//        	assert (data_min_copies>=2);
+//        	minCopies2.setSelected(true);
+//        }
+//        
+//        minCopies0.addActionListener(click->
+//		{
+////			System.out.println("#**PP.cMC/AL0 "+click);
+//			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+//			int[] selected_rows = table_scroll.getSelectedModelRows();
+//			posteriors.setMinimumObserved(0);
+//			setUnobservedCorrections();
+////			table_model.fireTableDataChanged();
+//			table_scroll.setSelectedModelRows(selected_rows);
+//		});
+//        minCopies1.addActionListener(click->
+//		{
+////			System.out.println("#**PP.cMC/AL1 "+click);
+//			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+//			int[] selected_rows = table_scroll.getSelectedModelRows();
+//			posteriors.setMinimumObserved(1);
+//			setUnobservedCorrections();
+////			table_model.fireTableDataChanged();
+//			table_scroll.setSelectedModelRows(selected_rows);
+//		});
+//        minCopies2.addActionListener(click->
+//		{
+//			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+//			int[] selected_rows = table_scroll.getSelectedModelRows();
+//			posteriors.setMinimumObserved(2);
+//			setUnobservedCorrections();
+////			table_model.fireTableDataChanged();
+//			table_scroll.setSelectedModelRows(selected_rows);
+//		});
+//        
+//        
+////        JSlider testslider = new JSlider(0,5,data_min_copies);
+////        testslider.setMajorTickSpacing(1);
+////        testslider.setMinorTickSpacing(1);
+////        testslider.setPaintLabels(true);
+////        testslider.setPaintTicks(true);
+////        testslider.setPaintTrack(true);
+////        testslider.setSize(100, 40);
+////        testslider.addChangeListener(change -> {
+////        	JSlider source = (JSlider)change.getSource();
+////        	if (!source.getValueIsAdjusting()) {System.out.println("#**PV.cMC.slider "+source.getValue());}});
+////        minCopiesB.add(testslider);
+//        Object[] cbbvalues = new Object[6];
+//        for (int v=0; v<cbbvalues.length; v++)
+//        	cbbvalues[v]=Integer.valueOf(v);
+//        JComboBox testcombo = new JComboBox(cbbvalues);
+//        testcombo.addActionListener(action -> {
+//	    	JComboBox source = (JComboBox)action.getSource();
+//	    	System.out.println("#**PV.cMC.combo "+source.getSelectedIndex());;});
+//        minCopiesB.add(testcombo);
         
         int data_min_copies = table_data.getContent().minCopies();
-        MinCopies minCopies0 = new MinCopies(0);
-        MinCopies minCopies1 = new MinCopies(1);
-        MinCopies minCopies2 = new MinCopies(2);
+        min_copiesCBB = new SmallIntegerSelector(0,data_min_copies);
         
-        min_copiesRB = new ArrayList<>();
-        min_copiesRB.add(minCopies0);
-        min_copiesRB.add(minCopies1);
-        min_copiesRB.add(minCopies2);
-        
-        
-        ButtonGroup minCopiesG = new ButtonGroup();
-        minCopiesG.add(minCopies0);
-        minCopiesG.add(minCopies1);
-        minCopiesG.add(minCopies2);
-        minCopies1.setEnabled(data_min_copies>0);
-        minCopies2.setEnabled(data_min_copies>1);
-
-        minCopiesB.add(minCopies0);
-        minCopiesB.add(minCopies1);
-        minCopiesB.add(minCopies2);
-        if (data_min_copies==0)
-        	minCopies0.setSelected(true);
-        else if (data_min_copies==1)
-        	minCopies1.setSelected(true);
-        else
-        {
-        	assert (data_min_copies>=2);
-        	minCopies2.setSelected(true);
-        }
-        
-        minCopies0.addActionListener(click->
-		{
-//			System.out.println("#**PP.cMC/AL0 "+click);
+        min_copiesCBB.addActionListener(click->
+			{
 			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
 			int[] selected_rows = table_scroll.getSelectedModelRows();
-			posteriors.setMinimumObserved(0);
+			posteriors.setMinimumObserved(min_copiesCBB.getSelectedValue());
 			setUnobservedCorrections();
-//			table_model.fireTableDataChanged();
 			table_scroll.setSelectedModelRows(selected_rows);
 		});
-        minCopies1.addActionListener(click->
-		{
-//			System.out.println("#**PP.cMC/AL1 "+click);
-			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
-			int[] selected_rows = table_scroll.getSelectedModelRows();
-			posteriors.setMinimumObserved(1);
-			setUnobservedCorrections();
-//			table_model.fireTableDataChanged();
-			table_scroll.setSelectedModelRows(selected_rows);
-		});
-        minCopies2.addActionListener(click->
-		{
-			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
-			int[] selected_rows = table_scroll.getSelectedModelRows();
-			posteriors.setMinimumObserved(2);
-			setUnobservedCorrections();
-//			table_model.fireTableDataChanged();
-			table_scroll.setSelectedModelRows(selected_rows);
-		});
+        min_copiesCBB.setSelectedItem(Integer.valueOf(posteriors.getMinimumObserved()));
+        
+        JLabel mincopiesL = new JLabel("Min.observed");
+        mincopiesL.setLabelFor(min_copiesCBB);
+        minCopiesB.add(mincopiesL);
+        minCopiesB.add(min_copiesCBB);
+        
         return minCopiesB;
 	}
 	
 	private void initComponents()
 	{
         getTreeControl().addControlAt(2, createMincopiesControl());
-        getLineageControl().add(createMincopiesControl()); // sets min_copiesRB too
+        //getLineageControl().add(createMincopiesControl()); // sets min_copiesRB too
         
         JTabbedPane selected_rows_display = this.getSelectedRowsDisplay();
 		String table_legend = "<p>The inferred counts are posterior expectations across selected families. "
@@ -307,6 +364,31 @@ public class PosteriorsView extends HistoryView
 		return posteriors.getCalculationWidthRelative();
 	}
 	
+	private void updateScoringInfo() {
+		double score = column_family_score.getSum();
+		double gains = column_family_gains.getSum();
+		double losses = column_family_losses.getSum();
+		
+		if (Double.isNaN(score)) return; // not computed yet
+		
+		StringBuilder info = new StringBuilder("<html><p>Score ");
+		if (EVIDENCE_SCALE == -1.0) {
+			info.append("<b>").append(String.format("%.1f", score)).append("</b>");
+		} else {
+			info.append(String.format("%.1f", score));
+			info.append("(").append(EVIDENCE_SCALE_UNIT).append(")=");
+			double score_nats = -score/EVIDENCE_SCALE;
+			info.append("<b>").append(String.format("%.1f", score_nats)).append("</b>");
+		}
+		info.append(" (nat)");
+		info.append("; ")
+		.append(String.format("%.1f", gains)).append(" gains, ")
+		.append(String.format("%.1f", losses)).append(" losses")
+		.append(" (").append(String.format("%.1f", gains+losses)).append(" events).");
+		
+		info.append("</p></html>");
+		setScoringInfo(info.toString());
+	}
 	
 	private void setUnobservedCorrections()
 	{
@@ -315,38 +397,39 @@ public class PosteriorsView extends HistoryView
 //		System.out.println("#**PV.sUC "+min_copies);
 		
 		
-		MixedRatePosteriors.Profile[] unobserved;
-		MixedRateModel rates_model = posteriors.getRateModel();
+//		MixedRatePosteriors.Profile[] unobserved;
+//		MixedRateModel rates_model = posteriors.getRateModel();
 		IndexedTree phylo = table_model.getTree();
-		MixedRatePosteriors empty_posteriors=null;
-		MixedRatePosteriors singleton_posteriors=null;		
-		if (min_copies==0)
-		{
-			unobserved = new MixedRatePosteriors.Profile[0];
-		}
-		else
-		{
-			empty_posteriors = new MixedRatePosteriors(rates_model, 
-					ProfileTable.emptyProfile(phylo));	
-			empty_posteriors.computeClasses();
-			if (min_copies == 1)
-			{
-				unobserved = new MixedRatePosteriors.Profile[1];
-				unobserved[0] = empty_posteriors.getProfile(0);
-				
-			} else
-			{
-				singleton_posteriors = new MixedRatePosteriors(rates_model, 
-						ProfileTable.singletonTable(phylo));
-				singleton_posteriors.computeClasses();
-				unobserved = new MixedRatePosteriors.Profile[1+phylo.getNumLeaves()];
-				unobserved[0] = empty_posteriors.getProfile(0);
-				for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
-				{
-					unobserved[1+leaf] = singleton_posteriors.getProfile(leaf);
-				}
-			}
-		}
+//		MixedRatePosteriors empty_posteriors=null;
+//		MixedRatePosteriors singleton_posteriors=null;		
+//		if (min_copies==0)
+//		{
+//			unobserved = new MixedRatePosteriors.Profile[0];
+//		}
+//		else
+//		{
+//			empty_posteriors = new MixedRatePosteriors(rates_model, 
+//					ProfileTable.emptyProfile(phylo));	
+//			empty_posteriors.computeClasses();
+//			if (min_copies == 1)
+//			{
+//				unobserved = new MixedRatePosteriors.Profile[1];
+//				unobserved[0] = empty_posteriors.getProfile(0);
+//				
+//			} else
+//			{
+//				singleton_posteriors = new MixedRatePosteriors(rates_model, 
+//						ProfileTable.singletonTable(phylo));
+//				singleton_posteriors.computeClasses();
+//				unobserved = new MixedRatePosteriors.Profile[1+phylo.getNumLeaves()];
+//				unobserved[0] = empty_posteriors.getProfile(0);
+//				for (int leaf=0; leaf<phylo.getNumLeaves(); leaf++)
+//				{
+//					unobserved[1+leaf] = singleton_posteriors.getProfile(leaf);
+//				}
+//			}
+//		}
+		MixedRatePosteriors.Profile[] unobserved = posteriors.getUnobservedProfiles();
 		
 		
 		double L0 = Double.NEGATIVE_INFINITY; // log(0)
@@ -358,10 +441,11 @@ public class PosteriorsView extends HistoryView
 		double p_obs = -Math.expm1(L0); // 1-exp(L0)
 		double Lobs = Logarithms.logToLogComplement(L0);
 		
-		table_family_score.setCorrection(-EVIDENCE_SCALE*Lobs);
+		column_family_score.setCorrection(-EVIDENCE_SCALE*Lobs);
 		table_model.fireTableChanged(new TableModelEvent(table_model, 
 					0, table_model.getRowCount()-1,
 					table_model.firstHistoryColumn()));
+		updateScoringInfo();
 
 		double[] factor = new double[unobserved.length];
 		double[] log_factor = new double[unobserved.length];
@@ -487,10 +571,7 @@ public class PosteriorsView extends HistoryView
 	@Override
 	public void computeAll()
 	{
-		for (MinCopies RB: min_copiesRB)
-		{
-			RB.setEnabled(false);
-		}
+		min_copiesCBB.setEnabled(false);
 		super.computeAll();
 	}
 	
@@ -508,14 +589,16 @@ public class PosteriorsView extends HistoryView
 	@Override
 	protected void computeDone()
 	{
-		int data_min_copies = table_data.getContent().minCopies();
-		for (int m=0; m<=2; m++)
-		{
-			MinCopies RB = min_copiesRB.get(m);
-			RB.setEnabled(m<=data_min_copies);
-		}
+//		int data_min_copies = table_data.getContent().minCopies();
+//		for (int m=0; m<=2; m++)
+//		{
+//			MinCopies RB = min_copiesRB.get(m);
+//			RB.setEnabled(m<=data_min_copies);
+//		}
+		min_copiesCBB.setEnabled(true);
 		
 		computation_cancel.setVisible(false);
+		updateScoringInfo();
 		
 		if (getTableScroll().getDataTable().getSelectedRowCount()==0)
 				getTableScroll().getDataTable().selectAll();
@@ -525,12 +608,9 @@ public class PosteriorsView extends HistoryView
 	protected void computeFamily(int f)
 	{
 		MixedRatePosteriors.Profile P = posteriors.getProfile(f);
-		
-//		if (f==3337) // DEBUG
-//			System.out.println("#**PV.cF "+f);
-		
+
 		double LL = P.getLL();
-		table_family_score.setValue(f, EVIDENCE_SCALE*LL);
+		column_family_score.setValue(f, EVIDENCE_SCALE*LL);
 
 		IndexedTree phylo = table_model.getTree();
 		int num_nodes = phylo.getNumNodes();
@@ -540,13 +620,13 @@ public class PosteriorsView extends HistoryView
 			table_member_birth.get(node).setValue(f, birth);
 			double death;
 			
-			if (phylo.isRoot(node))
-			{
-				death = 0.0;
-			} else 
-			{
+//			if (phylo.isRoot(node))
+//			{
+//				death = 0.0;
+//			} else 
+//			{
 				death = P.getDeathMean(node);
-			}
+//			}
 			table_member_death.get(node).setValue(f, death);
 			
 			
@@ -624,8 +704,8 @@ public class PosteriorsView extends HistoryView
     @Override
     public String toString()
     {
-        return "Posteriors @ "+
-        			DataFile.chopFileExtension(rates_data.getFile().getName());
+        return "Post @ "+
+        			DataFile.chopCommonFileExtension(rates_data.getFile().getName());
     }
 	
 }

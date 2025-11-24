@@ -44,7 +44,7 @@ public class SimulationView extends HistoryView
 	{
 		super(rates_data.getContent().getClassModel(0).getTree(),
 				new DataFile<AnnotatedTable>(SimulatedEvolution.table(rates_data.getContent(), num_rows, min_observed),
-						new File((File)null, "Sim @ "+DataFile.chopFileExtension(rates_data.getFile().getName())+"*"+num_rows)),
+						new File((File)null, "Sim."+DataFile.chopCommonFileExtension(rates_data.getFile().getName())+"*"+num_rows)),
 				true, false);
 		this.rates_data = rates_data;
 		// let's recover the table from super's instantiation
@@ -57,7 +57,7 @@ public class SimulationView extends HistoryView
 	{
 		super(rates_data.getContent().getClassModel(0).getTree(),
 				new DataFile<AnnotatedTable>(SimulatedEvolution.table(rates_data.getContent(), rnd_seed, num_rows, min_observed),
-						new File((File)null, "Sim @ "+DataFile.chopFileExtension(rates_data.getFile().getName())+"*"+num_rows)),
+						new File((File)null, "Sim."+DataFile.chopCommonFileExtension(rates_data.getFile().getName())+"*"+num_rows)),
 				true, false);
 		this.rates_data = rates_data;
 		// let's recover the table from super's instantiation
@@ -85,6 +85,11 @@ public class SimulationView extends HistoryView
 	
 	private AnnotatedTablePanel table_panel=null;
 
+	@Override
+	protected void initTableModel() {
+		this.isSimulated = true;
+		super.initTableModel();
+	}
 	
 	private void initDataStructures()
 	{
@@ -169,7 +174,7 @@ public class SimulationView extends HistoryView
 	protected void computeFamily(int f)
 	{
 		ObservedProfile P = sim_table.getObservedProfile(f);
-		table_family_score.setValue(f, P.getHistoryEventCount(want_unobserved));
+		column_family_score.setValue(f, P.getHistoryEventCount(want_unobserved));
 		
 		IndexedTree phylo = table_model.getTree() ;
 		int num_nodes = phylo.getNumNodes();
@@ -188,9 +193,11 @@ public class SimulationView extends HistoryView
 				death = P.getNodeSurvivalCount(parent, want_unobserved)-S;
 			}
 			table_member_death.get(node).setValue(f, death);
+			table_family_present.get(node).setValue(f, P.getFamilySurvivalPresent(node, want_unobserved));
+			table_family_multi.get(node).setValue(f, P.getFamilySurvivalMulti(node, want_unobserved));
 			
-			table_family_present.get(node).setValue(f, P.getFamilyPresent(node, want_unobserved));
-			table_family_multi.get(node).setValue(f, P.getFamilyMulti(node, want_unobserved));
+//			table_family_present.get(node).setValue(f, P.getFamilyPresent(node, want_unobserved));
+//			table_family_multi.get(node).setValue(f, P.getFamilyMulti(node, want_unobserved));
 			int[] events = P.getFamilyEvents(node, want_unobserved);
 			table_family_gain.get(node).setValue(f, events[FamilyEvent.GAIN.ordinal()]);
 			table_family_lose.get(node).setValue(f, events[FamilyEvent.LOSS.ordinal()]);
@@ -207,6 +214,6 @@ public class SimulationView extends HistoryView
 	
 	public String toString()
 	{
-		return DataFile.chopFileExtension(table_data.getFile().getName());
+		return "Histories"; //DataFile.chopFileExtension(table_data.getFile().getName());
 	}
 }

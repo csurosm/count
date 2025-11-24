@@ -50,6 +50,8 @@ import count.io.SavableData;
 *
 * Collection of trees: multiple phylogenies with the same terminal node set.
 * 
+* Not used anymore
+* 
 * @author Mikl&oacute;s Cs&#369;r&ouml;s
 * @deprecated
 */
@@ -156,7 +158,7 @@ public class TreeCollection extends JPanel
     		if (getTreePanel().getTreeData().getContent() == main_tree)
     			return false;
     		Session sesh = Session.getSession(this);
-			return sesh.getRatesBrowser().getSelectedPrimaryItem()==null;
+			return sesh.getDataBrowser().getSelectedPrimaryItem()==null;
     	}
 
 		@Override

@@ -38,6 +38,7 @@ import count.model.TreeWithRates;
 
 
 import count.model.GLDParameters;
+import count.model.TreeWithLogisticParameters;
 
 /**
 *
@@ -88,6 +89,7 @@ public class RatesTreePanel extends TreePanel
         }
         setRootStem(0); // we will have a window instead
         setBoundingBoxSeparation(getNormalFontSize()/2);
+        
         setDisplayedParameter(GLDParameters.Type.LOSS);
     }
     
@@ -214,6 +216,7 @@ public class RatesTreePanel extends TreePanel
     {
         super.paintComponent(g);
         this.paintSelectedNodes(g);
+        // TODO: draw scale 
     }
     
     @Override
@@ -500,7 +503,35 @@ public class RatesTreePanel extends TreePanel
     	switch (displayed_parameter)
     	{
     		case GAIN:
+    		{
+//    			double rmax = 10.0;
+//    			if (model.getDuplicationRate(node)==0) {
+//    				double gr = model.getGainRate(node);
+//    				r = gr/model.getLossParameter(node);
+//    			} else if (1.0<=model.getDuplicationRate(node))
+//    			{
+//    				r = rmax;
+//    			} else {
+//    				double gkapa = model.getGainRate(node);
+//    				
+//    				if (model instanceof TreeWithLogisticParameters) {
+//    					TreeWithLogisticParameters lrates = (TreeWithLogisticParameters)model;
+//    					r = gkapa * Math.exp(lrates.getLogitRelativeRate(node));
+//    				} else {
+//    					double p = model.getLossParameter(node);
+//    					double q = model.getDuplicationParameter(node);
+//    					r = gkapa * q/(p-q);
+//    				}
+//    				
+//    			}
+//    			r = Double.min(r, rmax);
     			r = model.getGainRate(node); 
+    			if (model.getDuplicationRate(node)!=0) {
+    				r *= model.getDuplicationParameter(node);
+    			}
+    			
+    			break;
+    		}
     		case DUPLICATION:
     			r *= model.getDuplicationRate(node)*model.getEdgeLength(node); break;
     		case LOSS:

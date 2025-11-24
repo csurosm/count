@@ -100,7 +100,7 @@ public class DolloView extends HistoryView
 //
 		Parsimony.Profile P = profiles[f];
 		int[] copies = P.computeDollo(root_surely_present);
-		table_family_score.setValue(f, P.getDolloScore());
+		column_family_score.setValue(f, P.getDolloScore());
 		
 		IndexedTree phylo = tree_data.getContent();
 		int num_nodes = phylo.getNumNodes();
@@ -113,7 +113,7 @@ public class DolloView extends HistoryView
     @Override
     public String toString()
     {
-        return "Dollo @ "+DataFile.chopFileExtension(tree_data.getFile().getName());
+        return "Dollo @ "+DataFile.chopCommonFileExtension(tree_data.getFile().getName());
     }
 	
 }

@@ -93,6 +93,8 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
     private Zoom<RatesTreePanel> tree_control;
     private RatesTable rates_table;
     
+    private JComponent rate_variation_panel;
+    
     @Override // Savable interface
     public DataFile<MixedRateModel> getDataFile(){ return model_data;} 
     
@@ -138,6 +140,7 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         control_bar.removeAll();
         control_bar.add(tree_panel.createParameterChooser());
         control_bar.add(Box.createHorizontalGlue());
+        control_bar.add(tree_panel.createSaveImageButton());
         control_bar.add(tree_control.getSpinner());
         
         rates_table = new RatesTable(rates);
@@ -150,9 +153,9 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
 //        table_scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 //        table_scroll.getViewport().setBackground(getBackground());
         
-        JComponent rate_multiplier_panel = createVariationPanel();
-        rate_multiplier_panel.setBackground(getBackground());
-        JScrollPane rate_variation_scroll = new JScrollPane(rate_multiplier_panel);
+        rate_variation_panel = createVariationPanel();
+        rate_variation_panel.setBackground(getBackground());
+        JScrollPane rate_variation_scroll = new JScrollPane(rate_variation_panel);
         rate_variation_scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         rate_variation_scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         
@@ -200,6 +203,28 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
 		return createVariationPanel;
 	}
 	
+	protected void updateDisplay(boolean recompute_layout)
+    {
+    	Zoom<RatesTreePanel> ratesZ = getRatesPanel();
+    	RatesTreePanel ratesP = ratesZ.getTreePanel();
+    	if (recompute_layout)
+    		ratesP.calculateNodeLocations();
+    	else
+    		ratesP.setValidBoundingBoxes(false);
+    	
+    	RatesTable ratesT = getRatesTable();
+    	int selected_node = ratesT.getSelectedModelRow(); // fireTableDataChanged clears row selection
+    	((RatesTable.Model)ratesT.getModel()).fireTableDataChanged();
+    	if (selected_node != -1) ratesT.setSelectedModelRow(selected_node);
+    	
+    	if (rate_variation_panel instanceof RateModifierPanel)
+    		((RateModifierPanel)rate_variation_panel).updateDisplay();
+    	
+    	repaint();
+    		
+    }
+
+	
 	private class RateModifierPanel extends JPanel
 	{
         private final Font normal_font = new Font("Serif",Font.PLAIN,TABLE_FONT_SIZE);
@@ -209,6 +234,7 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         private final Font plot_font = new Font("Serif", Font.PLAIN, TABLE_FONT_SIZE*4/5);
         
         private final RateVariationModel rates;
+        private JEditorPane category_description;
         
         private RateModifierPanel()
         {
@@ -220,7 +246,18 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
         {
             setBackground(Color.WHITE);
             
+
+            category_description = new JEditorPane("text/html", getCategoryDescriptionText());
+            category_description.setEditable(false);
+            this.add(category_description, BorderLayout.CENTER);
+//            text.setMaximumSize(new Dimension(400,600));
+//            text.setMinimumSize(this.getMaximumSize());
+//            text.setPreferredSize(this.getMaximumSize());
+        }
+        
+        private String getCategoryDescriptionText() {
             StringBuilder sb  = new StringBuilder();
+           
             
             int ncat = rates.getNumClasses();
             if (ncat == 1)
@@ -237,6 +274,9 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
 	            	RateVariationModel.Category C = rates.getCategory(k);
 	            	double modlen = C.getModLength();
 	            	double moddup = C.getModDuplication();
+	            	
+	            	
+	            	
 	            	sb.append("<li>(p=").append(Math.exp(C.getLogCatProbability())).append(")")
 	            	.append("; modlen ").append(modlen)
 	            	.append(modlen<0.0?"(/":"(*").append(Math.exp(Math.abs(modlen))).append(")")
@@ -246,12 +286,12 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
 	            }
 	            sb.append("</ol>");
             }
-            JEditorPane text = new JEditorPane("text/html", sb.toString());
-            text.setEditable(false);
-            this.add(text, BorderLayout.CENTER);
-//            text.setMaximumSize(new Dimension(400,600));
-//            text.setMinimumSize(this.getMaximumSize());
-//            text.setPreferredSize(this.getMaximumSize());
+            
+            return sb.toString();
+        }
+        
+        void updateDisplay() {
+        	category_description.setText(this.getCategoryDescriptionText());
         }
 
 //        @Override 
@@ -373,7 +413,7 @@ public class RateVariationPanel extends JPanel // Browser.PrimaryItem
     @Override
     public String toString()
     {
-        return DataFile.chopFileExtension(model_data.getFile().getName());
+        return DataFile.chopCommonFileExtension(model_data.getFile().getName());
     }   
     
     

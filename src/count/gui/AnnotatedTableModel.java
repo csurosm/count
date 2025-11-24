@@ -111,7 +111,7 @@ public class AnnotatedTableModel extends AbstractTableModel
 					        {
 					        	if (e.getType() == e.UPDATE)
 					        	{
-					        		for (int f=e.getFirstRow(); f<e.getLastRow(); f++)
+					        		for (int f=e.getFirstRow(); f<=e.getLastRow(); f++)
 					        		{
 					        			if (f != e.HEADER_ROW)
 			        					{	

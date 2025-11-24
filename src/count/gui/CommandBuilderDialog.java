@@ -95,6 +95,15 @@ public class CommandBuilderDialog extends JDialog
     private static final Color COLOR_DECORATION = new Color(255,255,204);
     
     
+    /*
+     * Status when last dialog is disposed of.
+     */
+    public static final int CANCEL_OPTION = 0;
+    public static final int SAVE_OPTION = 1;
+    public static final int COPY_OPTION = 2;
+    public static final int EXEC_OPTION = 3;
+    public static final int PRINT_OPTION = 4;
+    
     /**
      * Types for formatting and input verification.
      */
@@ -193,7 +202,7 @@ public class CommandBuilderDialog extends JDialog
     }
 
     /**
-     * Instantiates a text field with standar formats.
+     * Instantiates a text field with standard formats.
      * 
      * @param kind
      * @return
@@ -275,6 +284,7 @@ public class CommandBuilderDialog extends JDialog
     	return box;
     }
 
+    private int closing_status = CANCEL_OPTION;
     
     private JFormattedTextField mainclass_TF;
     private JFormattedTextField javaexec_TF;
@@ -297,8 +307,12 @@ public class CommandBuilderDialog extends JDialog
     private Properties extra_options;
     private Map<String, String> option_explanations;
     
-    
-	private void initComponents(boolean save_tree, boolean want_rates)
+    /**
+     * Closing status: one of {@link #CANCEL_OPTION}, {@link #SAVE_OPTION}, {@link #COPY_OPTION}, {@link #EXEC_OPTION}.
+     * @return
+     */
+    public int getClosedReason() { return closing_status;}
+    private void initComponents(boolean save_tree, boolean want_rates)
 	{
 		extra_options= new Properties();
 		option_explanations = new HashMap<>();
@@ -312,7 +326,7 @@ public class CommandBuilderDialog extends JDialog
 		
 		Box button_box = new Box(BoxLayout.LINE_AXIS);
 //		addTitledBorder(button_box, "Let's get to work");
-        JButton seeB = new JButton("Show");
+        JButton seeB = new JButton("Show ▶︎");
         seeB.setToolTipText("The corresponding command-line arguments or shell script will be shown in a popup window");
 		JButton cancelB = new JButton("Cancel");
 		
@@ -328,10 +342,11 @@ public class CommandBuilderDialog extends JDialog
 		cancelB.addActionListener(click ->
 		{
 			dispose();
+			closing_status = CANCEL_OPTION;
 		});
 		button_box.add(Box.createHorizontalGlue());
-		button_box.add(seeB);
 		button_box.add(cancelB);
+		button_box.add(seeB);
 		button_box.setBackground(COLOR_DECORATION);
 		button_box.setOpaque(true);
 		
@@ -754,12 +769,14 @@ public class CommandBuilderDialog extends JDialog
     }    
 
     
-    
+    /**
+     * Displayed JDialog after runtime options are selected 
+     */
     private class CommandDialog extends JDialog
     {
     	CommandDialog()
     	{
-        	super(app, "How to run "+Count.APP_TITLE+" ("+command_main_class.getCanonicalName()+") in the command line", true); // modal
+        	super(app, "How to run "+Count.APP_TITLE+" ("+command_main_class.getCanonicalName()+") in the command line or in a script", true); // modal
         	initComponents();
         	pack();
         	this.setLocationRelativeTo(null); // center on screen
@@ -783,9 +800,9 @@ public class CommandBuilderDialog extends JDialog
 	        JButton copyB = new JButton("Copy text to clipboard");
 	        copyB.setActionCommand("copy");
 	
-	//        JButton execB = new JButton("Execute!");
-	//        execB.setActionCommand("exec");
-	//        execB.setToolTipText("Executes the constructed command and closes the gui. The current process terminates when the executed command terminates.");
+	        JButton execB = new JButton("◀︎◀︎ GUI launch");
+	        execB.setActionCommand("exec");
+	        execB.setToolTipText("Returns to execute the optimization in the graphical interface.");
 	
 	        JButton closeB = new JButton("Close window");
 	        closeB.setActionCommand("close");
@@ -807,8 +824,10 @@ public class CommandBuilderDialog extends JDialog
 	
 	                    String file_name = FD.getFile();
 	                    String directory = FD.getDirectory();
-	                    if (file_name != null)
+	                    if (file_name == null)
 	                    {
+	                    	closing_status = CANCEL_OPTION;
+	                    } else {	                    
 	                        try
 	                        {
 	                            File file = new File(directory, file_name);
@@ -819,18 +838,23 @@ public class CommandBuilderDialog extends JDialog
 	                        {
 	                            throw new RuntimeException(e);
 	                        }
+	                        closing_status = SAVE_OPTION;
 	                    }
 	                } else if ("print".equals(cmd))
 	                {
 	                    System.out.println(selected_text);
+	                    closing_status = PRINT_OPTION;
 	                } else if ("copy".equals(cmd))
 	                {
 	                    selected_comp.selectAll();
 	                    selected_comp.copy();
+	                    closing_status = COPY_OPTION;
 	                } else if ("close".equals(cmd))
 	                {
+	                	closing_status = CANCEL_OPTION;
 	                } else if ("exec".equals(cmd))
 	                {
+	                	closing_status = EXEC_OPTION;
 	//                    setVisible(false);
 	//                    gui.getFrame().dispose();
 	//                    String exec_cmd = command_panel.command_line_text.getText();
@@ -857,7 +881,9 @@ public class CommandBuilderDialog extends JDialog
 	        printB.addActionListener(button_listener);
 	        closeB.addActionListener(button_listener);
 	        copyB.addActionListener(button_listener);
+	        execB.addActionListener(button_listener);
 	
+	        button_box.add(execB);
 	        button_box.add(saveB);
 //	        button_box.add(printB); // printing onto console is useless
 	        button_box.add(copyB);

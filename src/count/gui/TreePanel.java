@@ -21,6 +21,7 @@ package count.gui;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FileDialog;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -31,24 +32,27 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 
+import javax.imageio.ImageIO;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JRadioButton;
 import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
 import javax.swing.event.ListSelectionEvent;
 
 import count.ds.IndexedTree;
 import count.ds.TreeTraversal;
 import count.gui.kit.BoxIcon;
 import count.gui.kit.DiamondIcon;
-import count.gui.kit.DiscIcon;
 import count.gui.kit.DrawString;
 import count.gui.kit.IndexedPoint;
 import count.gui.kit.MagnificationSpinner;
@@ -114,6 +118,8 @@ public class TreePanel
     
     public static int FONT_SIZE_MIN = 7; 
     public static int FONT_SIZE_MAX = 32;
+    
+    private static final int NODE_TABLE_SEPARATION  = 3;
     
     /**
      * Thick edge width.
@@ -258,7 +264,7 @@ public class TreePanel
        int pad = 2*getTreeDefaultPadding(tree_point_size);
        setPadding(new Insets(pad, pad, pad, LayoutStyle.NODE_TABLE==layout_style?0:10*label_font_size));
        setRootStem(getTreeDefaultStem(tree_point_size));
-       setBoundingBoxSeparation(LayoutStyle.NODE_TABLE==layout_style?1:getTreeBBoxSperation(tree_point_size));
+       setBoundingBoxSeparation(LayoutStyle.NODE_TABLE==layout_style?NODE_TABLE_SEPARATION:getTreeBBoxSperation(tree_point_size));
        
        calculateNodeLocations();
        initializeGraphicalElements();
@@ -292,7 +298,7 @@ public class TreePanel
     */
    public String getTreeName()
    {
-	   return DataFile.chopFileExtension(tree_data.getFile().getName());
+	   return DataFile.chopCommonFileExtension(tree_data.getFile().getName());
    }
    
    public LayoutStyle getTreeLayoutStyle()
@@ -311,7 +317,7 @@ public class TreePanel
        this.layout_style = layout;
        if (LayoutStyle.NODE_TABLE==layout_style)
        {
-    	   setBoundingBoxSeparation(1);
+    	   setBoundingBoxSeparation(NODE_TABLE_SEPARATION);
     	   padding.right = padding.left;
        } else
        {
@@ -365,14 +371,14 @@ public class TreePanel
     			   Rectangle2D currentBB = displayed_node[node].node_bounding_box;
     			   double prev_ends = prevBB.getMaxY();
     			   double current_starts = currentBB.getMinY();
-    			   double current_stretch = prev_ends-current_starts;
+    			   double current_stretch = 1.0/(prev_ends-current_starts);
     			   if (current_stretch>min_y_stretch)
     				   min_y_stretch = current_stretch;
     			   prevBB = currentBB;
     		   }
     		   min_y_stretch += bounding_box_separation;
     		   
-//    		   System.out.println("#**TP.gPS "+layout_style+"\tystretch "+min_y_stretch+"\tlfont "+label_font_size+"\t");
+//    		   System.out.println("#**TP.gPS "+layout_style+"\tystretch "+min_y_stretch+"\tlfont "+label_font_size+"\t"+bounding_box_separation+"\t// "+getClass().getSimpleName());
     		   
     		   double minimum_height 
     		   			 = padding.left 
@@ -412,7 +418,7 @@ public class TreePanel
 	               double current_edge_starts = displayed_node[leaf].edge_bounding_box.getX();
 	               double current_starts = Math.min(current_leaf_starts, current_edge_starts);
 	
-	               double current_min_stretch = previous_ends - current_starts;
+	               double current_min_stretch = 1.0/(previous_ends - current_starts);
 	               if (current_min_stretch>min_x_stretch)
 	                   min_x_stretch = current_min_stretch;
 	           }
@@ -525,6 +531,7 @@ public class TreePanel
        g.setColor(old_color);
        paintNodes(g);
        paintNodeLabels(g);
+       
    }    
    
    
@@ -564,7 +571,7 @@ public class TreePanel
     */
    public static int getTreeDefaultPadding(int tree_point_size){return (5*tree_point_size)/8;}
    
-   public static int getTreeBBoxSperation(int tree_point_size){ return (1*tree_point_size)/2;}
+   public static int getTreeBBoxSperation(int tree_point_size){ return (1*tree_point_size)/4;}
    
    public static int getTreeNormalFontSize(int tree_point_size){ return (3*tree_point_size)/2;}
    
@@ -664,6 +671,39 @@ public class TreePanel
    
        return magnification_spin;
    }
+   
+   public JButton createSaveImageButton() {
+	   JButton  createSaveImageButton = new JButton("PNG");
+	   createSaveImageButton.setToolTipText("Save tree image as a PNG file");
+	   AppFrame app = Session.getApp(TreePanel.this);
+	   createSaveImageButton.addActionListener((e)->{
+		   FileDialog dialog = new FileDialog(app, "Save PNG-format file" , FileDialog.SAVE);
+		   dialog.setEnabled(true);
+		   dialog.setVisible(true);
+		   String file_name = dialog.getFile();;
+		   String directory = dialog.getDirectory(); 
+		   if (file_name != null) {
+			   final File save_file = new File(directory, file_name);
+               SwingWorker<Void,Void> save_worker = new SwingWorker<Void,Void>()
+               {
+                   @Override
+                   public Void doInBackground()
+                   {
+                       try 
+                       {
+                    	   TreePanel.this.saveImage(save_file);
+                       } catch (IOException e) {
+                    	   app.getExceptionHandler().handle(e, "I/O error", "File error while saving image.");
+                       }
+                       return null;
+                   }
+               };
+               save_worker.execute();
+		   }
+	   });
+	   return createSaveImageButton;
+   }
+   
    
    @Override
    public void valueChanged(ListSelectionEvent e)
@@ -1693,6 +1733,16 @@ public class TreePanel
                selected_icon.paint(g, nx, ny);
            else if (label_font_size>=FONT_SIZE_MIN && unselected_icon != null)
                unselected_icon.paint(g, nx, ny);
+
+//           // DEBUG
+//           Color oldc = g.getColor();
+//           g.setColor(Color.PINK);
+//           g.drawRect(
+//        		   nx
+//        		   , ny
+//        		   , (int) node_bounding_box.getWidth()
+//        		   , (int) node_bounding_box.getHeight());
+//           g.setColor(oldc);
        }
        
        /**
@@ -2067,5 +2117,36 @@ public class TreePanel
 	{
 		return getTreeName();
 	}
+	
+	public void saveImage(File f) throws IOException {
+		Dimension pref = getPreferredSize();
+		pref = this.getSize();
+		
+		BufferedImage img = getImage(pref.width,pref.height);
+		ImageIO.write(img, "png", f);
+	}
+	
+	public BufferedImage getImage(int w, int h) {
+		BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2 = img.createGraphics();
+		
+		
+		g2.setColor(Color.WHITE);
+		g2.fillRect(0, 0, w, h);
+		g2.setColor(Color.BLACK);
+		
+		this.print(g2);
+		return img;
+		// 	
+	}
+	/**
+	 * Image with current displayed size 
+	 * 
+	 * @return
+	 */
+	public BufferedImage getImage() {
+		return getImage(getWidth(), getHeight());
+	}
+	
    
 }
