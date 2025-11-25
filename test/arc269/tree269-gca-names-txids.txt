@@ -1,0 +1,269 @@
+Euryarchaeota-Halobacteria-Halobacteriales-Haloarculaceae-Halorhabdus-Halorhabdus tiamatea-GCA 000470655	1033806	GCF_000470655.1	// T197
+Euryarchaeota-Methanomicrobia-Methanocellales-Methanocellaceae-Methanocella-Methanocella conradii-GCA 000251105	1041930	GCF_000251105.1	// T215
+Crenarchaeota-Thermoprotei-Geoarchaeales-Geoarchaeaceae-none-Crenarchaeota archaeon SCGC AAA471-B05-GCA 000380705	1052801	GCF_000380705.1	// T315
+Aigarchaeota-none-none-none-none-Aigarchaeota archaeon SCGC AAA471-E14-GCA 000402965	1052827	GCF_000402965.1	// T349
+Aigarchaeota-none-none-none-none-Aigarchaeota archaeon SCGC AAA471-F17-GCA 000405905	1052829	GCF_000405905.1	// T350
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-Thermoplasmatales archaeon BRNA1-GCA 000350305	1054217	GCF_000350305.1	// T248
+Crenarchaeota-Thermoprotei-Desulfurococcales-Caldisphaeraceae-Caldisphaera-Caldisphaera lagunensis-GCA 000317795	1056495	GCF_000317795.1	// T290
+Thaumarchaeota-none-none-none-Nitrosotalea-Nitrosotalea devanaterra-GCA 900065925	1078905	GCF_900065925.1	// T357
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanolobus-Methanolobus psychrophilus-GCA 000306725	1094980	GCF_000306725.1	// T209
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Pyrobaculum-Pyrobaculum ferrireducens-GCA 000234805	1104324	GCF_000234805.1	// T313
+Diapherotrites-none-none-none-Iainarchaeum-Iainarchaeum andersonii-GCA 000402355	1104576	GCF_000402355.1	// T106
+Woesearchaeota-none-none-none-none-Nanoarchaeota archaeon SCGC AAA011-G17-GCA 000402515	1104577	GCF_000402515.1	// T7
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Picrophilaceae-Picrophilus-Picrophilus torridus-GCA 000008265	1122961	GCF_000008265.1	// T232
+Aigarchaeota-none-none-none-none-Aigarchaeota archaeon JGI 0000106-J15-GCA 000405685	1130285	GCF_000405685.1	// T347
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Geoglobus-Geoglobus ahangari-GCA 001006045	113653	GCF_001006045.1	// T231
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-uncultured archaeon-GCA 000965745	115547	GCA_000965745.1	// T235
+Crenarchaeota-Thermoprotei-Desulfurococcales-Fervidicoccaceae-Fervidicoccus-Fervidicoccus fontis-GCA 000258425	1163730	GCF_000258425.1	// T300
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Thermogladius-Thermogladius calderae-GCA 000264495	1184251	GCF_000264495.1	// T297
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanomicrobiaceae-Methanoculleus-Methanoculleus bourgensis-GCA 000304355	1201294	GCF_000304355.1	// T220
+Euryarchaeota-Thermoplasmata-Methanomassiliicoccales-Methanomassiliicoccaceae-Methanomethylophilus-Methanomethylophilus alvus-GCA 000300255	1236689	GCF_000300255.2	// T247
+Crenarchaeota-Thermoprotei-Desulfurococcales-Pyrodictiaceae-Pyrodictium-Pyrodictium delaneyi-GCA 001412615	1273541	GCF_001412615.1	// T292
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Thermocladium-Thermocladium modestius-GCA 001315925	1293040	GCF_001315925.1	// T310
+Nanoarchaeota-none-Nanoarchaeales-Nanopusillaceae-Nanobsidianus-Nanobsidianus stetteri-GCA 000387965	1294122	GCF_000387965.1	// T4
+Crenarchaeota-Thermoprotei-Sulfolobales-none-none-Sulfolobales archaeon Acd1-GCA 000389735	1294123	GCF_000389735.1	// T305
+Euryarchaeota-Thermoplasmata-Methanomassiliicoccales-Methanomassiliicoccaceae-Methanomassiliicoccus-Methanomassiliicoccus intestinalis-GCA 000404225	1295009	GCF_000404225.1	// T250
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Palaeococcus-Palaeococcus pacificus-GCA 000725425	1343739	GCF_000725425.1	// T163
+Thaumarchaeota-none-none-none-none-Thaumarchaeota archaeon N4-GCA 000723185	1407055	GCF_000723185.1	// T354
+Euryarchaeota-Halobacteria-Halobacteriales-Halobacteriaceae-Halobacterium-Halobacterium hubeiense-GCA 001488575	1407499	GCF_001488575.1	// T179
+Thaumarchaeota-none-none-none-Nitrosopelagicus-Nitrosopelagicus brevis-GCA 000812185	1410606	GCF_000812185.1	// T353
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosarcina-Methanosarcina barkeri-GCA 000970025	1434108	GCF_000970025.1	// T205
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosarcina-Methanosarcina siciliae-GCA 000970085	1434120	GCF_000970085.1	// T203
+Micrarchaeota-none-none-none-Micrarchaeum-Micrarchaeum sp AZ1-GCA 001896515	1531428	GCA_001896515.1	// T117
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermofilaceae-Thermofilum-Thermofilum uzonense-GCA 000993805	1550241	GCF_000993805.1	// T308
+Nanoarchaeota-none-Nanoarchaeales-Nanopusillaceae-Nanopusillus-Nanopusillus acidilobi-GCA 001552015	1577684	GCA_001552015.1	// T5
+Crenarchaeota-Thermoprotei-Desulfurococcales-Acidilobaceae-Acidilobus-Acidilobus sp 7A-GCA 003431325	1577685	GCF_003431325.1	// T289
+Euryarchaeota-Thermoplasmata-Methanomassiliicoccales-Methanomassiliicoccaceae-Methanoplasma-Methanoplasma termitum-GCA 000800805	1577791	GCF_000800805.1	// T249
+Pacearchaeota-none-none-none-none-archaeon GW2011 AR1-GCA 000806055	1579364	GCA_000806055.1	// T47
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR3-GCA 000806075	1579365	GCA_000806075.1	// T18
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR4-GCA 000806095	1579366	GCA_000806095.1	// T29
+Aenigmarchaeota-none-none-none-none-archaeon GW2011 AR5-GCA 000806115	1579367	GCA_000806115.1	// T87
+Diapherotrites-none-none-none-none-archaeon GW2011 AR10-GCA 000830275	1579370	GCA_000830275.1	// T109
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR11-GCA 000806135	1579371	GCA_000806135.1	// T21
+Pacearchaeota-none-none-none-none-archaeon GW2011 AR13-GCA 000805965	1579372	GCA_000805965.1	// T46
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR15-GCA 000830295	1579373	GCA_000830295.1	// T33
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR17-GCA 000805995	1579375	GCA_000805995.1	// T11
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR18-GCA 000806155	1579376	GCA_000806155.1	// T13
+Pacearchaeota-none-none-none-none-archaeon GW2011 AR19-GCA 000806015	1579377	GCA_000806015.1	// T55
+Woesearchaeota-none-none-none-none-archaeon GW2011 AR20-GCA 000830315	1579378	GCA_000830315.1	// T14
+Euryarchaeota-Halobacteria-Halobacteriales-Halobacteriaceae-Halanaeroarchaeum-Halanaeroarchaeum sulfurireducens-GCA 001011115	1604004	GCF_001011115.1	// T180
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Cuniculiplasmataceae-Cuniculiplasma-Cuniculiplasma divulgatum-GCA 900090055	1673428	GCF_900090055.1	// T238
+Bathyarchaeota-none-none-none-none-miscellaneous Crenarchaeota group-6 archaeon AD8-1-GCA 001273385	1685126	GCA_001273385.1	// T328
+Bathyarchaeota-none-none-none-none-miscellaneous Crenarchaeota group archaeon SMTZ-80-GCA 001273495	1685135	GCA_001273495.1	// T339
+Euryarchaeota-Persephonarchaea-none-none-none-candidate divison MSBL1 archaeon SCGC-AAA259E19-GCA 001549095	1698264	GCA_001549095.1	// T176
+Euryarchaeota-Persephonarchaea-none-none-none-candidate divison MSBL1 archaeon SCGC-AAA259I09-GCA 001548995	1698267	GCA_001548995.1	// T175
+Euryarchaeota-Persephonarchaea-none-none-none-candidate divison MSBL1 archaeon SCGC-AAA261D19-GCA 001549175	1698273	GCA_001549175.1	// T177
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon BA1-GCA 001399805	1700835	GCA_001399805.1	// T337
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon BA2-GCA 001399795	1700836	GCA_001399795.1	// T336
+Thorarchaeota-none-none-none-none-Thorarchaeota archaeon SMTZ-45-GCA 001563465	1706443	GCA_001563465.1	// T271
+Thorarchaeota-none-none-none-none-Thorarchaeota archaeon SMTZ1-45-GCA 001563335	1706444	GCA_001563335.1	// T270
+Thorarchaeota-none-none-none-none-Thorarchaeota archaeon SMTZ1-83-GCA 001563325	1706445	GCA_001563325.1	// T269
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus piezophilus-GCA 001647085	1712654	GCF_001647085.1	// T155
+Euryarchaeota-Nanohaloarchaeota-none-none-none-Nanohaloarchaea archaeon SG9-GCA 001761425	1737403	GCA_001761425.1	// T86
+Euryarchaeota-Hadesarchaea-none-none-none-Hadesarchaea archaeon DG-33-GCA 001515185	1775754	GCA_001515185.1	// T171
+Euryarchaeota-Hadesarchaea-none-none-none-Hadesarchaea archaeon DG-33-1-GCA 001515195	1775755	GCA_001515195.1	// T173
+Euryarchaeota-Hadesarchaea-none-none-none-Hadesarchaea archaeon YNP N21-GCA 001515215	1776333	GCA_001515215.1	// T174
+Euryarchaeota-Hadesarchaea-none-none-none-Hadesarchaea archaeon YNP 45-GCA 001515205	1776334	GCA_001515205.1	// T172
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon B23-GCA 001593875	1779367	GCA_001593875.1	// T342
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon RBG 13 38 9-GCA 001775955	1797377	GCA_001775955.1	// T340
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon RBG 13 52 12-GCA 001774245	1797379	GCA_001774245.1	// T343
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon RBG 13 60 20-GCA 001775965	1797380	GCA_001775965.1	// T344
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon RBG 16 57 9-GCA 001776015	1797382	GCA_001776015.1	// T345
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon RBG 13 36 9-GCA 001786395	1801881	GCA_001786395.1	// T67
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon RBG 16 35 8-GCA 001786425	1801882	GCA_001786425.1	// T54
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon RBG 19FT COMBO 34 9-GCA 001786415	1801883	GCA_001786415.1	// T53
+Thaumarchaeota-none-none-none-none-Thaumarchaeota archaeon RBG 16 49 8-GCA 001830115	1802371	GCA_001830115.1	// T360
+Euryarchaeota-Theionarchaea-none-none-none-Theionarchaea archaeon DG-70-GCA 001595795	1803813	GCA_001595795.1	// T169
+Euryarchaeota-Theionarchaea-none-none-none-Theionarchaea archaeon DG-70-1-GCA 001595815	1803814	GCA_001595815.1	// T170
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG1 02 47 40-GCA 001871475	1805247	GCA_001871475.1	// T114
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG1 02 51 15-GCA 001871495	1805249	GCA_001871495.1	// T121
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG1 02 55 41-GCA 001871605	1805251	GCA_001871605.1	// T122
+Thaumarchaeota-none-none-none-none-Thaumarchaeota archaeon 13 1 20CM 2 39 20-GCA 001920395	1805383	GCA_001920395.1	// T356
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG1 02 47 18-GCA 001872825	1805423	GCA_001872825.1	// T26
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG1 02 57 44-GCA 001871415	1805424	GCA_001871415.1	// T30
+Thorarchaeota-none-none-none-none-Thorarchaeota archaeon AB 25-GCA 001940705	1837170	GCA_001940705.1	// T273
+Heimdallarchaeota-none-none-none-none-Heimdallarchaeota archaeon AB 125-GCA 001940755	1841596	GCA_001940755.1	// T283
+Heimdallarchaeota-none-none-none-none-Heimdallarchaeota archaeon LC 2-GCA 001940725	1841597	GCA_001940725.1	// T281
+Heimdallarchaeota-none-none-none-none-Heimdallarchaeota archaeon LC 3-GCA 001940645	1841598	GCA_001940645.1	// T279
+Odinarchaeota-none-none-none-none-Odinarchaeota archaeon LCB 4-GCA 001940665	1841599	GCA_001940665.1	// T278
+Thaumarchaeota-none-none-none-Nitrosotenuis-Nitrosotenuis aquarius-GCA 002787055	1846278	GCF_002787055.1	// T355
+Lokiarchaeota-none-none-none-none-Lokiarchaeota archaeon CR 4-GCA 001940655	1849166	GCA_001940655.1	// T276
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon WOR SM1 SCG-GCA 001723845	1849261	GCA_001723845.1	// T126
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon WOR SM1 86-2-GCA 001723855	1849364	GCA_001723855.1	// T130
+Nanoarchaeota-none-none-none-none-Nanoarchaeota archaeon NZ13-N-GCA 003344645	1852704	GCA_003344645.1	// T6
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Pyrococcus-Pyrococcus furiosus-GCA 000007305	186497	GCF_000007305.1	// T153
+Korarchaeota-none-none-none-none-Korarchaeota archaeon NZ13-K-GCA 003344655	1868214	GCA_003344655.1	// T285
+Euryarchaeota-Halobacteria-Halobacteriales-Halobacteriaceae-Halodesulfurarchaeum-Halodesulfurarchaeum formicicum-GCA 001886955	1873524	GCF_001886955.1	// T181
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon IMC4-GCA 001742785	1878999	GCA_001742785.1	// T127
+Euryarchaeota-Pontarchaea-Pontarchaea-none-none-Marine Group III euryarchaeote CG-Epi1-GCA 001875345	1888995	GCA_001875345.1	// T262
+Euryarchaeota-Pontarchaea-Pontarchaea-none-none-Marine Group III euryarchaeote CG-Epi3-GCA 001875355	1888997	GCA_001875355.1	// T263
+Euryarchaeota-Pontarchaea-Pontarchaea-none-none-Marine Group III euryarchaeote CG-Bathy1-GCA 001875425	1889001	GCA_001875425.1	// T264
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosarcina-Methanosarcina acetivorans-GCA 000007345	188937	GCF_000007345.1	// T202
+Euryarchaeota-Methanopyri-Methanopyrales-Methanopyraceae-Methanopyrus-Methanopyrus kandleri-GCA 000007185	190192	GCF_000007185.1	// T145
+Euryarchaeota-Methanonatronarchaeia-Methanonatronarchaeales-Methanonatronarchaeaceae-Methanohalarchaeum-Methanohalarchaeum thermophilum-GCA 001914405	1903181	GCA_001914405.1	// T200
+Euryarchaeota-Nanohaloarchaeota-none-none-none-Nanohaloarchaea archaeon SW 7 43 1-GCA 003009795	1919221	GCA_003009795.1	// T84
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon Mia14-GCA 002214165	1920749	GCF_002214165.1	// T120
+Euryarchaeota-Methanonatronarchaeia-Methanonatronarchaeales-Methanonatronarchaeaceae-Methanonatronarchaeum-Methanonatronarchaeum thermophilum-GCA 002153915	1927129	GCF_002153915.1	// T201
+Euryarchaeota-Thermoplasmata-none-none-none-Thermoplasmata archaeon M9B1D-GCA 002900535	1933279	GCA_002900535.1	// T266
+Euryarchaeota-Thermoplasmata-none-none-none-Thermoplasmata archaeon M9B2D-GCA 002900555	1933280	GCA_002900555.1	// T268
+Euryarchaeota-Thermoplasmata-none-none-none-Thermoplasmata archaeon M11B2D-GCA 002900545	1933281	GCA_002900545.1	// T267
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon A3-GCA 002083985	1933927	GCA_002083985.1	// T131
+Euryarchaeota-Methanopyri-Methanopyrales-Methanopyraceae-Methanopyrus-Methanopyrus sp KOL6-GCA 002201915	1937004	GCF_002201915.1	// T147
+Euryarchaeota-Methanopyri-Methanopyrales-Methanopyraceae-Methanopyrus-Methanopyrus sp SNP6-GCA 002201895	1937005	GCF_002201895.1	// T146
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Cuniculiplasmataceae-Cuniculiplasma-Cuniculiplasma sp C DKE-GCA 002204655	1961135	GCA_002204655.1	// T239
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-Thermoplasmatales archaeon B DKE-GCA 002204705	1961136	GCA_002204705.1	// T236
+Micrarchaeota-none-none-none-none-Thermoplasmatales archaeon ARMAN-GCA 002204695	1961137	GCA_002204695.1	// T118
+Crenarchaeota-Thermoprotei-Sulfolobales-Sulfolobaceae-Zestosphaera-Zestosphaera tikiterensis-GCA 003056265	1973259	GCA_003056265.1	// T306
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon CG 4 8 14 3 um filter 42 8-GCA 002782745	1974384	GCA_002782745.1	// T333
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon CG07 land 8 20 14 0 80 47 9-GCA 002779555	1974385	GCA_002779555.1	// T332
+Diapherotrites-none-none-none-none-Diapherotrites archaeon CG08 land 8 20 14 0 20 30 16-GCA 002779075	1974403	GCA_002779075.1	// T113
+Diapherotrites-none-none-none-none-Diapherotrites archaeon CG08 land 8 20 14 0 20 34 12-GCA 002779065	1974404	GCA_002779065.1	// T112
+Diapherotrites-none-none-none-none-Diapherotrites archaeon CG10 big fil rev 8 21 14 0 10 31 34-GCA 002763225	1974406	GCA_002763225.1	// T111
+Diapherotrites-none-none-none-none-Diapherotrites archaeon CG11 big fil rev 8 21 14 0 20 37 9-GCA 002762975	1974407	GCA_002762975.1	// T107
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG 4 10 14 0 2 um filter 49 7-GCA 002792955	1974408	GCA_002792955.1	// T116
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG 4 10 14 0 2 um filter 60 11-GCA 002792915	1974410	GCA_002792915.1	// T123
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG10 big fil rev 8 21 14 0 10 45 29-GCA 002778455	1974417	GCA_002778455.1	// T115
+Micrarchaeota-none-none-none-none-Micrarchaeota archaeon CG10 big fil rev 8 21 14 0 10 59 7-GCA 002778425	1974419	GCA_002778425.1	// T124
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG 4 10 14 0 2 um filter 05 32 18-GCA 002792685	1974424	GCA_002792685.1	// T65
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG 4 9 14 0 2 um filter 39 13-GCA 002788615	1974430	GCA_002788615.1	// T61
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG06 land 8 20 14 3 00 35 12-GCA 002780285	1974435	GCA_002780285.1	// T71
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 30 48-GCA 002763155	1974437	GCA_002763155.1	// T64
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 31 59-GCA 002763115	1974439	GCA_002763115.1	// T74
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 32 14-GCA 002763085	1974441	GCA_002763085.1	// T56
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 34 76-GCA 002763075	1974444	GCA_002763075.1	// T63
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 35 13-GCA 002763035	1974445	GCA_002763035.1	// T66
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon CG10 big fil rev 8 21 14 0 10 35 219-GCA 002794155	1974446	GCA_002794155.1	// T62
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG 4 10 14 0 2 um filter 33 13-GCA 002792115	1974449	GCA_002792115.1	// T45
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 32 24-GCA 002763025	1974457	GCA_002763025.1	// T43
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 32 9-GCA 002762915	1974458	GCA_002762915.1	// T37
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 33 12-GCA 002762865	1974459	GCA_002762865.1	// T28
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 36 11-GCA 002762845	1974462	GCA_002762845.1	// T44
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 37 12-GCA 002762795	1974463	GCA_002762795.1	// T32
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 44 13-GCA 002762985	1974464	GCA_002762985.1	// T20
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG10 big fil rev 8 21 14 0 10 45 16-GCA 002762785	1974465	GCA_002762785.1	// T42
+Woesearchaeota-none-none-none-none-Woesearchaeota archaeon CG11 big fil rev 8 21 14 0 20 43 8-GCA 002762705	1974468	GCA_002762705.1	// T19
+NovelDPANN 1-none-none-none-none-archaeon CG10 big fil rev 8 21 14 0 10 43 11-GCA 002763265	1975556	GCA_002763265.1	// T79
+NovelDPANN 1-none-none-none-none-archaeon CG07 land 8 20 14 0 80 38 8-GCA 002779595	1975558	GCA_002779595.1	// T80
+Marsarchaeota-none-none-none-none-Marsarchaeota G1 archaeon OSP B-GCA 003019445	1978153	GCA_003019445.1	// T318
+Marsarchaeota-none-none-none-none-Marsarchaeota G1 archaeon BE D-GCA 003019595	1978156	GCA_003019595.1	// T319
+Marsarchaeota-none-none-none-none-Marsarchaeota G2 archaeon OSP D-GCA 003019545	1978157	GCA_003019545.1	// T321
+Marsarchaeota-none-none-none-none-Marsarchaeota G2 archaeon ECH B 1-GCA 003019535	1978159	GCA_003019535.1	// T320
+Aigarchaeota-none-none-none-none-Aigarchaeota archaeon NZ13 MG1-GCA 003056285	1980982	GCA_003056285.1	// T348
+Pacearchaeota-none-none-none-none-archaeon BMS3Abin17-GCA 002897655	2005741	GCA_002897655.1	// T52
+Euryarchaeota-Thalassoarchaea-Thalassoarchaea-none-none-Marine Group II euryarchaeote MED-G35-GCA 002457155	2007296	GCA_002457155.1	// T259
+Euryarchaeota-Thalassoarchaea-Thalassoarchaea-none-none-Marine Group II euryarchaeote MED-G36-GCA 002457595	2007297	GCA_002457595.1	// T255
+Euryarchaeota-Thalassoarchaea-Thalassoarchaea-none-none-Marine Group II euryarchaeote MED-G37-GCA 002457555	2007298	GCA_002457555.1	// T254
+Heimdallarchaeota-none-none-none-none-Heimdallarchaeota archaeon B3-JM-08-GCA 003144275	2012493	GCA_003144275.1	// T280
+Aenigmarchaeota-none-none-none-none-Aenigmarchaeota archaeon ex4484 14-GCA 002255055	2012502	GCA_002255055.1	// T89
+Aenigmarchaeota-none-none-none-none-Aenigmarchaeota archaeon ex4484 224-GCA 002254545	2012503	GCA_002254545.1	// T90
+Aenigmarchaeota-none-none-none-none-Aenigmarchaeota archaeon ex4484 56-GCA 002254685	2012505	GCA_002254685.1	// T93
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon ex4484 2-GCA 002254565	2012506	GCA_002254565.1	// T128
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon ex4484 43-GCA 002254945	2012507	GCA_002254945.1	// T129
+Bathyarchaeota-none-none-none-none-Bathyarchaeota archaeon ex4484 40-GCA 002254475	2012513	GCA_002254475.1	// T338
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon ex4484 26-GCA 002254495	2012514	GCA_002254495.1	// T75
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon ex4484 31-GCA 002254805	2012515	GCA_002254805.1	// T72
+Pacearchaeota-none-none-none-none-Pacearchaeota archaeon ex4484 71-GCA 002254395	2012516	GCA_002254395.1	// T48
+Euryarchaeota-none-Altiarchaeales-none-none-Altiarchaeales archaeon HGW-Altiarchaeales-1-GCA 002841105	2013673	GCA_002841105.1	// T134
+Huberarchaeota-none-none-none-none-Euryarchaeota archaeon HGW-Euryarchaeota-1-GCA 002841675	2013767	GCA_002841675.1	// T2
+Euryarchaeota-Thermoplasmata-none-none-none-Thermoplasmata archaeon HGW-Thermoplasmata-1-GCA 002838935	2013852	GCA_002838935.1	// T265
+Euryarchaeota-none-Altiarchaeales-none-Altiarchaeum-Altiarchaeum sp CG 4 10 14 0 8 um filter 32 851-GCA 002791795	2014238	GCA_002791795.1	// T133
+Euryarchaeota-none-Altiarchaeales-none-Altiarchaeum-Altiarchaeum sp CG03 land 8 20 14 0 80 32 618-GCA 002785505	2014241	GCA_002785505.1	// T132
+UAP2-none-none-none-none-Euryarchaeota archaeon-GCA 002687935	2026739	GCA_002687935.1	// T96
+Heimdallarchaeota-none-none-none-none-Heimdallarchaeota archaeon-GCA 002728275	2026747	GCA_002728275.1	// T282
+Lokiarchaeota-none-none-none-none-Lokiarchaeota archaeon-GCA 003662865	2053489	GCA_003662865.1	// T277
+Korarchaeota-none-none-none-none-Korarchaeota archaeon-GCA 002899815	2056630	GCA_002899815.1	// T286
+Thaumarchaeota-Nitrososphaeria-Nitrosocaldales-Nitrosocaldaceae-Nitrosocaldus-Nitrosocaldus cavascurensis-GCA 900248165	2058097	GCF_900248165.1	// T359
+Euryarchaeota-none-none-none-Aciduliprofundum-Aciduliprofundum sp -GCA 002878135	2060325	GCA_002878135.1	// T246
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosarcina-Methanosarcina mazei-GCA 000970205	213585	GCF_000970205.1	// T204
+Euryarchaeota-Thalassoarchaea-Thalassoarchaea-none-none-Marine Group II euryarchaeote-GCA 003324635	2163009	GCA_003324635.1	// T261
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanohalophilus-Methanohalophilus halophilus-GCA 001889405	2177	GCF_001889405.1	// T208
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Archaeoglobus-Archaeoglobus fulgidus-GCA 000008665	224325	GCF_000008665.1	// T225
+Nanoarchaeota-none-Nanoarchaeales-Nanoarchaeaceae-Nanoarchaeum-Nanoarchaeum equitans-GCA 000008085	228908	GCF_000008085.1	// T3
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanococcoides-Methanococcoides burtonii-GCA 000013725	259564	GCF_000013725.1	// T207
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-Thermoplasmatales archaeon Gpl-GCA 001856845	261391	GCA_001856845.1	// T237
+Euryarchaeota-Halobacteria-Halobacteriales-Haloarculaceae-Natronomonas-Natronomonas moolapensis-GCA 000591055	268739	GCF_000591055.1	// T199
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Aeropyrum-Aeropyrum pernix-GCA 000011125	272557	GCF_000011125.1	// T287
+Crenarchaeota-Thermoprotei-Sulfolobales-Sulfolobaceae-Sulfurisphaera-Sulfurisphaera tokodaii-GCA 000011205	273063	GCF_000011205.1	// T301
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Thermoplasmataceae-Thermoplasma-Thermoplasma acidophilum-GCA 000195915	273075	GCF_000195915.1	// T241
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Thermoplasmataceae-Thermoplasma-Thermoplasma volcanium-GCA 000011185	273116	GCF_000011185.1	// T240
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus thioreducens-GCA 002214545	277988	GCF_002214545.1	// T158
+Aigarchaeota-none-none-none-Caldiarchaeum-Caldiarchaeum subterraneum-GCA 000270325	311458	GCF_000270325.1	// T346
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanospirillaceae-Methanospirillum-Methanospirillum hungatei-GCA 000013445	323259	GCF_000013445.1	// T216
+Crenarchaeota-Thermoprotei-Sulfolobales-Sulfolobaceae-Sulfolobus-Sulfolobus acidocaldarius-GCA 000012285	330779	GCF_000012285.1	// T302
+Euryarchaeota-Methanobacteria-Methanobacteriales-Methanobacteriaceae-Methanosphaera-Methanosphaera stadtmanae-GCA 000012545	339860	GCF_000012545.1	// T148
+Euryarchaeota-Halobacteria-Halobacteriales-Haloarculaceae-Natronomonas-Natronomonas pharaonis-GCA 000026045	348780	GCF_000026045.1	// T198
+Euryarchaeota-Methanomicrobia-Methanocellales-Methanocellaceae-Methanocella-Methanocella arvoryzae-GCA 000063445	351160	GCF_000063445.1	// T214
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Halobiforma-Halobiforma lacisalsi-GCA 000226975	358396	GCF_000226975.1	// T191
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermofilaceae-Thermofilum-Thermofilum pendens-GCA 000015225	368408	GCF_000015225.1	// T307
+Korarchaeota-none-none-none-Korarchaeum-Korarchaeum cryptofilum-GCA 000019605	374847	GCF_000019605.1	// T284
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Archaeoglobus-Archaeoglobus sulfaticallidus-GCA 000385565	387631	GCF_000385565.1	// T228
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus barophilus-GCA 000151105	391623	GCF_000151105.2	// T159
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Caldivirga-Caldivirga maquilingensis-GCA 000018305	397948	GCF_000018305.1	// T309
+Crenarchaeota-Thermoprotei-Sulfolobales-Sulfolobaceae-Metallosphaera-Metallosphaera sedula-GCA 000016605	399549	GCF_000016605.1	// T303
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Staphylothermus-Staphylothermus marinus-GCA 000015945	399550	GCF_000015945.1	// T294
+Euryarchaeota-Methanococci-Methanococcales-Methanococcaceae-Methanococcus-Methanococcus vannielii-GCA 000017165	406327	GCF_000017165.1	// T138
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanocorpusculaceae-Methanocorpusculum-Methanocorpusculum labreanum-GCA 000015765	410358	GCF_000015765.1	// T221
+Thaumarchaeota-none-Cenarchaeales-Cenarchaeaceae-Cenarchaeum-Cenarchaeum symbiosum-GCA 000200715	414004	GCF_000200715.1	// T352
+Crenarchaeota-Thermoprotei-Desulfurococcales-Pyrodictiaceae-Hyperthermus-Hyperthermus butylicus-GCA 000015145	415426	GCF_000015145.1	// T291
+Euryarchaeota-Halobacteria-Haloferacales-Halorubraceae-Halorubrum-Halorubrum lacusprofundi-GCA 000022205	416348	GCF_000022205.1	// T182
+Euryarchaeota-Methanococci-Methanococcales-Methanococcaceae-Methanococcus-Methanococcus aeolicus-GCA 000017185	419665	GCF_000017185.1	// T139
+Euryarchaeota-Methanobacteria-Methanobacteriales-Methanobacteriaceae-Methanobrevibacter-Methanobrevibacter smithii-GCA 000016525	420247	GCF_000016525.1	// T150
+Thaumarchaeota-none-Nitrosopumilales-Nitrosopumilaceae-Nitrosopumilus-Nitrosopumilus maritimus-GCA 000018465	436308	GCF_000018465.1	// T351
+Euryarchaeota-none-none-none-Aciduliprofundum-Aciduliprofundum boonei-GCA 000025665	439481	GCF_000025665.1	// T243
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Ignicoccus-Ignicoccus hospitalis-GCA 000017945	453591	GCF_000017945.1	// T298
+Euryarchaeota-Halobacteria-Haloferacales-Haloferacaceae-Halogeometricum-Halogeometricum borinquense-GCA 000172995	469382	GCF_000172995.2	// T183
+Euryarchaeota-Halobacteria-Halobacteriales-Haloarculaceae-Halomicrobium-Halomicrobium mukohataei-GCA 000023965	485914	GCF_000023965.1	// T196
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Desulfurococcus-Desulfurococcus amylolyticus-GCA 000020905	490899	GCF_000020905.1	// T295
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus profundus-GCA 002214585	49899	GCF_002214585.1	// T157
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanoregulaceae-Methanosphaerula-Methanosphaerula palustris-GCA 000021965	521011	GCF_000021965.1	// T217
+Euryarchaeota-Halobacteria-Haloferacales-Haloferacaceae-Haloferax-Haloferax mediterranei-GCA 000306765	523841	GCF_000306765.1	// T185
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosarcina-Methanosarcina thermophila-GCA 000969885	523844	GCF_000969885.1	// T206
+Euryarchaeota-Methanobacteria-Methanobacteriales-Methanothermaceae-Methanothermus-Methanothermus fervidus-GCA 000166095	523846	GCF_000166095.1	// T152
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus litoralis-GCA 000246985	523849	GCF_000246985.2	// T162
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Haloterrigena-Haloterrigena turkmenica-GCA 000025325	543526	GCF_000025325.1	// T186
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Natrialba-Natrialba magadii-GCA 000025625	547559	GCF_000025625.1	// T189
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Geoglobus-Geoglobus acetivorans-GCA 000789255	565033	GCF_000789255.1	// T230
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Vulcanisaeta-Vulcanisaeta distributa-GCA 000148385	572478	GCF_000148385.1	// T311
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Archaeoglobus-Archaeoglobus profundus-GCA 000025285	572546	GCF_000025285.1	// T226
+Euryarchaeota-Methanococci-Methanococcales-Methanocaldococcaceae-Methanocaldococcus-Methanocaldococcus infernus-GCA 000092305	573063	GCF_000092305.1	// T144
+Euryarchaeota-Methanococci-Methanococcales-Methanocaldococcaceae-Methanocaldococcus-Methanocaldococcus fervens-GCA 000023985	573064	GCF_000023985.1	// T142
+Euryarchaeota-Methanococci-Methanococcales-Methanocaldococcaceae-Methanocaldococcus-Methanocaldococcus vulcanius-GCA 000024625	579137	GCF_000024625.1	// T143
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus paralvinellae-GCA 000517445	582419	GCF_000517445.1	// T160
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Haloterrigena-Haloterrigena daqingensis-GCA 001971705	588898	GCF_001971705.1	// T188
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Ferroglobus-Ferroglobus placidus-GCA 000025505	589924	GCF_000025505.1	// T229
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanoregulaceae-Methanoregula-Methanoregula formicica-GCA 000327485	593750	GCF_000327485.1	// T218
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus sibiricus-GCA 000022545	604354	GCF_000022545.1	// T161
+Crenarchaeota-Thermoprotei-Sulfolobales-Sulfolobaceae-Acidianus-Acidianus sulfidivorans-GCA 003201765	619593	GCF_003201765.1	// T304
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Thermosphaera-Thermosphaera aggregans-GCA 000092185	633148	GCF_000092185.1	// T296
+Euryarchaeota-Halobacteria-Halobacteriales-Halobacteriaceae-Halobacterium-Halobacterium salinarum-GCA 000006805	64091	GCF_000006805.1	// T178
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanohalobium-Methanohalobium evestigatum-GCA 000196655	644295	GCF_000196655.1	// T211
+Euryarchaeota-Methanococci-Methanococcales-Methanococcaceae-Methanothermococcus-Methanothermococcus okinawensis-GCA 000179575	647113	GCF_000179575.2	// T140
+Parvarchaeota-none-none-none-none-Parvarchaeum acidiphilum Arman4-GCA 002412065	662760	GCA_002412065.1	// T76
+Parvarchaeota-none-none-none--Parvarchaeum acidophilus-GCA 002412085	662762	GCA_002412085.1	// T78
+Crenarchaeota-Thermoprotei-Desulfurococcales-Acidilobaceae-Acidilobus-Acidilobus saccharovorans-GCA 000144915	666510	GCF_000144915.1	// T288
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-Thermoplasmatales archaeon A-plasma-GCA 000447225	667135	GCF_000447225.1	// T234
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-none-none-Thermoplasmatales archaeon I-plasma-GCA 001856825	667138	GCA_001856825.1	// T242
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanosalsum-Methanosalsum zhilinae-GCA 000217995	679901	GCF_000217995.1	// T212
+Euryarchaeota-Methanomicrobia-Methanomicrobiales-Methanomicrobiaceae-Methanolacinia-Methanolacinia petrolearia-GCA 000147875	679926	GCF_000147875.1	// T219
+Euryarchaeota-Archaeoglobi-Archaeoglobales-Archaeoglobaceae-Archaeoglobus-Archaeoglobus veneficus-GCA 000194625	693661	GCF_000194625.1	// T227
+Crenarchaeota-Thermoprotei-Desulfurococcales-Pyrodictiaceae-Pyrolobus-Pyrolobus fumarii-GCA 000223395	694429	GCF_000223395.1	// T293
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Natronococcus-Natronococcus occultus-GCA 000328685	694430	GCF_000328685.1	// T193
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Pyrococcus-Pyrococcus horikoshii-GCA 000011105	70601	GCF_000011105.1	// T154
+Euryarchaeota-Thermococci-Thermococcales-Thermococcaceae-Thermococcus-Thermococcus pacificus-GCA 002214485	71998	GCF_002214485.1	// T156
+Euryarchaeota-Thermoplasmata-Thermoplasmatales-Ferroplasmaceae-Ferroplasma-Ferroplasma acidiphilum-GCA 002078355	74969	GCF_002078355.1	// T233
+Euryarchaeota-Halobacteria-Haloferacales-Haloferacaceae-Haloquadratum-Haloquadratum walsbyi-GCA 000237865	768065	GCF_000237865.1	// T184
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Thermoproteus-Thermoproteus tenax-GCA 000253055	768679	GCF_000253055.1	// T314
+Euryarchaeota-Halobacteria-Halobacteriales-Halobacteriaceae-Halalkalicoccus-Halalkalicoccus jeotgali-GCA 000196895	795797	GCF_000196895.1	// T195
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Halopiger-Halopiger xanaduensis-GCA 000217715	797210	GCF_000217715.1	// T190
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Halostagnicola-Halostagnicola larsenii-GCA 000517625	797299	GCF_000517625.1	// T194
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Natrinema-Natrinema pellirubrum-GCA 000230735	797303	GCF_000230735.2	// T187
+Euryarchaeota-Halobacteria-Natrialbales-Natrialbaceae-Natronobacterium-Natronobacterium gregoryi-GCA 000230715	797304	GCF_000230715.2	// T192
+Euryarchaeota-Methanobacteria-Methanobacteriales-Methanobacteriaceae-Methanothermobacter-Methanothermobacter marburgensis-GCA 000145295	79929	GCF_000145295.1	// T151
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosarcinaceae-Methanomethylovorans-Methanomethylovorans hollandica-GCA 000328665	867904	GCF_000328665.1	// T210
+Crenarchaeota-Thermoprotei-Thermoproteales-Thermoproteaceae-Vulcanisaeta-Vulcanisaeta thermophila-GCA 001748385	867917	GCF_001748385.1	// T312
+Euryarchaeota-Methanobacteria-Methanobacteriales-Methanobacteriaceae-Methanobacterium-Methanobacterium paludis-GCA 000214725	868131	GCF_000214725.1	// T149
+Euryarchaeota-Methanococci-Methanococcales-Methanocaldococcaceae-Methanotorris-Methanotorris igneus-GCA 000214415	880724	GCF_000214415.1	// T141
+Euryarchaeota-Nanohaloarchaeota-none-none-Nanosalinarum-Nanosalinarum sp J07AB56-GCA 000220355	889962	GCA_000220355.1	// T81
+Thaumarchaeota-Nitrososphaeria-Nitrososphaerales-Nitrososphaeraceae-Nitrososphaera-Nitrososphaera viennensis-GCA 000698785	926571	GCF_000698785.1	// T358
+Crenarchaeota-Thermoprotei-Desulfurococcales-Desulfurococcaceae-Ignicoccus-Ignicoccus islandicus-GCA 001481685	940295	GCF_001481685.1	// T299
+Euryarchaeota-Methanomicrobia-Methanosarcinales-Methanosaetaceae-Methanothrix-Methanothrix soehngenii-GCA 000204415	990316	GCF_000204415.1	// T213

@@ -1,0 +1,814 @@
+#| Count XXV 25.1124 [beta]::count.io.NewickParser
+#| System: Mac OS X 15.5 aarch64
+#| Java engine: OpenJDK 64-Bit Server VM 24.0.1+9-30 (24.0.1+9-30) mixed mode, sharing, Oracle Corporation
+#| Date: Mon Nov 24 18:39:48 EST 2025
+#| Current directory: /Users/csuros/Work/gene_content/birth-death/TKF/Count22/test-upload
+#| Command-line arguments: count.io.NewickParser -subtree 536 ../test/arc269/tree269-baker-alti-names-edit.tre
+#| Subtree	-subtree 536	U536[d__Archaea]
+#**P.fL kept 269	missed 0	delleaves 0	delnodes 0
+#LEAF	Candidatus Iainarchaeum andersonii SCGC AAA011-E11	0	N[T0/Candidatus Iainarchaeum andersonii SCGC AAA011-E11 len 1.0 prnt U269 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Diapherotrites archaeon CG11_big_fil_rev_8_21_14_0_20_37_9	1	N[T1/Candidatus Diapherotrites archaeon CG11_big_fil_rev_8_21_14_0_20_37_9 len 1.0 prnt U269 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR10	2	N[T2/archaeon GW2011_AR10 len 1.0 prnt U270 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Diapherotrites archaeon CG10_big_fil_rev_8_21_14_0_10_31_34	3	N[T3/Candidatus Diapherotrites archaeon CG10_big_fil_rev_8_21_14_0_10_31_34 len 1.0 prnt U271 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_34_12	4	N[T4/Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_34_12 len 1.0 prnt U272 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_30_16	5	N[T5/Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_30_16 len 1.0 prnt U273/p__Iainarchaeota chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG1_02_47_40	6	N[T6/Candidatus Micrarchaeota archaeon CG1_02_47_40 len 1.0 prnt U274 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_29	7	N[T7/Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_29 len 1.0 prnt U274 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_49_7	8	N[T8/Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_49_7 len 1.0 prnt U275 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeum sp. AZ1	9	N[T9/Candidatus Micrarchaeum sp. AZ1 len 1.0 prnt U276 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon ARMAN	10	N[T10/Thermoplasmatales archaeon ARMAN len 1.0 prnt U276 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Mancarchaeum acidiphilum	11	N[T11/Candidatus Mancarchaeum acidiphilum len 1.0 prnt U277 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG1_02_51_15	12	N[T12/Candidatus Micrarchaeota archaeon CG1_02_51_15 len 1.0 prnt U281 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG1_02_55_41	13	N[T13/Candidatus Micrarchaeota archaeon CG1_02_55_41 len 1.0 prnt U279 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_60_11	14	N[T14/Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_60_11 len 1.0 prnt U279 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_59_7	15	N[T15/Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_59_7 len 1.0 prnt U280 chld {}, nl 1, nn 1]
+#LEAF	Euryarchaeota archaeon (p__Undinarchaeota)	16	N[T16/Euryarchaeota archaeon (p__Undinarchaeota) len 1.0 prnt U337/UPANN chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nanosalinarum sp. J07AB56	17	N[T17/Candidatus Nanosalinarum sp. J07AB56 len 1.0 prnt U285/p__Nanohaloarchaeota chld {}, nl 1, nn 1]
+#LEAF	Nanohaloarchaea archaeon SW_7_43_1	18	N[T18/Nanohaloarchaea archaeon SW_7_43_1 len 1.0 prnt U284/unclassified Candidatus Nanohaloarchaea chld {}, nl 1, nn 1]
+#LEAF	Nanohaloarchaea archaeon SG9	19	N[T19/Nanohaloarchaea archaeon SG9 len 1.0 prnt U284/unclassified Candidatus Nanohaloarchaea chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR5	20	N[T20/archaeon GW2011_AR5 len 1.0 prnt U286 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Aenigmarchaeota archaeon ex4484_14	21	N[T21/Candidatus Aenigmarchaeota archaeon ex4484_14 len 1.0 prnt U286 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Aenigmarchaeota archaeon ex4484_224	22	N[T22/Candidatus Aenigmarchaeota archaeon ex4484_224 len 1.0 prnt U287 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Aenigmarchaeota archaeon ex4484_56	23	N[T23/Candidatus Aenigmarchaeota archaeon ex4484_56 len 1.0 prnt U287 chld {}, nl 1, nn 1]
+#LEAF	Nanoarchaeum equitans Kin4-M	24	N[T24/Nanoarchaeum equitans Kin4-M len 1.0 prnt U292/Ca. Nanoarchaeia chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nanobsidianus stetteri	25	N[T25/Candidatus Nanobsidianus stetteri len 1.0 prnt U290/Nanopusillaceae chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nanopusillus acidilobi	26	N[T26/Candidatus Nanopusillus acidilobi len 1.0 prnt U290/Nanopusillaceae chld {}, nl 1, nn 1]
+#LEAF	Nanoarchaeota archaeon NZ13-N	27	N[T27/Nanoarchaeota archaeon NZ13-N len 1.0 prnt U291 chld {}, nl 1, nn 1]
+#LEAF	Nanoarchaeota archaeon SCGC AAA011-G17	28	N[T28/Nanoarchaeota archaeon SCGC AAA011-G17 len 1.0 prnt U293 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR17	29	N[T29/archaeon GW2011_AR17 len 1.0 prnt U293 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR18	30	N[T30/archaeon GW2011_AR18 len 1.0 prnt U294 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR20	31	N[T31/archaeon GW2011_AR20 len 1.0 prnt U294 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR3	32	N[T32/archaeon GW2011_AR3 len 1.0 prnt U297 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG11_big_fil_rev_8_21_14_0_20_43_8	33	N[T33/Candidatus Woesearchaeota archaeon CG11_big_fil_rev_8_21_14_0_20_43_8 len 1.0 prnt U296 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_44_13	34	N[T34/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_44_13 len 1.0 prnt U296 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR11	35	N[T35/archaeon GW2011_AR11 len 1.0 prnt U299 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG1_02_47_18	36	N[T36/Candidatus Woesearchaeota archaeon CG1_02_47_18 len 1.0 prnt U298 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_33_12	37	N[T37/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_33_12 len 1.0 prnt U298 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR4	38	N[T38/archaeon GW2011_AR4 len 1.0 prnt U301 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG1_02_57_44	39	N[T39/Candidatus Woesearchaeota archaeon CG1_02_57_44 len 1.0 prnt U301 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_37_12	40	N[T40/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_37_12 len 1.0 prnt U302 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR15	41	N[T41/archaeon GW2011_AR15 len 1.0 prnt U304 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_9	42	N[T42/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_9 len 1.0 prnt U304 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_16	43	N[T43/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_16 len 1.0 prnt U306 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_24	44	N[T44/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_24 len 1.0 prnt U306 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_36_11	45	N[T45/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_36_11 len 1.0 prnt U307 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Woesearchaeota archaeon CG_4_10_14_0_2_um_filter_33_13	46	N[T46/Candidatus Woesearchaeota archaeon CG_4_10_14_0_2_um_filter_33_13 len 1.0 prnt U308 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR13	47	N[T47/archaeon GW2011_AR13 len 1.0 prnt U312 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR1	48	N[T48/archaeon GW2011_AR1 len 1.0 prnt U311 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon ex4484_71	49	N[T49/Candidatus Pacearchaeota archaeon ex4484_71 len 1.0 prnt U311 chld {}, nl 1, nn 1]
+#LEAF	archaeon BMS3Abin17	50	N[T50/archaeon BMS3Abin17 len 1.0 prnt U313 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon RBG_19FT_COMBO_34_9	51	N[T51/Candidatus Pacearchaeota archaeon RBG_19FT_COMBO_34_9 len 1.0 prnt U314 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon RBG_16_35_8	52	N[T52/Candidatus Pacearchaeota archaeon RBG_16_35_8 len 1.0 prnt U314 chld {}, nl 1, nn 1]
+#LEAF	archaeon GW2011_AR19	53	N[T53/archaeon GW2011_AR19 len 1.0 prnt U316 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_14	54	N[T54/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_14 len 1.0 prnt U317 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG_4_9_14_0_2_um_filter_39_13	55	N[T55/Candidatus Pacearchaeota archaeon CG_4_9_14_0_2_um_filter_39_13 len 1.0 prnt U318 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_219	56	N[T56/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_219 len 1.0 prnt U318 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_34_76	57	N[T57/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_34_76 len 1.0 prnt U319 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_30_48	58	N[T58/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_30_48 len 1.0 prnt U320 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG_4_10_14_0_2_um_filter_05_32_18	59	N[T59/Candidatus Pacearchaeota archaeon CG_4_10_14_0_2_um_filter_05_32_18 len 1.0 prnt U320 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_13	60	N[T60/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_13 len 1.0 prnt U323 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon RBG_13_36_9	61	N[T61/Candidatus Pacearchaeota archaeon RBG_13_36_9 len 1.0 prnt U324 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG06_land_8_20_14_3_00_35_12	62	N[T62/Candidatus Pacearchaeota archaeon CG06_land_8_20_14_3_00_35_12 len 1.0 prnt U325 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon ex4484_31	63	N[T63/Candidatus Pacearchaeota archaeon ex4484_31 len 1.0 prnt U326 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_31_59	64	N[T64/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_31_59 len 1.0 prnt U326 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Pacearchaeota archaeon ex4484_26	65	N[T65/Candidatus Pacearchaeota archaeon ex4484_26 len 1.0 prnt U328/o__Pacearchaeales chld {}, nl 1, nn 1]
+#LEAF	Candidatus Parvarchaeum acidiphilum ARMAN-4	66	N[T66/Candidatus Parvarchaeum acidiphilum ARMAN-4 len 1.0 prnt U330/Candidatus Parvarchaeum chld {}, nl 1, nn 1]
+#LEAF	Candidatus Parvarchaeum acidophilus ARMAN-5	67	N[T67/Candidatus Parvarchaeum acidophilus ARMAN-5 len 1.0 prnt U330/Candidatus Parvarchaeum chld {}, nl 1, nn 1]
+#LEAF	archaeon CG10_big_fil_rev_8_21_14_0_10_43_11	68	N[T68/archaeon CG10_big_fil_rev_8_21_14_0_10_43_11 len 1.0 prnt U331 chld {}, nl 1, nn 1]
+#LEAF	archaeon CG07_land_8_20_14_0_80_38_8	69	N[T69/archaeon CG07_land_8_20_14_0_80_38_8 len 1.0 prnt U331 chld {}, nl 1, nn 1]
+#LEAF	Euryarchaeota archaeon HGW-Euryarchaeota-1 (p__Huberarchaeota)	70	N[T70/Euryarchaeota archaeon HGW-Euryarchaeota-1 (p__Huberarchaeota) len 1.0 prnt U335/NH chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon WOR_SM1_SCG	71	N[T71/Candidatus Altiarchaeales archaeon WOR_SM1_SCG len 1.0 prnt U341 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon IMC4	72	N[T72/Candidatus Altiarchaeales archaeon IMC4 len 1.0 prnt U340 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon ex4484_2	73	N[T73/Candidatus Altiarchaeales archaeon ex4484_2 len 1.0 prnt U339 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon ex4484_43	74	N[T74/Candidatus Altiarchaeales archaeon ex4484_43 len 1.0 prnt U339 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon WOR_SM1_86-2	75	N[T75/Candidatus Altiarchaeales archaeon WOR_SM1_86-2 len 1.0 prnt U342 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon A3	76	N[T76/Candidatus Altiarchaeales archaeon A3 len 1.0 prnt U344 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altarchaeum sp. CG03_land_8_20_14_0_80_32_618	77	N[T77/Candidatus Altarchaeum sp. CG03_land_8_20_14_0_80_32_618 len 1.0 prnt U343/unclassified Candidatus Altarchaeum chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altarchaeum sp. CG_4_10_14_0_8_um_filter_32_851	78	N[T78/Candidatus Altarchaeum sp. CG_4_10_14_0_8_um_filter_32_851 len 1.0 prnt U343/unclassified Candidatus Altarchaeum chld {}, nl 1, nn 1]
+#LEAF	Candidatus Altiarchaeales archaeon HGW-Altiarchaeales-1	79	N[T79/Candidatus Altiarchaeales archaeon HGW-Altiarchaeales-1 len 1.0 prnt U345 chld {}, nl 1, nn 1]
+#LEAF	Halobacterium salinarum NRC-1	80	N[T80/Halobacterium salinarum NRC-1 len 1.0 prnt U348/Halobacterium chld {}, nl 1, nn 1]
+#LEAF	Halobacterium hubeiense	81	N[T81/Halobacterium hubeiense len 1.0 prnt U348/Halobacterium chld {}, nl 1, nn 1]
+#LEAF	Halanaeroarchaeum sulfurireducens	82	N[T82/Halanaeroarchaeum sulfurireducens len 1.0 prnt U349 chld {}, nl 1, nn 1]
+#LEAF	Halodesulfurarchaeum formicicum	83	N[T83/Halodesulfurarchaeum formicicum len 1.0 prnt U349 chld {}, nl 1, nn 1]
+#LEAF	Halorubrum lacusprofundi ATCC 49239	84	N[T84/Halorubrum lacusprofundi ATCC 49239 len 1.0 prnt U353/Haloferacales chld {}, nl 1, nn 1]
+#LEAF	Halogeometricum borinquense DSM 11551	85	N[T85/Halogeometricum borinquense DSM 11551 len 1.0 prnt U351 chld {}, nl 1, nn 1]
+#LEAF	Haloquadratum walsbyi C23	86	N[T86/Haloquadratum walsbyi C23 len 1.0 prnt U351 chld {}, nl 1, nn 1]
+#LEAF	Haloferax mediterranei ATCC 33500	87	N[T87/Haloferax mediterranei ATCC 33500 len 1.0 prnt U352/Haloferacaceae chld {}, nl 1, nn 1]
+#LEAF	Haloterrigena turkmenica DSM 5511	88	N[T88/Haloterrigena turkmenica DSM 5511 len 1.0 prnt U354 chld {}, nl 1, nn 1]
+#LEAF	Natrinema pellirubrum DSM 15624	89	N[T89/Natrinema pellirubrum DSM 15624 len 1.0 prnt U354 chld {}, nl 1, nn 1]
+#LEAF	Natronorubrum daqingense	90	N[T90/Natronorubrum daqingense len 1.0 prnt U355 chld {}, nl 1, nn 1]
+#LEAF	Natrialba magadii ATCC 43099	91	N[T91/Natrialba magadii ATCC 43099 len 1.0 prnt U358 chld {}, nl 1, nn 1]
+#LEAF	Halopiger xanaduensis SH-6	92	N[T92/Halopiger xanaduensis SH-6 len 1.0 prnt U357 chld {}, nl 1, nn 1]
+#LEAF	Halobiforma lacisalsi AJ5	93	N[T93/Halobiforma lacisalsi AJ5 len 1.0 prnt U356 chld {}, nl 1, nn 1]
+#LEAF	Natronobacterium gregoryi SP2	94	N[T94/Natronobacterium gregoryi SP2 len 1.0 prnt U356 chld {}, nl 1, nn 1]
+#LEAF	Natronococcus occultus SP4	95	N[T95/Natronococcus occultus SP4 len 1.0 prnt U360 chld {}, nl 1, nn 1]
+#LEAF	Halostagnicola larsenii XH-48	96	N[T96/Halostagnicola larsenii XH-48 len 1.0 prnt U361/Natrialbaceae chld {}, nl 1, nn 1]
+#LEAF	Halalkalicoccus jeotgali B3	97	N[T97/Halalkalicoccus jeotgali B3 len 1.0 prnt U362 chld {}, nl 1, nn 1]
+#LEAF	Halomicrobium mukohataei DSM 12286	98	N[T98/Halomicrobium mukohataei DSM 12286 len 1.0 prnt U364 chld {}, nl 1, nn 1]
+#LEAF	Halorhabdus tiamatea SARL4B	99	N[T99/Halorhabdus tiamatea SARL4B len 1.0 prnt U364 chld {}, nl 1, nn 1]
+#LEAF	Natronomonas pharaonis DSM 2160	100	N[T100/Natronomonas pharaonis DSM 2160 len 1.0 prnt U365/Natronomonas chld {}, nl 1, nn 1]
+#LEAF	Natronomonas moolapensis 8.8.11	101	N[T101/Natronomonas moolapensis 8.8.11 len 1.0 prnt U365/Natronomonas chld {}, nl 1, nn 1]
+#LEAF	Candidatus Methanohalarchaeum thermophilum	102	N[T102/Candidatus Methanohalarchaeum thermophilum len 1.0 prnt U369/c__Methanonatronarchaeia chld {}, nl 1, nn 1]
+#LEAF	Methanonatronarchaeum thermophilum	103	N[T103/Methanonatronarchaeum thermophilum len 1.0 prnt U369/c__Methanonatronarchaeia chld {}, nl 1, nn 1]
+#LEAF	Methanosarcina acetivorans C2A	104	N[T104/Methanosarcina acetivorans C2A len 1.0 prnt U371 chld {}, nl 1, nn 1]
+#LEAF	Methanosarcina siciliae T4/M	105	N[T105/Methanosarcina siciliae T4/M len 1.0 prnt U371 chld {}, nl 1, nn 1]
+#LEAF	Methanosarcina mazei S-6	106	N[T106/Methanosarcina mazei S-6 len 1.0 prnt U372 chld {}, nl 1, nn 1]
+#LEAF	Methanosarcina barkeri MS	107	N[T107/Methanosarcina barkeri MS len 1.0 prnt U373 chld {}, nl 1, nn 1]
+#LEAF	Methanosarcina thermophila TM-1	108	N[T108/Methanosarcina thermophila TM-1 len 1.0 prnt U374/Methanosarcina chld {}, nl 1, nn 1]
+#LEAF	Methanococcoides burtonii DSM 6242	109	N[T109/Methanococcoides burtonii DSM 6242 len 1.0 prnt U375 chld {}, nl 1, nn 1]
+#LEAF	Methanohalophilus halophilus	110	N[T110/Methanohalophilus halophilus len 1.0 prnt U375 chld {}, nl 1, nn 1]
+#LEAF	Methanolobus psychrophilus R15	111	N[T111/Methanolobus psychrophilus R15 len 1.0 prnt U376 chld {}, nl 1, nn 1]
+#LEAF	Methanomethylovorans hollandica DSM 15978	112	N[T112/Methanomethylovorans hollandica DSM 15978 len 1.0 prnt U376 chld {}, nl 1, nn 1]
+#LEAF	Methanohalobium evestigatum Z-7303	113	N[T113/Methanohalobium evestigatum Z-7303 len 1.0 prnt U378 chld {}, nl 1, nn 1]
+#LEAF	Methanosalsum zhilinae DSM 4017	114	N[T114/Methanosalsum zhilinae DSM 4017 len 1.0 prnt U378 chld {}, nl 1, nn 1]
+#LEAF	Methanothrix soehngenii GP6	115	N[T115/Methanothrix soehngenii GP6 len 1.0 prnt U381 chld {}, nl 1, nn 1]
+#LEAF	Methanocella arvoryzae MRE50	116	N[T116/Methanocella arvoryzae MRE50 len 1.0 prnt U382/Methanocella chld {}, nl 1, nn 1]
+#LEAF	Methanocella conradii HZ254	117	N[T117/Methanocella conradii HZ254 len 1.0 prnt U382/Methanocella chld {}, nl 1, nn 1]
+#LEAF	Methanospirillum hungatei JF-1	118	N[T118/Methanospirillum hungatei JF-1 len 1.0 prnt U385 chld {}, nl 1, nn 1]
+#LEAF	Methanosphaerula palustris E1-9c	119	N[T119/Methanosphaerula palustris E1-9c len 1.0 prnt U384/Methanoregulaceae chld {}, nl 1, nn 1]
+#LEAF	Methanoregula formicica SMSP	120	N[T120/Methanoregula formicica SMSP len 1.0 prnt U384/Methanoregulaceae chld {}, nl 1, nn 1]
+#LEAF	Methanolacinia petrolearia DSM 11571	121	N[T121/Methanolacinia petrolearia DSM 11571 len 1.0 prnt U386/Methanomicrobiaceae chld {}, nl 1, nn 1]
+#LEAF	Methanoculleus bourgensis MS2	122	N[T122/Methanoculleus bourgensis MS2 len 1.0 prnt U386/Methanomicrobiaceae chld {}, nl 1, nn 1]
+#LEAF	Methanocorpusculum labreanum Z	123	N[T123/Methanocorpusculum labreanum Z len 1.0 prnt U388/Methanomicrobiales chld {}, nl 1, nn 1]
+#LEAF	Archaeoglobus fulgidus DSM 4304	124	N[T124/Archaeoglobus fulgidus DSM 4304 len 1.0 prnt U391 chld {}, nl 1, nn 1]
+#LEAF	Archaeoglobus profundus DSM 5631	125	N[T125/Archaeoglobus profundus DSM 5631 len 1.0 prnt U391 chld {}, nl 1, nn 1]
+#LEAF	Archaeoglobus veneficus SNP6	126	N[T126/Archaeoglobus veneficus SNP6 len 1.0 prnt U392 chld {}, nl 1, nn 1]
+#LEAF	Archaeoglobus sulfaticallidus PM70-1	127	N[T127/Archaeoglobus sulfaticallidus PM70-1 len 1.0 prnt U392 chld {}, nl 1, nn 1]
+#LEAF	Ferroglobus placidus DSM 10642	128	N[T128/Ferroglobus placidus DSM 10642 len 1.0 prnt U395 chld {}, nl 1, nn 1]
+#LEAF	Geoglobus acetivorans	129	N[T129/Geoglobus acetivorans len 1.0 prnt U394/Geoglobus chld {}, nl 1, nn 1]
+#LEAF	Geoglobus ahangari	130	N[T130/Geoglobus ahangari len 1.0 prnt U394/Geoglobus chld {}, nl 1, nn 1]
+#LEAF	Picrophilus oshimae DSM 9789	131	N[T131/Picrophilus oshimae DSM 9789 len 1.0 prnt U398 chld {}, nl 1, nn 1]
+#LEAF	Ferroplasma acidiphilum	132	N[T132/Ferroplasma acidiphilum len 1.0 prnt U398 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon A-plasma	133	N[T133/Thermoplasmatales archaeon A-plasma len 1.0 prnt U400 chld {}, nl 1, nn 1]
+#LEAF	uncultured archaeon	134	N[T134/uncultured archaeon len 1.0 prnt U399 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon B_DKE	135	N[T135/Thermoplasmatales archaeon B_DKE len 1.0 prnt U399 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon Gpl	136	N[T136/Thermoplasmatales archaeon Gpl len 1.0 prnt U401 chld {}, nl 1, nn 1]
+#LEAF	Cuniculiplasma divulgatum	137	N[T137/Cuniculiplasma divulgatum len 1.0 prnt U401 chld {}, nl 1, nn 1]
+#LEAF	Cuniculiplasma sp. C_DKE	138	N[T138/Cuniculiplasma sp. C_DKE len 1.0 prnt U402 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasma volcanium GSS1	139	N[T139/Thermoplasma volcanium GSS1 len 1.0 prnt U405/Thermoplasma chld {}, nl 1, nn 1]
+#LEAF	Thermoplasma acidophilum DSM 1728	140	N[T140/Thermoplasma acidophilum DSM 1728 len 1.0 prnt U405/Thermoplasma chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon I-plasma	141	N[T141/Thermoplasmatales archaeon I-plasma len 1.0 prnt U407/o__Thermoplasmatales chld {}, nl 1, nn 1]
+#LEAF	Aciduliprofundum boonei T469	142	N[T142/Aciduliprofundum boonei T469 len 1.0 prnt U408/o__Aciduliprofundales chld {}, nl 1, nn 1]
+#LEAF	Aciduliprofundum sp.	143	N[T143/Aciduliprofundum sp. len 1.0 prnt U408/o__Aciduliprofundales chld {}, nl 1, nn 1]
+#LEAF	Candidatus Methanomethylophilus alvus Mx1201	144	N[T144/Candidatus Methanomethylophilus alvus Mx1201 len 1.0 prnt U410 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmatales archaeon BRNA1	145	N[T145/Thermoplasmatales archaeon BRNA1 len 1.0 prnt U410 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Methanoplasma termitum	146	N[T146/Candidatus Methanoplasma termitum len 1.0 prnt U411 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Methanomassiliicoccus intestinalis Issoire-Mx1	147	N[T147/Candidatus Methanomassiliicoccus intestinalis Issoire-Mx1 len 1.0 prnt U412/o__Methanomassiliicoccales chld {}, nl 1, nn 1]
+#LEAF	Marine Group II euryarchaeote MED-G37	148	N[T148/Marine Group II euryarchaeote MED-G37 len 1.0 prnt U414 chld {}, nl 1, nn 1]
+#LEAF	Marine Group II euryarchaeote MED-G36	149	N[T149/Marine Group II euryarchaeote MED-G36 len 1.0 prnt U414 chld {}, nl 1, nn 1]
+#LEAF	Marine Group II euryarchaeote MED-G35	150	N[T150/Marine Group II euryarchaeote MED-G35 len 1.0 prnt U415 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Poseidoniales archaeon	151	N[T151/Candidatus Poseidoniales archaeon len 1.0 prnt U416/Poseidoniales chld {}, nl 1, nn 1]
+#LEAF	Marine Group III euryarchaeote CG-Epi1	152	N[T152/Marine Group III euryarchaeote CG-Epi1 len 1.0 prnt U417 chld {}, nl 1, nn 1]
+#LEAF	Marine Group III euryarchaeote CG-Epi3	153	N[T153/Marine Group III euryarchaeote CG-Epi3 len 1.0 prnt U417 chld {}, nl 1, nn 1]
+#LEAF	Marine Group III euryarchaeote CG-Bathy1	154	N[T154/Marine Group III euryarchaeote CG-Bathy1 len 1.0 prnt U418/Pontarchaea chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmata archaeon HGW-Thermoplasmata-1	155	N[T155/Thermoplasmata archaeon HGW-Thermoplasmata-1 len 1.0 prnt U423/Thermoprofundales chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmata archaeon M9B1D	156	N[T156/Thermoplasmata archaeon M9B1D len 1.0 prnt U422 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmata archaeon M11B2D	157	N[T157/Thermoplasmata archaeon M11B2D len 1.0 prnt U421 chld {}, nl 1, nn 1]
+#LEAF	Thermoplasmata archaeon M9B2D	158	N[T158/Thermoplasmata archaeon M9B2D len 1.0 prnt U421 chld {}, nl 1, nn 1]
+#LEAF	Methanococcus vannielii SB	159	N[T159/Methanococcus vannielii SB len 1.0 prnt U427/Methanococcaceae chld {}, nl 1, nn 1]
+#LEAF	Methanococcus aeolicus Nankai-3	160	N[T160/Methanococcus aeolicus Nankai-3 len 1.0 prnt U426 chld {}, nl 1, nn 1]
+#LEAF	Methanothermococcus okinawensis IH1	161	N[T161/Methanothermococcus okinawensis IH1 len 1.0 prnt U426 chld {}, nl 1, nn 1]
+#LEAF	Methanotorris igneus Kol 5	162	N[T162/Methanotorris igneus Kol 5 len 1.0 prnt U428 chld {}, nl 1, nn 1]
+#LEAF	Methanocaldococcus fervens AG86	163	N[T163/Methanocaldococcus fervens AG86 len 1.0 prnt U429 chld {}, nl 1, nn 1]
+#LEAF	Methanocaldococcus vulcanius M7	164	N[T164/Methanocaldococcus vulcanius M7 len 1.0 prnt U429 chld {}, nl 1, nn 1]
+#LEAF	Methanocaldococcus infernus ME	165	N[T165/Methanocaldococcus infernus ME len 1.0 prnt U430/Methanocaldococcus chld {}, nl 1, nn 1]
+#LEAF	Methanopyrus kandleri AV19	166	N[T166/Methanopyrus kandleri AV19 len 1.0 prnt U433/c__Methanopyri chld {}, nl 1, nn 1]
+#LEAF	Methanopyrus sp. SNP6	167	N[T167/Methanopyrus sp. SNP6 len 1.0 prnt U432/unclassified Methanopyrus chld {}, nl 1, nn 1]
+#LEAF	Methanopyrus sp. KOL6	168	N[T168/Methanopyrus sp. KOL6 len 1.0 prnt U432/unclassified Methanopyrus chld {}, nl 1, nn 1]
+#LEAF	Methanosphaera stadtmanae DSM 3091	169	N[T169/Methanosphaera stadtmanae DSM 3091 len 1.0 prnt U434 chld {}, nl 1, nn 1]
+#LEAF	Methanobacterium paludis	170	N[T170/Methanobacterium paludis len 1.0 prnt U434 chld {}, nl 1, nn 1]
+#LEAF	Methanobrevibacter smithii ATCC 35061	171	N[T171/Methanobrevibacter smithii ATCC 35061 len 1.0 prnt U435 chld {}, nl 1, nn 1]
+#LEAF	Methanothermobacter marburgensis str. Marburg	172	N[T172/Methanothermobacter marburgensis str. Marburg len 1.0 prnt U436/Methanobacteriaceae chld {}, nl 1, nn 1]
+#LEAF	Methanothermus fervidus DSM 2088	173	N[T173/Methanothermus fervidus DSM 2088 len 1.0 prnt U437/c__Methanobacteria chld {}, nl 1, nn 1]
+#LEAF	Pyrococcus furiosus DSM 3638	174	N[T174/Pyrococcus furiosus DSM 3638 len 1.0 prnt U442/Pyrococcus chld {}, nl 1, nn 1]
+#LEAF	Pyrococcus horikoshii OT3	175	N[T175/Pyrococcus horikoshii OT3 len 1.0 prnt U442/Pyrococcus chld {}, nl 1, nn 1]
+#LEAF	Thermococcus piezophilus	176	N[T176/Thermococcus piezophilus len 1.0 prnt U445 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus pacificus	177	N[T177/Thermococcus pacificus len 1.0 prnt U443 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus profundus	178	N[T178/Thermococcus profundus len 1.0 prnt U443 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus thioreducens	179	N[T179/Thermococcus thioreducens len 1.0 prnt U444 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus barophilus MP	180	N[T180/Thermococcus barophilus MP len 1.0 prnt U447 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus paralvinellae	181	N[T181/Thermococcus paralvinellae len 1.0 prnt U447 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus sibiricus MM 739	182	N[T182/Thermococcus sibiricus MM 739 len 1.0 prnt U449 chld {}, nl 1, nn 1]
+#LEAF	Thermococcus litoralis DSM 5473	183	N[T183/Thermococcus litoralis DSM 5473 len 1.0 prnt U449 chld {}, nl 1, nn 1]
+#LEAF	Palaeococcus pacificus DY20341	184	N[T184/Palaeococcus pacificus DY20341 len 1.0 prnt U451/c__Thermococci chld {}, nl 1, nn 1]
+#LEAF	Theionarchaea archaeon DG-70	185	N[T185/Theionarchaea archaeon DG-70 len 1.0 prnt U452/Theionarchaea chld {}, nl 1, nn 1]
+#LEAF	Theionarchaea archaeon DG-70-1	186	N[T186/Theionarchaea archaeon DG-70-1 len 1.0 prnt U452/Theionarchaea chld {}, nl 1, nn 1]
+#LEAF	Hadesarchaea archaeon DG-33	187	N[T187/Hadesarchaea archaeon DG-33 len 1.0 prnt U455 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Hadarchaeum yellowstonense	188	N[T188/Candidatus Hadarchaeum yellowstonense len 1.0 prnt U455 chld {}, nl 1, nn 1]
+#LEAF	Hadesarchaea archaeon DG-33-1	189	N[T189/Hadesarchaea archaeon DG-33-1 len 1.0 prnt U456 chld {}, nl 1, nn 1]
+#LEAF	Hadesarchaea archaeon YNP_N21	190	N[T190/Hadesarchaea archaeon YNP_N21 len 1.0 prnt U457/Hadesarchaea chld {}, nl 1, nn 1]
+#LEAF	candidate division MSBL1 archaeon SCGC-AAA259I09	191	N[T191/candidate division MSBL1 archaeon SCGC-AAA259I09 len 1.0 prnt U458 chld {}, nl 1, nn 1]
+#LEAF	candidate division MSBL1 archaeon SCGC-AAA259E19	192	N[T192/candidate division MSBL1 archaeon SCGC-AAA259E19 len 1.0 prnt U458 chld {}, nl 1, nn 1]
+#LEAF	candidate division MSBL1 archaeon SCGC-AAA261D19	193	N[T193/candidate division MSBL1 archaeon SCGC-AAA261D19 len 1.0 prnt U459/Persephonarchaea chld {}, nl 1, nn 1]
+#LEAF	Candidatus Thorarchaeota archaeon SMTZ1-83	194	N[T194/Candidatus Thorarchaeota archaeon SMTZ1-83 len 1.0 prnt U464/Thorarchaeota chld {}, nl 1, nn 1]
+#LEAF	Candidatus Thorarchaeota archaeon SMTZ1-45	195	N[T195/Candidatus Thorarchaeota archaeon SMTZ1-45 len 1.0 prnt U462 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Thorarchaeota archaeon SMTZ-45	196	N[T196/Candidatus Thorarchaeota archaeon SMTZ-45 len 1.0 prnt U462 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Thorarchaeota archaeon AB_25	197	N[T197/Candidatus Thorarchaeota archaeon AB_25 len 1.0 prnt U463 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Lokiarchaeota archaeon CR_4	198	N[T198/Candidatus Lokiarchaeota archaeon CR_4 len 1.0 prnt U465/Lokiarchaeota chld {}, nl 1, nn 1]
+#LEAF	Candidatus Lokiarchaeota archaeon	199	N[T199/Candidatus Lokiarchaeota archaeon len 1.0 prnt U465/Lokiarchaeota chld {}, nl 1, nn 1]
+#LEAF	Candidatus Odinarchaeum yellowstonii	200	N[T200/Candidatus Odinarchaeum yellowstonii len 1.0 prnt U466 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Heimdallarchaeota archaeon LC_3	201	N[T201/Candidatus Heimdallarchaeota archaeon LC_3 len 1.0 prnt U468 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Heimdallarchaeota archaeon B3_Heim	202	N[T202/Candidatus Heimdallarchaeota archaeon B3_Heim len 1.0 prnt U468 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Heimdallarchaeota archaeon LC_2	203	N[T203/Candidatus Heimdallarchaeota archaeon LC_2 len 1.0 prnt U469 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Heimdallarchaeota archaeon	204	N[T204/Candidatus Heimdallarchaeota archaeon len 1.0 prnt U469 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Heimdallarchaeota archaeon AB_125	205	N[T205/Candidatus Heimdallarchaeota archaeon AB_125 len 1.0 prnt U470 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Korarchaeum cryptofilum OPF8	206	N[T206/Candidatus Korarchaeum cryptofilum OPF8 len 1.0 prnt U473 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Korarchaeota archaeon NZ13-K	207	N[T207/Candidatus Korarchaeota archaeon NZ13-K len 1.0 prnt U473 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Korarchaeota archaeon	208	N[T208/Candidatus Korarchaeota archaeon len 1.0 prnt U474/p__Korarchaeota chld {}, nl 1, nn 1]
+#LEAF	Aeropyrum pernix K1	209	N[T209/Aeropyrum pernix K1 len 1.0 prnt U477 chld {}, nl 1, nn 1]
+#LEAF	Acidilobus saccharovorans 345-15	210	N[T210/Acidilobus saccharovorans 345-15 len 1.0 prnt U475/Acidilobus chld {}, nl 1, nn 1]
+#LEAF	Acidilobus sp. 7A	211	N[T211/Acidilobus sp. 7A len 1.0 prnt U475/Acidilobus chld {}, nl 1, nn 1]
+#LEAF	Caldisphaera lagunensis DSM 15908	212	N[T212/Caldisphaera lagunensis DSM 15908 len 1.0 prnt U476/Acidilobales chld {}, nl 1, nn 1]
+#LEAF	Hyperthermus butylicus DSM 5456	213	N[T213/Hyperthermus butylicus DSM 5456 len 1.0 prnt U478 chld {}, nl 1, nn 1]
+#LEAF	Pyrodictium delaneyi	214	N[T214/Pyrodictium delaneyi len 1.0 prnt U478 chld {}, nl 1, nn 1]
+#LEAF	Pyrolobus fumarii 1A	215	N[T215/Pyrolobus fumarii 1A len 1.0 prnt U479/Pyrodictiaceae chld {}, nl 1, nn 1]
+#LEAF	Staphylothermus marinus F1	216	N[T216/Staphylothermus marinus F1 len 1.0 prnt U483 chld {}, nl 1, nn 1]
+#LEAF	Desulfurococcus amylolyticus 1221n	217	N[T217/Desulfurococcus amylolyticus 1221n len 1.0 prnt U481 chld {}, nl 1, nn 1]
+#LEAF	Thermosphaera aggregans DSM 11486	218	N[T218/Thermosphaera aggregans DSM 11486 len 1.0 prnt U481 chld {}, nl 1, nn 1]
+#LEAF	Thermogladius calderae 1633	219	N[T219/Thermogladius calderae 1633 len 1.0 prnt U482 chld {}, nl 1, nn 1]
+#LEAF	Ignicoccus hospitalis KIN4/I	220	N[T220/Ignicoccus hospitalis KIN4/I len 1.0 prnt U485/Ignicoccus chld {}, nl 1, nn 1]
+#LEAF	Ignicoccus islandicus DSM 13165	221	N[T221/Ignicoccus islandicus DSM 13165 len 1.0 prnt U485/Ignicoccus chld {}, nl 1, nn 1]
+#LEAF	Fervidicoccus fontis Kam940	222	N[T222/Fervidicoccus fontis Kam940 len 1.0 prnt U486 chld {}, nl 1, nn 1]
+#LEAF	Sulfurisphaera tokodaii str. 7	223	N[T223/Sulfurisphaera tokodaii str. 7 len 1.0 prnt U488 chld {}, nl 1, nn 1]
+#LEAF	Sulfolobus acidocaldarius DSM 639	224	N[T224/Sulfolobus acidocaldarius DSM 639 len 1.0 prnt U488 chld {}, nl 1, nn 1]
+#LEAF	Metallosphaera sedula DSM 5348	225	N[T225/Metallosphaera sedula DSM 5348 len 1.0 prnt U489 chld {}, nl 1, nn 1]
+#LEAF	Acidianus sulfidivorans JP7	226	N[T226/Acidianus sulfidivorans JP7 len 1.0 prnt U489 chld {}, nl 1, nn 1]
+#LEAF	Sulfolobales archaeon Acd1	227	N[T227/Sulfolobales archaeon Acd1 len 1.0 prnt U491 chld {}, nl 1, nn 1]
+#LEAF	Zestosphaera tikiterensis	228	N[T228/Zestosphaera tikiterensis len 1.0 prnt U492 chld {}, nl 1, nn 1]
+#LEAF	Thermofilum pendens Hrk 5	229	N[T229/Thermofilum pendens Hrk 5 len 1.0 prnt U494/Thermofilaceae chld {}, nl 1, nn 1]
+#LEAF	Infirmifilum uzonense	230	N[T230/Infirmifilum uzonense len 1.0 prnt U494/Thermofilaceae chld {}, nl 1, nn 1]
+#LEAF	Caldivirga maquilingensis IC-167	231	N[T231/Caldivirga maquilingensis IC-167 len 1.0 prnt U495 chld {}, nl 1, nn 1]
+#LEAF	Thermocladium modestius JCM 10088	232	N[T232/Thermocladium modestius JCM 10088 len 1.0 prnt U495 chld {}, nl 1, nn 1]
+#LEAF	Vulcanisaeta distributa DSM 14429	233	N[T233/Vulcanisaeta distributa DSM 14429 len 1.0 prnt U496/Vulcanisaeta chld {}, nl 1, nn 1]
+#LEAF	Vulcanisaeta thermophila	234	N[T234/Vulcanisaeta thermophila len 1.0 prnt U496/Vulcanisaeta chld {}, nl 1, nn 1]
+#LEAF	Pyrobaculum ferrireducens	235	N[T235/Pyrobaculum ferrireducens len 1.0 prnt U498 chld {}, nl 1, nn 1]
+#LEAF	Thermoproteus tenax Kra 1	236	N[T236/Thermoproteus tenax Kra 1 len 1.0 prnt U498 chld {}, nl 1, nn 1]
+#LEAF	Crenarchaeota archaeon SCGC AAA471-B05 (Gearcheales)	237	N[T237/Crenarchaeota archaeon SCGC AAA471-B05 (Gearcheales) len 1.0 prnt U505 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Marsarchaeota G1 archaeon OSP_B	238	N[T238/Candidatus Marsarchaeota G1 archaeon OSP_B len 1.0 prnt U502/Marsarchaeota group 1 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Marsarchaeota G1 archaeon BE_D	239	N[T239/Candidatus Marsarchaeota G1 archaeon BE_D len 1.0 prnt U502/Marsarchaeota group 1 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Marsarchaeota G2 archaeon ECH_B_1	240	N[T240/Candidatus Marsarchaeota G2 archaeon ECH_B_1 len 1.0 prnt U503/Marsarchaeota group 2 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Marsarchaeota G2 archaeon OSP_D	241	N[T241/Candidatus Marsarchaeota G2 archaeon OSP_D len 1.0 prnt U503/Marsarchaeota group 2 chld {}, nl 1, nn 1]
+#LEAF	miscellaneous Crenarchaeota group-6 archaeon AD8-1	242	N[T242/miscellaneous Crenarchaeota group-6 archaeon AD8-1 len 1.0 prnt U508 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon CG07_land_8_20_14_0_80_47_9	243	N[T243/Candidatus Bathyarchaeota archaeon CG07_land_8_20_14_0_80_47_9 len 1.0 prnt U507 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon CG_4_8_14_3_um_filter_42_8	244	N[T244/Candidatus Bathyarchaeota archaeon CG_4_8_14_3_um_filter_42_8 len 1.0 prnt U507 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon BA2	245	N[T245/Candidatus Bathyarchaeota archaeon BA2 len 1.0 prnt U509 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon BA1	246	N[T246/Candidatus Bathyarchaeota archaeon BA1 len 1.0 prnt U509 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon ex4484_40	247	N[T247/Candidatus Bathyarchaeota archaeon ex4484_40 len 1.0 prnt U511/o__Bathyarchaeales chld {}, nl 1, nn 1]
+#LEAF	miscellaneous Crenarchaeota group archaeon SMTZ-80	248	N[T248/miscellaneous Crenarchaeota group archaeon SMTZ-80 len 1.0 prnt U512 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon RBG_13_38_9	249	N[T249/Candidatus Bathyarchaeota archaeon RBG_13_38_9 len 1.0 prnt U512 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon B23	250	N[T250/Candidatus Bathyarchaeota archaeon B23 len 1.0 prnt U516/o__TCS64 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon RBG_13_52_12	251	N[T251/Candidatus Bathyarchaeota archaeon RBG_13_52_12 len 1.0 prnt U515 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon RBG_13_60_20	252	N[T252/Candidatus Bathyarchaeota archaeon RBG_13_60_20 len 1.0 prnt U514 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Bathyarchaeota archaeon RBG_16_57_9	253	N[T253/Candidatus Bathyarchaeota archaeon RBG_16_57_9 len 1.0 prnt U514 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Caldarchaeum subterraneum	254	N[T254/Candidatus Caldarchaeum subterraneum len 1.0 prnt U519 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Geocrenenecus sp. JGI 0000106-J15	255	N[T255/Candidatus Geocrenenecus sp. JGI 0000106-J15 len 1.0 prnt U518/Wolframiiraptoraceae chld {}, nl 1, nn 1]
+#LEAF	Candidatus Terraquivivens tikiterensis	256	N[T256/Candidatus Terraquivivens tikiterensis len 1.0 prnt U518/Wolframiiraptoraceae chld {}, nl 1, nn 1]
+#LEAF	Aigarchaeota archaeon SCGC AAA471-E14	257	N[T257/Aigarchaeota archaeon SCGC AAA471-E14 len 1.0 prnt U520 chld {}, nl 1, nn 1]
+#LEAF	Aigarchaeota archaeon SCGC AAA471-F17	258	N[T258/Aigarchaeota archaeon SCGC AAA471-F17 len 1.0 prnt U520 chld {}, nl 1, nn 1]
+#LEAF	Nitrosopumilus maritimus SCM1	259	N[T259/Nitrosopumilus maritimus SCM1 len 1.0 prnt U522 chld {}, nl 1, nn 1]
+#LEAF	Cenarchaeum symbiosum A	260	N[T260/Cenarchaeum symbiosum A len 1.0 prnt U522 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nitrosopelagicus brevis	261	N[T261/Candidatus Nitrosopelagicus brevis len 1.0 prnt U523 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nitrosotenuis uzonensis	262	N[T262/Candidatus Nitrosotenuis uzonensis len 1.0 prnt U524/Nitrosotenuis chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nitrosotenuis aquarius	263	N[T263/Candidatus Nitrosotenuis aquarius len 1.0 prnt U524/Nitrosotenuis chld {}, nl 1, nn 1]
+#LEAF	Thaumarchaeota archaeon 13_1_20CM_2_39_20	264	N[T264/Thaumarchaeota archaeon 13_1_20CM_2_39_20 len 1.0 prnt U526 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nitrosotalea devanaterra	265	N[T265/Candidatus Nitrosotalea devanaterra len 1.0 prnt U526 chld {}, nl 1, nn 1]
+#LEAF	Nitrososphaera viennensis EN76	266	N[T266/Nitrososphaera viennensis EN76 len 1.0 prnt U528 chld {}, nl 1, nn 1]
+#LEAF	Candidatus Nitrosocaldus cavascurensis	267	N[T267/Candidatus Nitrosocaldus cavascurensis len 1.0 prnt U529/o__Nitrososphaerales chld {}, nl 1, nn 1]
+#LEAF	Thaumarchaeota archaeon RBG_16_49_8	268	N[T268/Thaumarchaeota archaeon RBG_16_49_8 len 1.0 prnt U530 chld {}, nl 1, nn 1]
+#NODE	U269	269	N[U269 len 1.0 prnt U270 chld {T0/Candidatus Iainarchaeum andersonii SCGC AAA011-E11, T1/Candidatus Diapherotrites archaeon CG11_big_fil_rev_8_21_14_0_20_37_9}, nl 2, nn 3]
+#NODE	U270	270	N[U270 len 1.0 prnt U271 chld {U269, T2/archaeon GW2011_AR10}, nl 3, nn 5]
+#NODE	U271	271	N[U271 len 1.0 prnt U272 chld {U270, T3/Candidatus Diapherotrites archaeon CG10_big_fil_rev_8_21_14_0_10_31_34}, nl 4, nn 7]
+#NODE	U272	272	N[U272 len 1.0 prnt U273/p__Iainarchaeota chld {U271, T4/Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_34_12}, nl 5, nn 9]
+#NODE	U273	273	N[U273/p__Iainarchaeota len 1.0 prnt U283/IaiMic chld {U272, T5/Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_30_16}, nl 6, nn 11]
+#NODE	U274	274	N[U274 len 1.0 prnt U275 chld {T6/Candidatus Micrarchaeota archaeon CG1_02_47_40, T7/Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_29}, nl 2, nn 3]
+#NODE	U275	275	N[U275 len 1.0 prnt U278 chld {U274, T8/Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_49_7}, nl 3, nn 5]
+#NODE	U276	276	N[U276 len 1.0 prnt U277 chld {T9/Candidatus Micrarchaeum sp. AZ1, T10/Thermoplasmatales archaeon ARMAN}, nl 2, nn 3]
+#NODE	U277	277	N[U277 len 1.0 prnt U278 chld {U276, T11/Candidatus Mancarchaeum acidiphilum}, nl 3, nn 5]
+#NODE	U278	278	N[U278 len 1.0 prnt U282/p__Micrarchaeota chld {U275, U277}, nl 6, nn 11]
+#NODE	U279	279	N[U279 len 1.0 prnt U280 chld {T13/Candidatus Micrarchaeota archaeon CG1_02_55_41, T14/Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_60_11}, nl 2, nn 3]
+#NODE	U280	280	N[U280 len 1.0 prnt U281 chld {U279, T15/Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_59_7}, nl 3, nn 5]
+#NODE	U281	281	N[U281 len 1.0 prnt U282/p__Micrarchaeota chld {T12/Candidatus Micrarchaeota archaeon CG1_02_51_15, U280}, nl 4, nn 7]
+#NODE	U282	282	N[U282/p__Micrarchaeota len 1.0 prnt U283/IaiMic chld {U278, U281}, nl 10, nn 19]
+#NODE	U283	283	N[U283/IaiMic len 2.0 prnt U338 chld {U273/p__Iainarchaeota, U282/p__Micrarchaeota}, nl 16, nn 31]
+#NODE	U284	284	N[U284/unclassified Candidatus Nanohaloarchaea len 1.0 prnt U285/p__Nanohaloarchaeota chld {T18/Nanohaloarchaea archaeon SW_7_43_1, T19/Nanohaloarchaea archaeon SG9}, nl 2, nn 3]
+#NODE	U285	285	N[U285/p__Nanohaloarchaeota len 1.0 prnt U289/AN chld {T17/Candidatus Nanosalinarum sp. J07AB56, U284/unclassified Candidatus Nanohaloarchaea}, nl 3, nn 5]
+#NODE	U286	286	N[U286 len 1.0 prnt U288/p__Aenigmarchaeota chld {T20/archaeon GW2011_AR5, T21/Candidatus Aenigmarchaeota archaeon ex4484_14}, nl 2, nn 3]
+#NODE	U287	287	N[U287 len 1.0 prnt U288/p__Aenigmarchaeota chld {T22/Candidatus Aenigmarchaeota archaeon ex4484_224, T23/Candidatus Aenigmarchaeota archaeon ex4484_56}, nl 2, nn 3]
+#NODE	U288	288	N[U288/p__Aenigmarchaeota len 1.0 prnt U289/AN chld {U286, U287}, nl 4, nn 7]
+#NODE	U289	289	N[U289/AN len 1.0 prnt U336/PANN chld {U285/p__Nanohaloarchaeota, U288/p__Aenigmarchaeota}, nl 7, nn 13]
+#NODE	U290	290	N[U290/Nanopusillaceae len 1.0 prnt U291 chld {T25/Candidatus Nanobsidianus stetteri, T26/Candidatus Nanopusillus acidilobi}, nl 2, nn 3]
+#NODE	U291	291	N[U291 len 1.0 prnt U292/Ca. Nanoarchaeia chld {U290/Nanopusillaceae, T27/Nanoarchaeota archaeon NZ13-N}, nl 3, nn 5]
+#NODE	U292	292	N[U292/Ca. Nanoarchaeia len 1.0 prnt U334/p__Nanobdellota chld {T24/Nanoarchaeum equitans Kin4-M, U291}, nl 4, nn 7]
+#NODE	U293	293	N[U293 len 1.0 prnt U295 chld {T28/Nanoarchaeota archaeon SCGC AAA011-G17, T29/archaeon GW2011_AR17}, nl 2, nn 3]
+#NODE	U294	294	N[U294 len 1.0 prnt U295 chld {T30/archaeon GW2011_AR18, T31/archaeon GW2011_AR20}, nl 2, nn 3]
+#NODE	U295	295	N[U295 len 1.0 prnt U310/o__Woesearchaeales chld {U293, U294}, nl 4, nn 7]
+#NODE	U296	296	N[U296 len 1.0 prnt U297 chld {T33/Candidatus Woesearchaeota archaeon CG11_big_fil_rev_8_21_14_0_20_43_8, T34/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_44_13}, nl 2, nn 3]
+#NODE	U297	297	N[U297 len 1.0 prnt U300 chld {T32/archaeon GW2011_AR3, U296}, nl 3, nn 5]
+#NODE	U298	298	N[U298 len 1.0 prnt U299 chld {T36/Candidatus Woesearchaeota archaeon CG1_02_47_18, T37/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_33_12}, nl 2, nn 3]
+#NODE	U299	299	N[U299 len 1.0 prnt U300 chld {T35/archaeon GW2011_AR11, U298}, nl 3, nn 5]
+#NODE	U300	300	N[U300 len 1.0 prnt U303 chld {U297, U299}, nl 6, nn 11]
+#NODE	U301	301	N[U301 len 1.0 prnt U302 chld {T38/archaeon GW2011_AR4, T39/Candidatus Woesearchaeota archaeon CG1_02_57_44}, nl 2, nn 3]
+#NODE	U302	302	N[U302 len 1.0 prnt U303 chld {U301, T40/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_37_12}, nl 3, nn 5]
+#NODE	U303	303	N[U303 len 1.0 prnt U305 chld {U300, U302}, nl 9, nn 17]
+#NODE	U304	304	N[U304 len 1.0 prnt U305 chld {T41/archaeon GW2011_AR15, T42/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_9}, nl 2, nn 3]
+#NODE	U305	305	N[U305 len 1.0 prnt U309 chld {U303, U304}, nl 11, nn 21]
+#NODE	U306	306	N[U306 len 1.0 prnt U307 chld {T43/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_16, T44/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_24}, nl 2, nn 3]
+#NODE	U307	307	N[U307 len 1.0 prnt U308 chld {U306, T45/Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_36_11}, nl 3, nn 5]
+#NODE	U308	308	N[U308 len 1.0 prnt U309 chld {U307, T46/Candidatus Woesearchaeota archaeon CG_4_10_14_0_2_um_filter_33_13}, nl 4, nn 7]
+#NODE	U309	309	N[U309 len 1.0 prnt U310/o__Woesearchaeales chld {U305, U308}, nl 15, nn 29]
+#NODE	U310	310	N[U310/o__Woesearchaeales len 1.0 prnt U329/WoePac chld {U295, U309}, nl 19, nn 37]
+#NODE	U311	311	N[U311 len 1.0 prnt U312 chld {T48/archaeon GW2011_AR1, T49/Candidatus Pacearchaeota archaeon ex4484_71}, nl 2, nn 3]
+#NODE	U312	312	N[U312 len 1.0 prnt U313 chld {T47/archaeon GW2011_AR13, U311}, nl 3, nn 5]
+#NODE	U313	313	N[U313 len 1.0 prnt U315 chld {U312, T50/archaeon BMS3Abin17}, nl 4, nn 7]
+#NODE	U314	314	N[U314 len 1.0 prnt U315 chld {T51/Candidatus Pacearchaeota archaeon RBG_19FT_COMBO_34_9, T52/Candidatus Pacearchaeota archaeon RBG_16_35_8}, nl 2, nn 3]
+#NODE	U315	315	N[U315 len 1.0 prnt U316 chld {U313, U314}, nl 6, nn 11]
+#NODE	U316	316	N[U316 len 1.0 prnt U317 chld {U315, T53/archaeon GW2011_AR19}, nl 7, nn 13]
+#NODE	U317	317	N[U317 len 1.0 prnt U322 chld {U316, T54/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_14}, nl 8, nn 15]
+#NODE	U318	318	N[U318 len 1.0 prnt U319 chld {T55/Candidatus Pacearchaeota archaeon CG_4_9_14_0_2_um_filter_39_13, T56/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_219}, nl 2, nn 3]
+#NODE	U319	319	N[U319 len 1.0 prnt U321 chld {U318, T57/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_34_76}, nl 3, nn 5]
+#NODE	U320	320	N[U320 len 1.0 prnt U321 chld {T58/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_30_48, T59/Candidatus Pacearchaeota archaeon CG_4_10_14_0_2_um_filter_05_32_18}, nl 2, nn 3]
+#NODE	U321	321	N[U321 len 1.0 prnt U322 chld {U319, U320}, nl 5, nn 9]
+#NODE	U322	322	N[U322 len 1.0 prnt U323 chld {U317, U321}, nl 13, nn 25]
+#NODE	U323	323	N[U323 len 1.0 prnt U324 chld {U322, T60/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_13}, nl 14, nn 27]
+#NODE	U324	324	N[U324 len 1.0 prnt U325 chld {U323, T61/Candidatus Pacearchaeota archaeon RBG_13_36_9}, nl 15, nn 29]
+#NODE	U325	325	N[U325 len 1.0 prnt U327 chld {U324, T62/Candidatus Pacearchaeota archaeon CG06_land_8_20_14_3_00_35_12}, nl 16, nn 31]
+#NODE	U326	326	N[U326 len 1.0 prnt U327 chld {T63/Candidatus Pacearchaeota archaeon ex4484_31, T64/Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_31_59}, nl 2, nn 3]
+#NODE	U327	327	N[U327 len 1.0 prnt U328/o__Pacearchaeales chld {U325, U326}, nl 18, nn 35]
+#NODE	U328	328	N[U328/o__Pacearchaeales len 1.0 prnt U329/WoePac chld {U327, T65/Candidatus Pacearchaeota archaeon ex4484_26}, nl 19, nn 37]
+#NODE	U329	329	N[U329/WoePac len 1.0 prnt U333/WPP chld {U310/o__Woesearchaeales, U328/o__Pacearchaeales}, nl 38, nn 75]
+#NODE	U330	330	N[U330/Candidatus Parvarchaeum len 1.0 prnt U332/o__Parvarchaeales chld {T66/Candidatus Parvarchaeum acidiphilum ARMAN-4, T67/Candidatus Parvarchaeum acidophilus ARMAN-5}, nl 2, nn 3]
+#NODE	U331	331	N[U331 len 1.0 prnt U332/o__Parvarchaeales chld {T68/archaeon CG10_big_fil_rev_8_21_14_0_10_43_11, T69/archaeon CG07_land_8_20_14_0_80_38_8}, nl 2, nn 3]
+#NODE	U332	332	N[U332/o__Parvarchaeales len 1.0 prnt U333/WPP chld {U330/Candidatus Parvarchaeum, U331}, nl 4, nn 7]
+#NODE	U333	333	N[U333/WPP len 1.0 prnt U334/p__Nanobdellota chld {U329/WoePac, U332/o__Parvarchaeales}, nl 42, nn 83]
+#NODE	U334	334	N[U334/p__Nanobdellota len 1.0 prnt U335/NH chld {U292/Ca. Nanoarchaeia, U333/WPP}, nl 46, nn 91]
+#NODE	U335	335	N[U335/NH len 1.0 prnt U336/PANN chld {U334/p__Nanobdellota, T70/Euryarchaeota archaeon HGW-Euryarchaeota-1 (p__Huberarchaeota)}, nl 47, nn 93]
+#NODE	U336	336	N[U336/PANN len 1.0 prnt U337/UPANN chld {U289/AN, U335/NH}, nl 54, nn 107]
+#NODE	U337	337	N[U337/UPANN len 1.0 prnt U338 chld {T16/Euryarchaeota archaeon (p__Undinarchaeota), U336/PANN}, nl 55, nn 109]
+#NODE	U338	338	N[U338 len 1.0 prnt U347/Nanobdellati chld {U283/IaiMic, U337/UPANN}, nl 71, nn 141]
+#NODE	U339	339	N[U339 len 1.0 prnt U340 chld {T73/Candidatus Altiarchaeales archaeon ex4484_2, T74/Candidatus Altiarchaeales archaeon ex4484_43}, nl 2, nn 3]
+#NODE	U340	340	N[U340 len 1.0 prnt U341 chld {T72/Candidatus Altiarchaeales archaeon IMC4, U339}, nl 3, nn 5]
+#NODE	U341	341	N[U341 len 1.0 prnt U342 chld {T71/Candidatus Altiarchaeales archaeon WOR_SM1_SCG, U340}, nl 4, nn 7]
+#NODE	U342	342	N[U342 len 1.0 prnt U346/p__Altarchaeota chld {U341, T75/Candidatus Altiarchaeales archaeon WOR_SM1_86-2}, nl 5, nn 9]
+#NODE	U343	343	N[U343/unclassified Candidatus Altarchaeum len 1.0 prnt U344 chld {T77/Candidatus Altarchaeum sp. CG03_land_8_20_14_0_80_32_618, T78/Candidatus Altarchaeum sp. CG_4_10_14_0_8_um_filter_32_851}, nl 2, nn 3]
+#NODE	U344	344	N[U344 len 1.0 prnt U345 chld {T76/Candidatus Altiarchaeales archaeon A3, U343/unclassified Candidatus Altarchaeum}, nl 3, nn 5]
+#NODE	U345	345	N[U345 len 1.0 prnt U346/p__Altarchaeota chld {U344, T79/Candidatus Altiarchaeales archaeon HGW-Altiarchaeales-1}, nl 4, nn 7]
+#NODE	U346	346	N[U346/p__Altarchaeota len 1.0 prnt U347/Nanobdellati chld {U342, U345}, nl 9, nn 17]
+#NODE	U347	347	N[U347/Nanobdellati len 1.0 prnt U441 chld {U338, U346/p__Altarchaeota}, nl 80, nn 159]
+#NODE	U348	348	N[U348/Halobacterium len 1.0 prnt U350 chld {T80/Halobacterium salinarum NRC-1, T81/Halobacterium hubeiense}, nl 2, nn 3]
+#NODE	U349	349	N[U349 len 1.0 prnt U350 chld {T82/Halanaeroarchaeum sulfurireducens, T83/Halodesulfurarchaeum formicicum}, nl 2, nn 3]
+#NODE	U350	350	N[U350 len 1.0 prnt U368/c__Halobacteria chld {U348/Halobacterium, U349}, nl 4, nn 7]
+#NODE	U351	351	N[U351 len 1.0 prnt U352/Haloferacaceae chld {T85/Halogeometricum borinquense DSM 11551, T86/Haloquadratum walsbyi C23}, nl 2, nn 3]
+#NODE	U352	352	N[U352/Haloferacaceae len 1.0 prnt U353/Haloferacales chld {U351, T87/Haloferax mediterranei ATCC 33500}, nl 3, nn 5]
+#NODE	U353	353	N[U353/Haloferacales len 1.0 prnt U363 chld {T84/Halorubrum lacusprofundi ATCC 49239, U352/Haloferacaceae}, nl 4, nn 7]
+#NODE	U354	354	N[U354 len 1.0 prnt U355 chld {T88/Haloterrigena turkmenica DSM 5511, T89/Natrinema pellirubrum DSM 15624}, nl 2, nn 3]
+#NODE	U355	355	N[U355 len 1.0 prnt U359 chld {U354, T90/Natronorubrum daqingense}, nl 3, nn 5]
+#NODE	U356	356	N[U356 len 1.0 prnt U357 chld {T93/Halobiforma lacisalsi AJ5, T94/Natronobacterium gregoryi SP2}, nl 2, nn 3]
+#NODE	U357	357	N[U357 len 1.0 prnt U358 chld {T92/Halopiger xanaduensis SH-6, U356}, nl 3, nn 5]
+#NODE	U358	358	N[U358 len 1.0 prnt U359 chld {T91/Natrialba magadii ATCC 43099, U357}, nl 4, nn 7]
+#NODE	U359	359	N[U359 len 1.0 prnt U360 chld {U355, U358}, nl 7, nn 13]
+#NODE	U360	360	N[U360 len 1.0 prnt U361/Natrialbaceae chld {U359, T95/Natronococcus occultus SP4}, nl 8, nn 15]
+#NODE	U361	361	N[U361/Natrialbaceae len 1.0 prnt U362 chld {U360, T96/Halostagnicola larsenii XH-48}, nl 9, nn 17]
+#NODE	U362	362	N[U362 len 1.0 prnt U363 chld {U361/Natrialbaceae, T97/Halalkalicoccus jeotgali B3}, nl 10, nn 19]
+#NODE	U363	363	N[U363 len 1.0 prnt U367 chld {U353/Haloferacales, U362}, nl 14, nn 27]
+#NODE	U364	364	N[U364 len 1.0 prnt U366/Haloarculaceae chld {T98/Halomicrobium mukohataei DSM 12286, T99/Halorhabdus tiamatea SARL4B}, nl 2, nn 3]
+#NODE	U365	365	N[U365/Natronomonas len 1.0 prnt U366/Haloarculaceae chld {T100/Natronomonas pharaonis DSM 2160, T101/Natronomonas moolapensis 8.8.11}, nl 2, nn 3]
+#NODE	U366	366	N[U366/Haloarculaceae len 1.0 prnt U367 chld {U364, U365/Natronomonas}, nl 4, nn 7]
+#NODE	U367	367	N[U367 len 1.0 prnt U368/c__Halobacteria chld {U363, U366/Haloarculaceae}, nl 18, nn 35]
+#NODE	U368	368	N[U368/c__Halobacteria len 1.0 prnt U370 chld {U350, U367}, nl 22, nn 43]
+#NODE	U369	369	N[U369/c__Methanonatronarchaeia len 1.0 prnt U370 chld {T102/Candidatus Methanohalarchaeum thermophilum, T103/Methanonatronarchaeum thermophilum}, nl 2, nn 3]
+#NODE	U370	370	N[U370 len 1.0 prnt U390 chld {U368/c__Halobacteria, U369/c__Methanonatronarchaeia}, nl 24, nn 47]
+#NODE	U371	371	N[U371 len 1.0 prnt U372 chld {T104/Methanosarcina acetivorans C2A, T105/Methanosarcina siciliae T4/M}, nl 2, nn 3]
+#NODE	U372	372	N[U372 len 1.0 prnt U373 chld {U371, T106/Methanosarcina mazei S-6}, nl 3, nn 5]
+#NODE	U373	373	N[U373 len 1.0 prnt U374/Methanosarcina chld {U372, T107/Methanosarcina barkeri MS}, nl 4, nn 7]
+#NODE	U374	374	N[U374/Methanosarcina len 1.0 prnt U380/Methanosarcinaceae chld {U373, T108/Methanosarcina thermophila TM-1}, nl 5, nn 9]
+#NODE	U375	375	N[U375 len 1.0 prnt U377 chld {T109/Methanococcoides burtonii DSM 6242, T110/Methanohalophilus halophilus}, nl 2, nn 3]
+#NODE	U376	376	N[U376 len 1.0 prnt U377 chld {T111/Methanolobus psychrophilus R15, T112/Methanomethylovorans hollandica DSM 15978}, nl 2, nn 3]
+#NODE	U377	377	N[U377 len 1.0 prnt U379 chld {U375, U376}, nl 4, nn 7]
+#NODE	U378	378	N[U378 len 1.0 prnt U379 chld {T113/Methanohalobium evestigatum Z-7303, T114/Methanosalsum zhilinae DSM 4017}, nl 2, nn 3]
+#NODE	U379	379	N[U379 len 1.0 prnt U380/Methanosarcinaceae chld {U377, U378}, nl 6, nn 11]
+#NODE	U380	380	N[U380/Methanosarcinaceae len 1.0 prnt U381 chld {U374/Methanosarcina, U379}, nl 11, nn 21]
+#NODE	U381	381	N[U381 len 1.0 prnt U383 chld {U380/Methanosarcinaceae, T115/Methanothrix soehngenii GP6}, nl 12, nn 23]
+#NODE	U382	382	N[U382/Methanocella len 1.0 prnt U383 chld {T116/Methanocella arvoryzae MRE50, T117/Methanocella conradii HZ254}, nl 2, nn 3]
+#NODE	U383	383	N[U383 len 1.0 prnt U389/c__Methanomicrobia chld {U381, U382/Methanocella}, nl 14, nn 27]
+#NODE	U384	384	N[U384/Methanoregulaceae len 1.0 prnt U385 chld {T119/Methanosphaerula palustris E1-9c, T120/Methanoregula formicica SMSP}, nl 2, nn 3]
+#NODE	U385	385	N[U385 len 1.0 prnt U387 chld {T118/Methanospirillum hungatei JF-1, U384/Methanoregulaceae}, nl 3, nn 5]
+#NODE	U386	386	N[U386/Methanomicrobiaceae len 1.0 prnt U387 chld {T121/Methanolacinia petrolearia DSM 11571, T122/Methanoculleus bourgensis MS2}, nl 2, nn 3]
+#NODE	U387	387	N[U387 len 1.0 prnt U388/Methanomicrobiales chld {U385, U386/Methanomicrobiaceae}, nl 5, nn 9]
+#NODE	U388	388	N[U388/Methanomicrobiales len 1.0 prnt U389/c__Methanomicrobia chld {U387, T123/Methanocorpusculum labreanum Z}, nl 6, nn 11]
+#NODE	U389	389	N[U389/c__Methanomicrobia len 1.0 prnt U390 chld {U383, U388/Methanomicrobiales}, nl 20, nn 39]
+#NODE	U390	390	N[U390 len 1.0 prnt U397/p__Halobacteriota chld {U370, U389/c__Methanomicrobia}, nl 44, nn 87]
+#NODE	U391	391	N[U391 len 1.0 prnt U393/Archaeoglobus chld {T124/Archaeoglobus fulgidus DSM 4304, T125/Archaeoglobus profundus DSM 5631}, nl 2, nn 3]
+#NODE	U392	392	N[U392 len 1.0 prnt U393/Archaeoglobus chld {T126/Archaeoglobus veneficus SNP6, T127/Archaeoglobus sulfaticallidus PM70-1}, nl 2, nn 3]
+#NODE	U393	393	N[U393/Archaeoglobus len 1.0 prnt U396/c__Archaeoglobi chld {U391, U392}, nl 4, nn 7]
+#NODE	U394	394	N[U394/Geoglobus len 1.0 prnt U395 chld {T129/Geoglobus acetivorans, T130/Geoglobus ahangari}, nl 2, nn 3]
+#NODE	U395	395	N[U395 len 1.0 prnt U396/c__Archaeoglobi chld {T128/Ferroglobus placidus DSM 10642, U394/Geoglobus}, nl 3, nn 5]
+#NODE	U396	396	N[U396/c__Archaeoglobi len 1.0 prnt U397/p__Halobacteriota chld {U393/Archaeoglobus, U395}, nl 7, nn 13]
+#NODE	U397	397	N[U397/p__Halobacteriota len 1.0 prnt U425/EuryB chld {U390, U396/c__Archaeoglobi}, nl 51, nn 101]
+#NODE	U398	398	N[U398 len 1.0 prnt U404 chld {T131/Picrophilus oshimae DSM 9789, T132/Ferroplasma acidiphilum}, nl 2, nn 3]
+#NODE	U399	399	N[U399 len 1.0 prnt U400 chld {T134/uncultured archaeon, T135/Thermoplasmatales archaeon B_DKE}, nl 2, nn 3]
+#NODE	U400	400	N[U400 len 1.0 prnt U403 chld {T133/Thermoplasmatales archaeon A-plasma, U399}, nl 3, nn 5]
+#NODE	U401	401	N[U401 len 1.0 prnt U402 chld {T136/Thermoplasmatales archaeon Gpl, T137/Cuniculiplasma divulgatum}, nl 2, nn 3]
+#NODE	U402	402	N[U402 len 1.0 prnt U403 chld {U401, T138/Cuniculiplasma sp. C_DKE}, nl 3, nn 5]
+#NODE	U403	403	N[U403 len 1.0 prnt U404 chld {U400, U402}, nl 6, nn 11]
+#NODE	U404	404	N[U404 len 1.0 prnt U406 chld {U398, U403}, nl 8, nn 15]
+#NODE	U405	405	N[U405/Thermoplasma len 1.0 prnt U406 chld {T139/Thermoplasma volcanium GSS1, T140/Thermoplasma acidophilum DSM 1728}, nl 2, nn 3]
+#NODE	U406	406	N[U406 len 1.0 prnt U407/o__Thermoplasmatales chld {U404, U405/Thermoplasma}, nl 10, nn 19]
+#NODE	U407	407	N[U407/o__Thermoplasmatales len 1.0 prnt U409 chld {U406, T141/Thermoplasmatales archaeon I-plasma}, nl 11, nn 21]
+#NODE	U408	408	N[U408/o__Aciduliprofundales len 1.0 prnt U409 chld {T142/Aciduliprofundum boonei T469, T143/Aciduliprofundum sp.}, nl 2, nn 3]
+#NODE	U409	409	N[U409 len 1.0 prnt U413/c__Thermoplasmata chld {U407/o__Thermoplasmatales, U408/o__Aciduliprofundales}, nl 13, nn 25]
+#NODE	U410	410	N[U410 len 1.0 prnt U411 chld {T144/Candidatus Methanomethylophilus alvus Mx1201, T145/Thermoplasmatales archaeon BRNA1}, nl 2, nn 3]
+#NODE	U411	411	N[U411 len 1.0 prnt U412/o__Methanomassiliicoccales chld {U410, T146/Candidatus Methanoplasma termitum}, nl 3, nn 5]
+#NODE	U412	412	N[U412/o__Methanomassiliicoccales len 1.0 prnt U413/c__Thermoplasmata chld {U411, T147/Candidatus Methanomassiliicoccus intestinalis Issoire-Mx1}, nl 4, nn 7]
+#NODE	U413	413	N[U413/c__Thermoplasmata len 1.0 prnt U420 chld {U409, U412/o__Methanomassiliicoccales}, nl 17, nn 33]
+#NODE	U414	414	N[U414 len 1.0 prnt U415 chld {T148/Marine Group II euryarchaeote MED-G37, T149/Marine Group II euryarchaeote MED-G36}, nl 2, nn 3]
+#NODE	U415	415	N[U415 len 1.0 prnt U416/Poseidoniales chld {U414, T150/Marine Group II euryarchaeote MED-G35}, nl 3, nn 5]
+#NODE	U416	416	N[U416/Poseidoniales len 1.0 prnt U419/c__Poseidoniia chld {U415, T151/Candidatus Poseidoniales archaeon}, nl 4, nn 7]
+#NODE	U417	417	N[U417 len 1.0 prnt U418/Pontarchaea chld {T152/Marine Group III euryarchaeote CG-Epi1, T153/Marine Group III euryarchaeote CG-Epi3}, nl 2, nn 3]
+#NODE	U418	418	N[U418/Pontarchaea len 1.0 prnt U419/c__Poseidoniia chld {U417, T154/Marine Group III euryarchaeote CG-Bathy1}, nl 3, nn 5]
+#NODE	U419	419	N[U419/c__Poseidoniia len 1.0 prnt U420 chld {U416/Poseidoniales, U418/Pontarchaea}, nl 7, nn 13]
+#NODE	U420	420	N[U420 len 1.0 prnt U424/p__Thermoplasmatota chld {U413/c__Thermoplasmata, U419/c__Poseidoniia}, nl 24, nn 47]
+#NODE	U421	421	N[U421 len 1.0 prnt U422 chld {T157/Thermoplasmata archaeon M11B2D, T158/Thermoplasmata archaeon M9B2D}, nl 2, nn 3]
+#NODE	U422	422	N[U422 len 1.0 prnt U423/Thermoprofundales chld {T156/Thermoplasmata archaeon M9B1D, U421}, nl 3, nn 5]
+#NODE	U423	423	N[U423/Thermoprofundales len 1.0 prnt U424/p__Thermoplasmatota chld {T155/Thermoplasmata archaeon HGW-Thermoplasmata-1, U422}, nl 4, nn 7]
+#NODE	U424	424	N[U424/p__Thermoplasmatota len 1.0 prnt U425/EuryB chld {U420, U423/Thermoprofundales}, nl 28, nn 55]
+#NODE	U425	425	N[U425/EuryB len 1.0 prnt U440/THM chld {U397/p__Halobacteriota, U424/p__Thermoplasmatota}, nl 79, nn 157]
+#NODE	U426	426	N[U426 len 1.0 prnt U427/Methanococcaceae chld {T160/Methanococcus aeolicus Nankai-3, T161/Methanothermococcus okinawensis IH1}, nl 2, nn 3]
+#NODE	U427	427	N[U427/Methanococcaceae len 1.0 prnt U428 chld {T159/Methanococcus vannielii SB, U426}, nl 3, nn 5]
+#NODE	U428	428	N[U428 len 1.0 prnt U431/c__Methanococci chld {U427/Methanococcaceae, T162/Methanotorris igneus Kol 5}, nl 4, nn 7]
+#NODE	U429	429	N[U429 len 1.0 prnt U430/Methanocaldococcus chld {T163/Methanocaldococcus fervens AG86, T164/Methanocaldococcus vulcanius M7}, nl 2, nn 3]
+#NODE	U430	430	N[U430/Methanocaldococcus len 1.0 prnt U431/c__Methanococci chld {U429, T165/Methanocaldococcus infernus ME}, nl 3, nn 5]
+#NODE	U431	431	N[U431/c__Methanococci len 1.0 prnt U439/Methanomada chld {U428, U430/Methanocaldococcus}, nl 7, nn 13]
+#NODE	U432	432	N[U432/unclassified Methanopyrus len 1.0 prnt U433/c__Methanopyri chld {T167/Methanopyrus sp. SNP6, T168/Methanopyrus sp. KOL6}, nl 2, nn 3]
+#NODE	U433	433	N[U433/c__Methanopyri len 1.0 prnt U438 chld {T166/Methanopyrus kandleri AV19, U432/unclassified Methanopyrus}, nl 3, nn 5]
+#NODE	U434	434	N[U434 len 1.0 prnt U435 chld {T169/Methanosphaera stadtmanae DSM 3091, T170/Methanobacterium paludis}, nl 2, nn 3]
+#NODE	U435	435	N[U435 len 1.0 prnt U436/Methanobacteriaceae chld {U434, T171/Methanobrevibacter smithii ATCC 35061}, nl 3, nn 5]
+#NODE	U436	436	N[U436/Methanobacteriaceae len 1.0 prnt U437/c__Methanobacteria chld {U435, T172/Methanothermobacter marburgensis str. Marburg}, nl 4, nn 7]
+#NODE	U437	437	N[U437/c__Methanobacteria len 1.0 prnt U438 chld {U436/Methanobacteriaceae, T173/Methanothermus fervidus DSM 2088}, nl 5, nn 9]
+#NODE	U438	438	N[U438 len 1.0 prnt U439/Methanomada chld {U433/c__Methanopyri, U437/c__Methanobacteria}, nl 8, nn 15]
+#NODE	U439	439	N[U439/Methanomada len 1.0 prnt U440/THM chld {U431/c__Methanococci, U438}, nl 15, nn 29]
+#NODE	U440	440	N[U440/THM len 1.0 prnt U441 chld {U425/EuryB, U439/Methanomada}, nl 94, nn 187]
+#NODE	U441	441	N[U441 len 1.0 prnt U454 chld {U347/Nanobdellati, U440/THM}, nl 174, nn 347]
+#NODE	U442	442	N[U442/Pyrococcus len 1.0 prnt U446 chld {T174/Pyrococcus furiosus DSM 3638, T175/Pyrococcus horikoshii OT3}, nl 2, nn 3]
+#NODE	U443	443	N[U443 len 1.0 prnt U444 chld {T177/Thermococcus pacificus, T178/Thermococcus profundus}, nl 2, nn 3]
+#NODE	U444	444	N[U444 len 1.0 prnt U445 chld {U443, T179/Thermococcus thioreducens}, nl 3, nn 5]
+#NODE	U445	445	N[U445 len 1.0 prnt U446 chld {T176/Thermococcus piezophilus, U444}, nl 4, nn 7]
+#NODE	U446	446	N[U446 len 1.0 prnt U448 chld {U442/Pyrococcus, U445}, nl 6, nn 11]
+#NODE	U447	447	N[U447 len 1.0 prnt U448 chld {T180/Thermococcus barophilus MP, T181/Thermococcus paralvinellae}, nl 2, nn 3]
+#NODE	U448	448	N[U448 len 1.0 prnt U450 chld {U446, U447}, nl 8, nn 15]
+#NODE	U449	449	N[U449 len 1.0 prnt U450 chld {T182/Thermococcus sibiricus MM 739, T183/Thermococcus litoralis DSM 5473}, nl 2, nn 3]
+#NODE	U450	450	N[U450 len 1.0 prnt U451/c__Thermococci chld {U448, U449}, nl 10, nn 19]
+#NODE	U451	451	N[U451/c__Thermococci len 1.0 prnt U453/Acherontia chld {U450, T184/Palaeococcus pacificus DY20341}, nl 11, nn 21]
+#NODE	U452	452	N[U452/Theionarchaea len 1.0 prnt U453/Acherontia chld {T185/Theionarchaea archaeon DG-70, T186/Theionarchaea archaeon DG-70-1}, nl 2, nn 3]
+#NODE	U453	453	N[U453/Acherontia len 1.0 prnt U454 chld {U451/c__Thermococci, U452/Theionarchaea}, nl 13, nn 25]
+#NODE	U454	454	N[U454 len 1.0 prnt U461 chld {U441, U453/Acherontia}, nl 187, nn 373]
+#NODE	U455	455	N[U455 len 1.0 prnt U456 chld {T187/Hadesarchaea archaeon DG-33, T188/Candidatus Hadarchaeum yellowstonense}, nl 2, nn 3]
+#NODE	U456	456	N[U456 len 1.0 prnt U457/Hadesarchaea chld {U455, T189/Hadesarchaea archaeon DG-33-1}, nl 3, nn 5]
+#NODE	U457	457	N[U457/Hadesarchaea len 1.0 prnt U460/p__Hadarchaeota chld {U456, T190/Hadesarchaea archaeon YNP_N21}, nl 4, nn 7]
+#NODE	U458	458	N[U458 len 1.0 prnt U459/Persephonarchaea chld {T191/candidate division MSBL1 archaeon SCGC-AAA259I09, T192/candidate division MSBL1 archaeon SCGC-AAA259E19}, nl 2, nn 3]
+#NODE	U459	459	N[U459/Persephonarchaea len 1.0 prnt U460/p__Hadarchaeota chld {U458, T193/candidate division MSBL1 archaeon SCGC-AAA261D19}, nl 3, nn 5]
+#NODE	U460	460	N[U460/p__Hadarchaeota len 1.0 prnt U461 chld {U457/Hadesarchaea, U459/Persephonarchaea}, nl 7, nn 13]
+#NODE	U461	461	N[U461 len 1.0 prnt U536/d__Archaea chld {U454, U460/p__Hadarchaeota}, nl 194, nn 387]
+#NODE	U462	462	N[U462 len 1.0 prnt U463 chld {T195/Candidatus Thorarchaeota archaeon SMTZ1-45, T196/Candidatus Thorarchaeota archaeon SMTZ-45}, nl 2, nn 3]
+#NODE	U463	463	N[U463 len 1.0 prnt U464/Thorarchaeota chld {U462, T197/Candidatus Thorarchaeota archaeon AB_25}, nl 3, nn 5]
+#NODE	U464	464	N[U464/Thorarchaeota len 1.0 prnt U467 chld {T194/Candidatus Thorarchaeota archaeon SMTZ1-83, U463}, nl 4, nn 7]
+#NODE	U465	465	N[U465/Lokiarchaeota len 1.0 prnt U466 chld {T198/Candidatus Lokiarchaeota archaeon CR_4, T199/Candidatus Lokiarchaeota archaeon}, nl 2, nn 3]
+#NODE	U466	466	N[U466 len 1.0 prnt U467 chld {U465/Lokiarchaeota, T200/Candidatus Odinarchaeum yellowstonii}, nl 3, nn 5]
+#NODE	U467	467	N[U467 len 1.0 prnt U472/p__Asgardarchaeota chld {U464/Thorarchaeota, U466}, nl 7, nn 13]
+#NODE	U468	468	N[U468 len 1.0 prnt U471/Heimdallarchaeota chld {T201/Candidatus Heimdallarchaeota archaeon LC_3, T202/Candidatus Heimdallarchaeota archaeon B3_Heim}, nl 2, nn 3]
+#NODE	U469	469	N[U469 len 1.0 prnt U470 chld {T203/Candidatus Heimdallarchaeota archaeon LC_2, T204/Candidatus Heimdallarchaeota archaeon}, nl 2, nn 3]
+#NODE	U470	470	N[U470 len 1.0 prnt U471/Heimdallarchaeota chld {U469, T205/Candidatus Heimdallarchaeota archaeon AB_125}, nl 3, nn 5]
+#NODE	U471	471	N[U471/Heimdallarchaeota len 1.0 prnt U472/p__Asgardarchaeota chld {U468, U470}, nl 5, nn 9]
+#NODE	U472	472	N[U472/p__Asgardarchaeota len 1.0 prnt U535/Proteoarchaeota chld {U467, U471/Heimdallarchaeota}, nl 12, nn 23]
+#NODE	U473	473	N[U473 len 1.0 prnt U474/p__Korarchaeota chld {T206/Candidatus Korarchaeum cryptofilum OPF8, T207/Candidatus Korarchaeota archaeon NZ13-K}, nl 2, nn 3]
+#NODE	U474	474	N[U474/p__Korarchaeota len 1.0 prnt U534/p__Thermoproteota chld {U473, T208/Candidatus Korarchaeota archaeon}, nl 3, nn 5]
+#NODE	U475	475	N[U475/Acidilobus len 1.0 prnt U476/Acidilobales chld {T210/Acidilobus saccharovorans 345-15, T211/Acidilobus sp. 7A}, nl 2, nn 3]
+#NODE	U476	476	N[U476/Acidilobales len 1.0 prnt U477 chld {U475/Acidilobus, T212/Caldisphaera lagunensis DSM 15908}, nl 3, nn 5]
+#NODE	U477	477	N[U477 len 1.0 prnt U480 chld {T209/Aeropyrum pernix K1, U476/Acidilobales}, nl 4, nn 7]
+#NODE	U478	478	N[U478 len 1.0 prnt U479/Pyrodictiaceae chld {T213/Hyperthermus butylicus DSM 5456, T214/Pyrodictium delaneyi}, nl 2, nn 3]
+#NODE	U479	479	N[U479/Pyrodictiaceae len 1.0 prnt U480 chld {U478, T215/Pyrolobus fumarii 1A}, nl 3, nn 5]
+#NODE	U480	480	N[U480 len 1.0 prnt U484 chld {U477, U479/Pyrodictiaceae}, nl 7, nn 13]
+#NODE	U481	481	N[U481 len 1.0 prnt U482 chld {T217/Desulfurococcus amylolyticus 1221n, T218/Thermosphaera aggregans DSM 11486}, nl 2, nn 3]
+#NODE	U482	482	N[U482 len 1.0 prnt U483 chld {U481, T219/Thermogladius calderae 1633}, nl 3, nn 5]
+#NODE	U483	483	N[U483 len 1.0 prnt U484 chld {T216/Staphylothermus marinus F1, U482}, nl 4, nn 7]
+#NODE	U484	484	N[U484 len 1.0 prnt U487 chld {U480, U483}, nl 11, nn 21]
+#NODE	U485	485	N[U485/Ignicoccus len 1.0 prnt U486 chld {T220/Ignicoccus hospitalis KIN4/I, T221/Ignicoccus islandicus DSM 13165}, nl 2, nn 3]
+#NODE	U486	486	N[U486 len 1.0 prnt U487 chld {U485/Ignicoccus, T222/Fervidicoccus fontis Kam940}, nl 3, nn 5]
+#NODE	U487	487	N[U487 len 1.0 prnt U493/o__Sulfolobales chld {U484, U486}, nl 14, nn 27]
+#NODE	U488	488	N[U488 len 1.0 prnt U490/Sulfolobaceae chld {T223/Sulfurisphaera tokodaii str. 7, T224/Sulfolobus acidocaldarius DSM 639}, nl 2, nn 3]
+#NODE	U489	489	N[U489 len 1.0 prnt U490/Sulfolobaceae chld {T225/Metallosphaera sedula DSM 5348, T226/Acidianus sulfidivorans JP7}, nl 2, nn 3]
+#NODE	U490	490	N[U490/Sulfolobaceae len 1.0 prnt U491 chld {U488, U489}, nl 4, nn 7]
+#NODE	U491	491	N[U491 len 1.0 prnt U492 chld {U490/Sulfolobaceae, T227/Sulfolobales archaeon Acd1}, nl 5, nn 9]
+#NODE	U492	492	N[U492 len 1.0 prnt U493/o__Sulfolobales chld {U491, T228/Zestosphaera tikiterensis}, nl 6, nn 11]
+#NODE	U493	493	N[U493/o__Sulfolobales len 1.0 prnt U501/SulThe chld {U487, U492}, nl 20, nn 39]
+#NODE	U494	494	N[U494/Thermofilaceae len 1.0 prnt U500/o__Thermoproteales chld {T229/Thermofilum pendens Hrk 5, T230/Infirmifilum uzonense}, nl 2, nn 3]
+#NODE	U495	495	N[U495 len 1.0 prnt U497 chld {T231/Caldivirga maquilingensis IC-167, T232/Thermocladium modestius JCM 10088}, nl 2, nn 3]
+#NODE	U496	496	N[U496/Vulcanisaeta len 1.0 prnt U497 chld {T233/Vulcanisaeta distributa DSM 14429, T234/Vulcanisaeta thermophila}, nl 2, nn 3]
+#NODE	U497	497	N[U497 len 1.0 prnt U499/Thermoproteaceae chld {U495, U496/Vulcanisaeta}, nl 4, nn 7]
+#NODE	U498	498	N[U498 len 1.0 prnt U499/Thermoproteaceae chld {T235/Pyrobaculum ferrireducens, T236/Thermoproteus tenax Kra 1}, nl 2, nn 3]
+#NODE	U499	499	N[U499/Thermoproteaceae len 1.0 prnt U500/o__Thermoproteales chld {U497, U498}, nl 6, nn 11]
+#NODE	U500	500	N[U500/o__Thermoproteales len 1.0 prnt U501/SulThe chld {U494/Thermofilaceae, U499/Thermoproteaceae}, nl 8, nn 15]
+#NODE	U501	501	N[U501/SulThe len 1.0 prnt U506/c__Thermoprotei chld {U493/o__Sulfolobales, U500/o__Thermoproteales}, nl 28, nn 55]
+#NODE	U502	502	N[U502/Marsarchaeota group 1 len 1.0 prnt U504/o__Marsarchaeales chld {T238/Candidatus Marsarchaeota G1 archaeon OSP_B, T239/Candidatus Marsarchaeota G1 archaeon BE_D}, nl 2, nn 3]
+#NODE	U503	503	N[U503/Marsarchaeota group 2 len 1.0 prnt U504/o__Marsarchaeales chld {T240/Candidatus Marsarchaeota G2 archaeon ECH_B_1, T241/Candidatus Marsarchaeota G2 archaeon OSP_D}, nl 2, nn 3]
+#NODE	U504	504	N[U504/o__Marsarchaeales len 1.0 prnt U505 chld {U502/Marsarchaeota group 1, U503/Marsarchaeota group 2}, nl 4, nn 7]
+#NODE	U505	505	N[U505 len 1.0 prnt U506/c__Thermoprotei chld {T237/Crenarchaeota archaeon SCGC AAA471-B05 (Gearcheales), U504/o__Marsarchaeales}, nl 5, nn 9]
+#NODE	U506	506	N[U506/c__Thermoprotei len 1.0 prnt U533/TAC chld {U501/SulThe, U505}, nl 33, nn 65]
+#NODE	U507	507	N[U507 len 1.0 prnt U508 chld {T243/Candidatus Bathyarchaeota archaeon CG07_land_8_20_14_0_80_47_9, T244/Candidatus Bathyarchaeota archaeon CG_4_8_14_3_um_filter_42_8}, nl 2, nn 3]
+#NODE	U508	508	N[U508 len 1.0 prnt U510 chld {T242/miscellaneous Crenarchaeota group-6 archaeon AD8-1, U507}, nl 3, nn 5]
+#NODE	U509	509	N[U509 len 1.0 prnt U510 chld {T245/Candidatus Bathyarchaeota archaeon BA2, T246/Candidatus Bathyarchaeota archaeon BA1}, nl 2, nn 3]
+#NODE	U510	510	N[U510 len 1.0 prnt U511/o__Bathyarchaeales chld {U508, U509}, nl 5, nn 9]
+#NODE	U511	511	N[U511/o__Bathyarchaeales len 1.0 prnt U513 chld {U510, T247/Candidatus Bathyarchaeota archaeon ex4484_40}, nl 6, nn 11]
+#NODE	U512	512	N[U512 len 1.0 prnt U513 chld {T248/miscellaneous Crenarchaeota group archaeon SMTZ-80, T249/Candidatus Bathyarchaeota archaeon RBG_13_38_9}, nl 2, nn 3]
+#NODE	U513	513	N[U513 len 1.0 prnt U517/c__Bathyarchaeia chld {U511/o__Bathyarchaeales, U512}, nl 8, nn 15]
+#NODE	U514	514	N[U514 len 1.0 prnt U515 chld {T252/Candidatus Bathyarchaeota archaeon RBG_13_60_20, T253/Candidatus Bathyarchaeota archaeon RBG_16_57_9}, nl 2, nn 3]
+#NODE	U515	515	N[U515 len 1.0 prnt U516/o__TCS64 chld {T251/Candidatus Bathyarchaeota archaeon RBG_13_52_12, U514}, nl 3, nn 5]
+#NODE	U516	516	N[U516/o__TCS64 len 1.0 prnt U517/c__Bathyarchaeia chld {T250/Candidatus Bathyarchaeota archaeon B23, U515}, nl 4, nn 7]
+#NODE	U517	517	N[U517/c__Bathyarchaeia len 1.0 prnt U532 chld {U513, U516/o__TCS64}, nl 12, nn 23]
+#NODE	U518	518	N[U518/Wolframiiraptoraceae len 1.0 prnt U519 chld {T255/Candidatus Geocrenenecus sp. JGI 0000106-J15, T256/Candidatus Terraquivivens tikiterensis}, nl 2, nn 3]
+#NODE	U519	519	N[U519 len 1.0 prnt U521/o__Caldarchaeales chld {T254/Candidatus Caldarchaeum subterraneum, U518/Wolframiiraptoraceae}, nl 3, nn 5]
+#NODE	U520	520	N[U520 len 1.0 prnt U521/o__Caldarchaeales chld {T257/Aigarchaeota archaeon SCGC AAA471-E14, T258/Aigarchaeota archaeon SCGC AAA471-F17}, nl 2, nn 3]
+#NODE	U521	521	N[U521/o__Caldarchaeales len 1.0 prnt U531/c__Nitrososphaeria chld {U519, U520}, nl 5, nn 9]
+#NODE	U522	522	N[U522 len 1.0 prnt U523 chld {T259/Nitrosopumilus maritimus SCM1, T260/Cenarchaeum symbiosum A}, nl 2, nn 3]
+#NODE	U523	523	N[U523 len 1.0 prnt U525 chld {U522, T261/Candidatus Nitrosopelagicus brevis}, nl 3, nn 5]
+#NODE	U524	524	N[U524/Nitrosotenuis len 1.0 prnt U525 chld {T262/Candidatus Nitrosotenuis uzonensis, T263/Candidatus Nitrosotenuis aquarius}, nl 2, nn 3]
+#NODE	U525	525	N[U525 len 1.0 prnt U527 chld {U523, U524/Nitrosotenuis}, nl 5, nn 9]
+#NODE	U526	526	N[U526 len 1.0 prnt U527 chld {T264/Thaumarchaeota archaeon 13_1_20CM_2_39_20, T265/Candidatus Nitrosotalea devanaterra}, nl 2, nn 3]
+#NODE	U527	527	N[U527 len 1.0 prnt U528 chld {U525, U526}, nl 7, nn 13]
+#NODE	U528	528	N[U528 len 1.0 prnt U529/o__Nitrososphaerales chld {U527, T266/Nitrososphaera viennensis EN76}, nl 8, nn 15]
+#NODE	U529	529	N[U529/o__Nitrososphaerales len 1.0 prnt U530 chld {U528, T267/Candidatus Nitrosocaldus cavascurensis}, nl 9, nn 17]
+#NODE	U530	530	N[U530 len 1.0 prnt U531/c__Nitrososphaeria chld {U529/o__Nitrososphaerales, T268/Thaumarchaeota archaeon RBG_16_49_8}, nl 10, nn 19]
+#NODE	U531	531	N[U531/c__Nitrososphaeria len 1.0 prnt U532 chld {U521/o__Caldarchaeales, U530}, nl 15, nn 29]
+#NODE	U532	532	N[U532 len 1.0 prnt U533/TAC chld {U517/c__Bathyarchaeia, U531/c__Nitrososphaeria}, nl 27, nn 53]
+#NODE	U533	533	N[U533/TAC len 1.0 prnt U534/p__Thermoproteota chld {U506/c__Thermoprotei, U532}, nl 60, nn 119]
+#NODE	U534	534	N[U534/p__Thermoproteota len 1.0 prnt U535/Proteoarchaeota chld {U474/p__Korarchaeota, U533/TAC}, nl 63, nn 125]
+#NODE	U535	535	N[U535/Proteoarchaeota len 1.0 prnt U536/d__Archaea chld {U472/p__Asgardarchaeota, U534/p__Thermoproteota}, nl 75, nn 149]
+#NODE	U536	536	N[U536/d__Archaea len 1.0 prnt - chld {U461, U535/Proteoarchaeota}, nl 269, nn 537]
+(((((((((((([T0]'Candidatus Iainarchaeum andersonii SCGC AAA011-E11':1.0,
+[T1]'Candidatus Diapherotrites archaeon CG11_big_fil_rev_8_21_14_0_20_37_9':1.0)[U269]:1.0,
+[T2]'archaeon GW2011_AR10':1.0)[U270]:1.0,
+[T3]'Candidatus Diapherotrites archaeon CG10_big_fil_rev_8_21_14_0_10_31_34':1.0)[U271]:1.0,
+[T4]'Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_34_12':1.0)[U272]:1.0,
+[T5]'Candidatus Diapherotrites archaeon CG08_land_8_20_14_0_20_30_16':1.0)[U273] 'p__Iainarchaeota':1.0,
+(((([T6]'Candidatus Micrarchaeota archaeon CG1_02_47_40':1.0,
+[T7]'Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_29':1.0)[U274]:1.0,
+[T8]'Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_49_7':1.0)[U275]:1.0,
+(([T9]'Candidatus Micrarchaeum sp. AZ1':1.0,
+[T10]'Thermoplasmatales archaeon ARMAN':1.0)[U276]:1.0,
+[T11]'Candidatus Mancarchaeum acidiphilum':1.0)[U277]:1.0)[U278]:1.0,
+([T12]'Candidatus Micrarchaeota archaeon CG1_02_51_15':1.0,
+(([T13]'Candidatus Micrarchaeota archaeon CG1_02_55_41':1.0,
+[T14]'Candidatus Micrarchaeota archaeon CG_4_10_14_0_2_um_filter_60_11':1.0)[U279]:1.0,
+[T15]'Candidatus Micrarchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_59_7':1.0)[U280]:1.0)[U281]:1.0)[U282] 'p__Micrarchaeota':1.0)[U283] IaiMic:2.0,
+([T16]'Euryarchaeota archaeon (p__Undinarchaeota)':1.0,
+((([T17]'Candidatus Nanosalinarum sp. J07AB56':1.0,
+([T18]'Nanohaloarchaea archaeon SW_7_43_1':1.0,
+[T19]'Nanohaloarchaea archaeon SG9':1.0)[U284] 'unclassified Candidatus Nanohaloarchaea':1.0)[U285] 'p__Nanohaloarchaeota':1.0,
+(([T20]'archaeon GW2011_AR5':1.0,
+[T21]'Candidatus Aenigmarchaeota archaeon ex4484_14':1.0)[U286]:1.0,
+([T22]'Candidatus Aenigmarchaeota archaeon ex4484_224':1.0,
+[T23]'Candidatus Aenigmarchaeota archaeon ex4484_56':1.0)[U287]:1.0)[U288] 'p__Aenigmarchaeota':1.0)[U289] AN:1.0,
+((([T24]'Nanoarchaeum equitans Kin4-M':1.0,
+(([T25]'Candidatus Nanobsidianus stetteri':1.0,
+[T26]'Candidatus Nanopusillus acidilobi':1.0)[U290] Nanopusillaceae:1.0,
+[T27]'Nanoarchaeota archaeon NZ13-N':1.0)[U291]:1.0)[U292] 'Ca. Nanoarchaeia':1.0,
+((((([T28]'Nanoarchaeota archaeon SCGC AAA011-G17':1.0,
+[T29]'archaeon GW2011_AR17':1.0)[U293]:1.0,
+([T30]'archaeon GW2011_AR18':1.0,
+[T31]'archaeon GW2011_AR20':1.0)[U294]:1.0)[U295]:1.0,
+((((([T32]'archaeon GW2011_AR3':1.0,
+([T33]'Candidatus Woesearchaeota archaeon CG11_big_fil_rev_8_21_14_0_20_43_8':1.0,
+[T34]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_44_13':1.0)[U296]:1.0)[U297]:1.0,
+([T35]'archaeon GW2011_AR11':1.0,
+([T36]'Candidatus Woesearchaeota archaeon CG1_02_47_18':1.0,
+[T37]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_33_12':1.0)[U298]:1.0)[U299]:1.0)[U300]:1.0,
+(([T38]'archaeon GW2011_AR4':1.0,
+[T39]'Candidatus Woesearchaeota archaeon CG1_02_57_44':1.0)[U301]:1.0,
+[T40]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_37_12':1.0)[U302]:1.0)[U303]:1.0,
+([T41]'archaeon GW2011_AR15':1.0,
+[T42]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_9':1.0)[U304]:1.0)[U305]:1.0,
+((([T43]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_45_16':1.0,
+[T44]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_24':1.0)[U306]:1.0,
+[T45]'Candidatus Woesearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_36_11':1.0)[U307]:1.0,
+[T46]'Candidatus Woesearchaeota archaeon CG_4_10_14_0_2_um_filter_33_13':1.0)[U308]:1.0)[U309]:1.0)[U310] 'o__Woesearchaeales':1.0,
+((((((((((([T47]'archaeon GW2011_AR13':1.0,
+([T48]'archaeon GW2011_AR1':1.0,
+[T49]'Candidatus Pacearchaeota archaeon ex4484_71':1.0)[U311]:1.0)[U312]:1.0,
+[T50]'archaeon BMS3Abin17':1.0)[U313]:1.0,
+([T51]'Candidatus Pacearchaeota archaeon RBG_19FT_COMBO_34_9':1.0,
+[T52]'Candidatus Pacearchaeota archaeon RBG_16_35_8':1.0)[U314]:1.0)[U315]:1.0,
+[T53]'archaeon GW2011_AR19':1.0)[U316]:1.0,
+[T54]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_32_14':1.0)[U317]:1.0,
+((([T55]'Candidatus Pacearchaeota archaeon CG_4_9_14_0_2_um_filter_39_13':1.0,
+[T56]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_219':1.0)[U318]:1.0,
+[T57]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_34_76':1.0)[U319]:1.0,
+([T58]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_30_48':1.0,
+[T59]'Candidatus Pacearchaeota archaeon CG_4_10_14_0_2_um_filter_05_32_18':1.0)[U320]:1.0)[U321]:1.0)[U322]:1.0,
+[T60]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_35_13':1.0)[U323]:1.0,
+[T61]'Candidatus Pacearchaeota archaeon RBG_13_36_9':1.0)[U324]:1.0,
+[T62]'Candidatus Pacearchaeota archaeon CG06_land_8_20_14_3_00_35_12':1.0)[U325]:1.0,
+([T63]'Candidatus Pacearchaeota archaeon ex4484_31':1.0,
+[T64]'Candidatus Pacearchaeota archaeon CG10_big_fil_rev_8_21_14_0_10_31_59':1.0)[U326]:1.0)[U327]:1.0,
+[T65]'Candidatus Pacearchaeota archaeon ex4484_26':1.0)[U328] 'o__Pacearchaeales':1.0)[U329] WoePac:1.0,
+(([T66]'Candidatus Parvarchaeum acidiphilum ARMAN-4':1.0,
+[T67]'Candidatus Parvarchaeum acidophilus ARMAN-5':1.0)[U330] 'Candidatus Parvarchaeum':1.0,
+([T68]'archaeon CG10_big_fil_rev_8_21_14_0_10_43_11':1.0,
+[T69]'archaeon CG07_land_8_20_14_0_80_38_8':1.0)[U331]:1.0)[U332] 'o__Parvarchaeales':1.0)[U333] WPP:1.0)[U334] 'p__Nanobdellota':1.0,
+[T70]'Euryarchaeota archaeon HGW-Euryarchaeota-1 (p__Huberarchaeota)':1.0)[U335] NH:1.0)[U336] PANN:1.0)[U337] UPANN:1.0)[U338]:1.0,
+((([T71]'Candidatus Altiarchaeales archaeon WOR_SM1_SCG':1.0,
+([T72]'Candidatus Altiarchaeales archaeon IMC4':1.0,
+([T73]'Candidatus Altiarchaeales archaeon ex4484_2':1.0,
+[T74]'Candidatus Altiarchaeales archaeon ex4484_43':1.0)[U339]:1.0)[U340]:1.0)[U341]:1.0,
+[T75]'Candidatus Altiarchaeales archaeon WOR_SM1_86-2':1.0)[U342]:1.0,
+(([T76]'Candidatus Altiarchaeales archaeon A3':1.0,
+([T77]'Candidatus Altarchaeum sp. CG03_land_8_20_14_0_80_32_618':1.0,
+[T78]'Candidatus Altarchaeum sp. CG_4_10_14_0_8_um_filter_32_851':1.0)[U343] 'unclassified Candidatus Altarchaeum':1.0)[U344]:1.0,
+[T79]'Candidatus Altiarchaeales archaeon HGW-Altiarchaeales-1':1.0)[U345]:1.0)[U346] 'p__Altarchaeota':1.0)[U347] Nanobdellati:1.0,
+(((((((([T80]'Halobacterium salinarum NRC-1':1.0,
+[T81]'Halobacterium hubeiense':1.0)[U348] Halobacterium:1.0,
+([T82]'Halanaeroarchaeum sulfurireducens':1.0,
+[T83]'Halodesulfurarchaeum formicicum':1.0)[U349]:1.0)[U350]:1.0,
+((([T84]'Halorubrum lacusprofundi ATCC 49239':1.0,
+(([T85]'Halogeometricum borinquense DSM 11551':1.0,
+[T86]'Haloquadratum walsbyi C23':1.0)[U351]:1.0,
+[T87]'Haloferax mediterranei ATCC 33500':1.0)[U352] Haloferacaceae:1.0)[U353] Haloferacales:1.0,
+(((((([T88]'Haloterrigena turkmenica DSM 5511':1.0,
+[T89]'Natrinema pellirubrum DSM 15624':1.0)[U354]:1.0,
+[T90]'Natronorubrum daqingense':1.0)[U355]:1.0,
+([T91]'Natrialba magadii ATCC 43099':1.0,
+([T92]'Halopiger xanaduensis SH-6':1.0,
+([T93]'Halobiforma lacisalsi AJ5':1.0,
+[T94]'Natronobacterium gregoryi SP2':1.0)[U356]:1.0)[U357]:1.0)[U358]:1.0)[U359]:1.0,
+[T95]'Natronococcus occultus SP4':1.0)[U360]:1.0,
+[T96]'Halostagnicola larsenii XH-48':1.0)[U361] Natrialbaceae:1.0,
+[T97]'Halalkalicoccus jeotgali B3':1.0)[U362]:1.0)[U363]:1.0,
+(([T98]'Halomicrobium mukohataei DSM 12286':1.0,
+[T99]'Halorhabdus tiamatea SARL4B':1.0)[U364]:1.0,
+([T100]'Natronomonas pharaonis DSM 2160':1.0,
+[T101]'Natronomonas moolapensis 8.8.11':1.0)[U365] Natronomonas:1.0)[U366] Haloarculaceae:1.0)[U367]:1.0)[U368] 'c__Halobacteria':1.0,
+([T102]'Candidatus Methanohalarchaeum thermophilum':1.0,
+[T103]'Methanonatronarchaeum thermophilum':1.0)[U369] 'c__Methanonatronarchaeia':1.0)[U370]:1.0,
+(((((((([T104]'Methanosarcina acetivorans C2A':1.0,
+[T105]'Methanosarcina siciliae T4/M':1.0)[U371]:1.0,
+[T106]'Methanosarcina mazei S-6':1.0)[U372]:1.0,
+[T107]'Methanosarcina barkeri MS':1.0)[U373]:1.0,
+[T108]'Methanosarcina thermophila TM-1':1.0)[U374] Methanosarcina:1.0,
+((([T109]'Methanococcoides burtonii DSM 6242':1.0,
+[T110]'Methanohalophilus halophilus':1.0)[U375]:1.0,
+([T111]'Methanolobus psychrophilus R15':1.0,
+[T112]'Methanomethylovorans hollandica DSM 15978':1.0)[U376]:1.0)[U377]:1.0,
+([T113]'Methanohalobium evestigatum Z-7303':1.0,
+[T114]'Methanosalsum zhilinae DSM 4017':1.0)[U378]:1.0)[U379]:1.0)[U380] Methanosarcinaceae:1.0,
+[T115]'Methanothrix soehngenii GP6':1.0)[U381]:1.0,
+([T116]'Methanocella arvoryzae MRE50':1.0,
+[T117]'Methanocella conradii HZ254':1.0)[U382] Methanocella:1.0)[U383]:1.0,
+((([T118]'Methanospirillum hungatei JF-1':1.0,
+([T119]'Methanosphaerula palustris E1-9c':1.0,
+[T120]'Methanoregula formicica SMSP':1.0)[U384] Methanoregulaceae:1.0)[U385]:1.0,
+([T121]'Methanolacinia petrolearia DSM 11571':1.0,
+[T122]'Methanoculleus bourgensis MS2':1.0)[U386] Methanomicrobiaceae:1.0)[U387]:1.0,
+[T123]'Methanocorpusculum labreanum Z':1.0)[U388] Methanomicrobiales:1.0)[U389] 'c__Methanomicrobia':1.0)[U390]:1.0,
+((([T124]'Archaeoglobus fulgidus DSM 4304':1.0,
+[T125]'Archaeoglobus profundus DSM 5631':1.0)[U391]:1.0,
+([T126]'Archaeoglobus veneficus SNP6':1.0,
+[T127]'Archaeoglobus sulfaticallidus PM70-1':1.0)[U392]:1.0)[U393] Archaeoglobus:1.0,
+([T128]'Ferroglobus placidus DSM 10642':1.0,
+([T129]'Geoglobus acetivorans':1.0,
+[T130]'Geoglobus ahangari':1.0)[U394] Geoglobus:1.0)[U395]:1.0)[U396] 'c__Archaeoglobi':1.0)[U397] 'p__Halobacteriota':1.0,
+(((((((([T131]'Picrophilus oshimae DSM 9789':1.0,
+[T132]'Ferroplasma acidiphilum':1.0)[U398]:1.0,
+(([T133]'Thermoplasmatales archaeon A-plasma':1.0,
+([T134]'uncultured archaeon':1.0,
+[T135]'Thermoplasmatales archaeon B_DKE':1.0)[U399]:1.0)[U400]:1.0,
+(([T136]'Thermoplasmatales archaeon Gpl':1.0,
+[T137]'Cuniculiplasma divulgatum':1.0)[U401]:1.0,
+[T138]'Cuniculiplasma sp. C_DKE':1.0)[U402]:1.0)[U403]:1.0)[U404]:1.0,
+([T139]'Thermoplasma volcanium GSS1':1.0,
+[T140]'Thermoplasma acidophilum DSM 1728':1.0)[U405] Thermoplasma:1.0)[U406]:1.0,
+[T141]'Thermoplasmatales archaeon I-plasma':1.0)[U407] 'o__Thermoplasmatales':1.0,
+([T142]'Aciduliprofundum boonei T469':1.0,
+[T143]'Aciduliprofundum sp.':1.0)[U408] 'o__Aciduliprofundales':1.0)[U409]:1.0,
+((([T144]'Candidatus Methanomethylophilus alvus Mx1201':1.0,
+[T145]'Thermoplasmatales archaeon BRNA1':1.0)[U410]:1.0,
+[T146]'Candidatus Methanoplasma termitum':1.0)[U411]:1.0,
+[T147]'Candidatus Methanomassiliicoccus intestinalis Issoire-Mx1':1.0)[U412] 'o__Methanomassiliicoccales':1.0)[U413] 'c__Thermoplasmata':1.0,
+(((([T148]'Marine Group II euryarchaeote MED-G37':1.0,
+[T149]'Marine Group II euryarchaeote MED-G36':1.0)[U414]:1.0,
+[T150]'Marine Group II euryarchaeote MED-G35':1.0)[U415]:1.0,
+[T151]'Candidatus Poseidoniales archaeon':1.0)[U416] Poseidoniales:1.0,
+(([T152]'Marine Group III euryarchaeote CG-Epi1':1.0,
+[T153]'Marine Group III euryarchaeote CG-Epi3':1.0)[U417]:1.0,
+[T154]'Marine Group III euryarchaeote CG-Bathy1':1.0)[U418] Pontarchaea:1.0)[U419] 'c__Poseidoniia':1.0)[U420]:1.0,
+([T155]'Thermoplasmata archaeon HGW-Thermoplasmata-1':1.0,
+([T156]'Thermoplasmata archaeon M9B1D':1.0,
+([T157]'Thermoplasmata archaeon M11B2D':1.0,
+[T158]'Thermoplasmata archaeon M9B2D':1.0)[U421]:1.0)[U422]:1.0)[U423] Thermoprofundales:1.0)[U424] 'p__Thermoplasmatota':1.0)[U425] EuryB:1.0,
+(((([T159]'Methanococcus vannielii SB':1.0,
+([T160]'Methanococcus aeolicus Nankai-3':1.0,
+[T161]'Methanothermococcus okinawensis IH1':1.0)[U426]:1.0)[U427] Methanococcaceae:1.0,
+[T162]'Methanotorris igneus Kol 5':1.0)[U428]:1.0,
+(([T163]'Methanocaldococcus fervens AG86':1.0,
+[T164]'Methanocaldococcus vulcanius M7':1.0)[U429]:1.0,
+[T165]'Methanocaldococcus infernus ME':1.0)[U430] Methanocaldococcus:1.0)[U431] 'c__Methanococci':1.0,
+(([T166]'Methanopyrus kandleri AV19':1.0,
+([T167]'Methanopyrus sp. SNP6':1.0,
+[T168]'Methanopyrus sp. KOL6':1.0)[U432] 'unclassified Methanopyrus':1.0)[U433] 'c__Methanopyri':1.0,
+(((([T169]'Methanosphaera stadtmanae DSM 3091':1.0,
+[T170]'Methanobacterium paludis':1.0)[U434]:1.0,
+[T171]'Methanobrevibacter smithii ATCC 35061':1.0)[U435]:1.0,
+[T172]'Methanothermobacter marburgensis str. Marburg':1.0)[U436] Methanobacteriaceae:1.0,
+[T173]'Methanothermus fervidus DSM 2088':1.0)[U437] 'c__Methanobacteria':1.0)[U438]:1.0)[U439] Methanomada:1.0)[U440] THM:1.0)[U441]:1.0,
+(((((([T174]'Pyrococcus furiosus DSM 3638':1.0,
+[T175]'Pyrococcus horikoshii OT3':1.0)[U442] Pyrococcus:1.0,
+([T176]'Thermococcus piezophilus':1.0,
+(([T177]'Thermococcus pacificus':1.0,
+[T178]'Thermococcus profundus':1.0)[U443]:1.0,
+[T179]'Thermococcus thioreducens':1.0)[U444]:1.0)[U445]:1.0)[U446]:1.0,
+([T180]'Thermococcus barophilus MP':1.0,
+[T181]'Thermococcus paralvinellae':1.0)[U447]:1.0)[U448]:1.0,
+([T182]'Thermococcus sibiricus MM 739':1.0,
+[T183]'Thermococcus litoralis DSM 5473':1.0)[U449]:1.0)[U450]:1.0,
+[T184]'Palaeococcus pacificus DY20341':1.0)[U451] 'c__Thermococci':1.0,
+([T185]'Theionarchaea archaeon DG-70':1.0,
+[T186]'Theionarchaea archaeon DG-70-1':1.0)[U452] Theionarchaea:1.0)[U453] Acherontia:1.0)[U454]:1.0,
+(((([T187]'Hadesarchaea archaeon DG-33':1.0,
+[T188]'Candidatus Hadarchaeum yellowstonense':1.0)[U455]:1.0,
+[T189]'Hadesarchaea archaeon DG-33-1':1.0)[U456]:1.0,
+[T190]'Hadesarchaea archaeon YNP_N21':1.0)[U457] Hadesarchaea:1.0,
+(([T191]'candidate division MSBL1 archaeon SCGC-AAA259I09':1.0,
+[T192]'candidate division MSBL1 archaeon SCGC-AAA259E19':1.0)[U458]:1.0,
+[T193]'candidate division MSBL1 archaeon SCGC-AAA261D19':1.0)[U459] Persephonarchaea:1.0)[U460] 'p__Hadarchaeota':1.0)[U461]:1.0,
+(((([T194]'Candidatus Thorarchaeota archaeon SMTZ1-83':1.0,
+(([T195]'Candidatus Thorarchaeota archaeon SMTZ1-45':1.0,
+[T196]'Candidatus Thorarchaeota archaeon SMTZ-45':1.0)[U462]:1.0,
+[T197]'Candidatus Thorarchaeota archaeon AB_25':1.0)[U463]:1.0)[U464] Thorarchaeota:1.0,
+(([T198]'Candidatus Lokiarchaeota archaeon CR_4':1.0,
+[T199]'Candidatus Lokiarchaeota archaeon':1.0)[U465] Lokiarchaeota:1.0,
+[T200]'Candidatus Odinarchaeum yellowstonii':1.0)[U466]:1.0)[U467]:1.0,
+(([T201]'Candidatus Heimdallarchaeota archaeon LC_3':1.0,
+[T202]'Candidatus Heimdallarchaeota archaeon B3_Heim':1.0)[U468]:1.0,
+(([T203]'Candidatus Heimdallarchaeota archaeon LC_2':1.0,
+[T204]'Candidatus Heimdallarchaeota archaeon':1.0)[U469]:1.0,
+[T205]'Candidatus Heimdallarchaeota archaeon AB_125':1.0)[U470]:1.0)[U471] Heimdallarchaeota:1.0)[U472] 'p__Asgardarchaeota':1.0,
+((([T206]'Candidatus Korarchaeum cryptofilum OPF8':1.0,
+[T207]'Candidatus Korarchaeota archaeon NZ13-K':1.0)[U473]:1.0,
+[T208]'Candidatus Korarchaeota archaeon':1.0)[U474] 'p__Korarchaeota':1.0,
+(((((((([T209]'Aeropyrum pernix K1':1.0,
+(([T210]'Acidilobus saccharovorans 345-15':1.0,
+[T211]'Acidilobus sp. 7A':1.0)[U475] Acidilobus:1.0,
+[T212]'Caldisphaera lagunensis DSM 15908':1.0)[U476] Acidilobales:1.0)[U477]:1.0,
+(([T213]'Hyperthermus butylicus DSM 5456':1.0,
+[T214]'Pyrodictium delaneyi':1.0)[U478]:1.0,
+[T215]'Pyrolobus fumarii 1A':1.0)[U479] Pyrodictiaceae:1.0)[U480]:1.0,
+([T216]'Staphylothermus marinus F1':1.0,
+(([T217]'Desulfurococcus amylolyticus 1221n':1.0,
+[T218]'Thermosphaera aggregans DSM 11486':1.0)[U481]:1.0,
+[T219]'Thermogladius calderae 1633':1.0)[U482]:1.0)[U483]:1.0)[U484]:1.0,
+(([T220]'Ignicoccus hospitalis KIN4/I':1.0,
+[T221]'Ignicoccus islandicus DSM 13165':1.0)[U485] Ignicoccus:1.0,
+[T222]'Fervidicoccus fontis Kam940':1.0)[U486]:1.0)[U487]:1.0,
+(((([T223]'Sulfurisphaera tokodaii str. 7':1.0,
+[T224]'Sulfolobus acidocaldarius DSM 639':1.0)[U488]:1.0,
+([T225]'Metallosphaera sedula DSM 5348':1.0,
+[T226]'Acidianus sulfidivorans JP7':1.0)[U489]:1.0)[U490] Sulfolobaceae:1.0,
+[T227]'Sulfolobales archaeon Acd1':1.0)[U491]:1.0,
+[T228]'Zestosphaera tikiterensis':1.0)[U492]:1.0)[U493] 'o__Sulfolobales':1.0,
+(([T229]'Thermofilum pendens Hrk 5':1.0,
+[T230]'Infirmifilum uzonense':1.0)[U494] Thermofilaceae:1.0,
+((([T231]'Caldivirga maquilingensis IC-167':1.0,
+[T232]'Thermocladium modestius JCM 10088':1.0)[U495]:1.0,
+([T233]'Vulcanisaeta distributa DSM 14429':1.0,
+[T234]'Vulcanisaeta thermophila':1.0)[U496] Vulcanisaeta:1.0)[U497]:1.0,
+([T235]'Pyrobaculum ferrireducens':1.0,
+[T236]'Thermoproteus tenax Kra 1':1.0)[U498]:1.0)[U499] Thermoproteaceae:1.0)[U500] 'o__Thermoproteales':1.0)[U501] SulThe:1.0,
+([T237]'Crenarchaeota archaeon SCGC AAA471-B05 (Gearcheales)':1.0,
+(([T238]'Candidatus Marsarchaeota G1 archaeon OSP_B':1.0,
+[T239]'Candidatus Marsarchaeota G1 archaeon BE_D':1.0)[U502] 'Marsarchaeota group 1':1.0,
+([T240]'Candidatus Marsarchaeota G2 archaeon ECH_B_1':1.0,
+[T241]'Candidatus Marsarchaeota G2 archaeon OSP_D':1.0)[U503] 'Marsarchaeota group 2':1.0)[U504] 'o__Marsarchaeales':1.0)[U505]:1.0)[U506] 'c__Thermoprotei':1.0,
+(((((([T242]'miscellaneous Crenarchaeota group-6 archaeon AD8-1':1.0,
+([T243]'Candidatus Bathyarchaeota archaeon CG07_land_8_20_14_0_80_47_9':1.0,
+[T244]'Candidatus Bathyarchaeota archaeon CG_4_8_14_3_um_filter_42_8':1.0)[U507]:1.0)[U508]:1.0,
+([T245]'Candidatus Bathyarchaeota archaeon BA2':1.0,
+[T246]'Candidatus Bathyarchaeota archaeon BA1':1.0)[U509]:1.0)[U510]:1.0,
+[T247]'Candidatus Bathyarchaeota archaeon ex4484_40':1.0)[U511] 'o__Bathyarchaeales':1.0,
+([T248]'miscellaneous Crenarchaeota group archaeon SMTZ-80':1.0,
+[T249]'Candidatus Bathyarchaeota archaeon RBG_13_38_9':1.0)[U512]:1.0)[U513]:1.0,
+([T250]'Candidatus Bathyarchaeota archaeon B23':1.0,
+([T251]'Candidatus Bathyarchaeota archaeon RBG_13_52_12':1.0,
+([T252]'Candidatus Bathyarchaeota archaeon RBG_13_60_20':1.0,
+[T253]'Candidatus Bathyarchaeota archaeon RBG_16_57_9':1.0)[U514]:1.0)[U515]:1.0)[U516] 'o__TCS64':1.0)[U517] 'c__Bathyarchaeia':1.0,
+((([T254]'Candidatus Caldarchaeum subterraneum':1.0,
+([T255]'Candidatus Geocrenenecus sp. JGI 0000106-J15':1.0,
+[T256]'Candidatus Terraquivivens tikiterensis':1.0)[U518] Wolframiiraptoraceae:1.0)[U519]:1.0,
+([T257]'Aigarchaeota archaeon SCGC AAA471-E14':1.0,
+[T258]'Aigarchaeota archaeon SCGC AAA471-F17':1.0)[U520]:1.0)[U521] 'o__Caldarchaeales':1.0,
+((((((([T259]'Nitrosopumilus maritimus SCM1':1.0,
+[T260]'Cenarchaeum symbiosum A':1.0)[U522]:1.0,
+[T261]'Candidatus Nitrosopelagicus brevis':1.0)[U523]:1.0,
+([T262]'Candidatus Nitrosotenuis uzonensis':1.0,
+[T263]'Candidatus Nitrosotenuis aquarius':1.0)[U524] Nitrosotenuis:1.0)[U525]:1.0,
+([T264]'Thaumarchaeota archaeon 13_1_20CM_2_39_20':1.0,
+[T265]'Candidatus Nitrosotalea devanaterra':1.0)[U526]:1.0)[U527]:1.0,
+[T266]'Nitrososphaera viennensis EN76':1.0)[U528]:1.0,
+[T267]'Candidatus Nitrosocaldus cavascurensis':1.0)[U529] 'o__Nitrososphaerales':1.0,
+[T268]'Thaumarchaeota archaeon RBG_16_49_8':1.0)[U530]:1.0)[U531] 'c__Nitrososphaeria':1.0)[U532]:1.0)[U533] TAC:1.0)[U534] 'p__Thermoproteota':1.0)[U535] Proteoarchaeota:1.0)[U536] 'd__Archaea';
