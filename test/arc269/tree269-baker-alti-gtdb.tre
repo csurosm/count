@@ -1,0 +1,812 @@
+#| Count XXV 25.0923 [ModelBundle muiltisession]::count.io.NewickParser
+#| System: Mac OS X 15.5 aarch64
+#| Java engine: OpenJDK 64-Bit Server VM 24.0.1+9-30 (24.0.1+9-30) mixed mode, sharing, Oracle Corporation
+#| Date: Fri Sep 26 12:22:12 EDT 2025
+#| Current directory: /Users/csuros/Work/gene_content/birth-death/TKF/Count22
+#| Command-line arguments: count.io.NewickParser test/arc269/tree269-baker-alti.tre
+#LEAF	1104576	0	N[T0/1104576 len 1.0 prnt U269 chld {}, nl 1, nn 1]
+#LEAF	1974407	1	N[T1/1974407 len 1.0 prnt U269 chld {}, nl 1, nn 1]
+#LEAF	1579370	2	N[T2/1579370 len 1.0 prnt U270 chld {}, nl 1, nn 1]
+#LEAF	1974406	3	N[T3/1974406 len 1.0 prnt U271 chld {}, nl 1, nn 1]
+#LEAF	1974404	4	N[T4/1974404 len 1.0 prnt U272 chld {}, nl 1, nn 1]
+#LEAF	1974403	5	N[T5/1974403 len 1.0 prnt U273/Iainarchaeota chld {}, nl 1, nn 1]
+#LEAF	1805247	6	N[T6/1805247 len 1.0 prnt U274 chld {}, nl 1, nn 1]
+#LEAF	1974417	7	N[T7/1974417 len 1.0 prnt U274 chld {}, nl 1, nn 1]
+#LEAF	1974408	8	N[T8/1974408 len 1.0 prnt U275 chld {}, nl 1, nn 1]
+#LEAF	1531428	9	N[T9/1531428 len 1.0 prnt U276 chld {}, nl 1, nn 1]
+#LEAF	1961137	10	N[T10/1961137 len 1.0 prnt U276 chld {}, nl 1, nn 1]
+#LEAF	1920749	11	N[T11/1920749 len 1.0 prnt U277 chld {}, nl 1, nn 1]
+#LEAF	1805249	12	N[T12/1805249 len 1.0 prnt U281 chld {}, nl 1, nn 1]
+#LEAF	1805251	13	N[T13/1805251 len 1.0 prnt U279 chld {}, nl 1, nn 1]
+#LEAF	1974410	14	N[T14/1974410 len 1.0 prnt U279 chld {}, nl 1, nn 1]
+#LEAF	1974419	15	N[T15/1974419 len 1.0 prnt U280 chld {}, nl 1, nn 1]
+#LEAF	2026739	16	N[T16/2026739 len 1.0 prnt U337/UPANN chld {}, nl 1, nn 1]
+#LEAF	889962	17	N[T17/889962 len 1.0 prnt U285/Nanohaloarchaeota chld {}, nl 1, nn 1]
+#LEAF	1919221	18	N[T18/1919221 len 1.0 prnt U284/unclassified Candidatus Nanohaloarchaea chld {}, nl 1, nn 1]
+#LEAF	1737403	19	N[T19/1737403 len 1.0 prnt U284/unclassified Candidatus Nanohaloarchaea chld {}, nl 1, nn 1]
+#LEAF	1579367	20	N[T20/1579367 len 1.0 prnt U286 chld {}, nl 1, nn 1]
+#LEAF	2012502	21	N[T21/2012502 len 1.0 prnt U286 chld {}, nl 1, nn 1]
+#LEAF	2012503	22	N[T22/2012503 len 1.0 prnt U287 chld {}, nl 1, nn 1]
+#LEAF	2012505	23	N[T23/2012505 len 1.0 prnt U287 chld {}, nl 1, nn 1]
+#LEAF	228908	24	N[T24/228908 len 1.0 prnt U292/Nanoarchaeia chld {}, nl 1, nn 1]
+#LEAF	1294122	25	N[T25/1294122 len 1.0 prnt U290/Nanopusillaceae chld {}, nl 1, nn 1]
+#LEAF	1577684	26	N[T26/1577684 len 1.0 prnt U290/Nanopusillaceae chld {}, nl 1, nn 1]
+#LEAF	1852704	27	N[T27/1852704 len 1.0 prnt U291 chld {}, nl 1, nn 1]
+#LEAF	1104577	28	N[T28/1104577 len 1.0 prnt U293 chld {}, nl 1, nn 1]
+#LEAF	1579375	29	N[T29/1579375 len 1.0 prnt U293 chld {}, nl 1, nn 1]
+#LEAF	1579376	30	N[T30/1579376 len 1.0 prnt U294 chld {}, nl 1, nn 1]
+#LEAF	1579378	31	N[T31/1579378 len 1.0 prnt U294 chld {}, nl 1, nn 1]
+#LEAF	1579365	32	N[T32/1579365 len 1.0 prnt U297 chld {}, nl 1, nn 1]
+#LEAF	1974468	33	N[T33/1974468 len 1.0 prnt U296 chld {}, nl 1, nn 1]
+#LEAF	1974464	34	N[T34/1974464 len 1.0 prnt U296 chld {}, nl 1, nn 1]
+#LEAF	1579371	35	N[T35/1579371 len 1.0 prnt U299 chld {}, nl 1, nn 1]
+#LEAF	1805423	36	N[T36/1805423 len 1.0 prnt U298 chld {}, nl 1, nn 1]
+#LEAF	1974459	37	N[T37/1974459 len 1.0 prnt U298 chld {}, nl 1, nn 1]
+#LEAF	1579366	38	N[T38/1579366 len 1.0 prnt U301 chld {}, nl 1, nn 1]
+#LEAF	1805424	39	N[T39/1805424 len 1.0 prnt U301 chld {}, nl 1, nn 1]
+#LEAF	1974463	40	N[T40/1974463 len 1.0 prnt U302 chld {}, nl 1, nn 1]
+#LEAF	1579373	41	N[T41/1579373 len 1.0 prnt U304 chld {}, nl 1, nn 1]
+#LEAF	1974458	42	N[T42/1974458 len 1.0 prnt U304 chld {}, nl 1, nn 1]
+#LEAF	1974465	43	N[T43/1974465 len 1.0 prnt U306 chld {}, nl 1, nn 1]
+#LEAF	1974457	44	N[T44/1974457 len 1.0 prnt U306 chld {}, nl 1, nn 1]
+#LEAF	1974462	45	N[T45/1974462 len 1.0 prnt U307 chld {}, nl 1, nn 1]
+#LEAF	1974449	46	N[T46/1974449 len 1.0 prnt U308 chld {}, nl 1, nn 1]
+#LEAF	1579372	47	N[T47/1579372 len 1.0 prnt U312 chld {}, nl 1, nn 1]
+#LEAF	1579364	48	N[T48/1579364 len 1.0 prnt U311 chld {}, nl 1, nn 1]
+#LEAF	2012516	49	N[T49/2012516 len 1.0 prnt U311 chld {}, nl 1, nn 1]
+#LEAF	2005741	50	N[T50/2005741 len 1.0 prnt U313 chld {}, nl 1, nn 1]
+#LEAF	1801883	51	N[T51/1801883 len 1.0 prnt U314 chld {}, nl 1, nn 1]
+#LEAF	1801882	52	N[T52/1801882 len 1.0 prnt U314 chld {}, nl 1, nn 1]
+#LEAF	1579377	53	N[T53/1579377 len 1.0 prnt U316 chld {}, nl 1, nn 1]
+#LEAF	1974441	54	N[T54/1974441 len 1.0 prnt U317 chld {}, nl 1, nn 1]
+#LEAF	1974430	55	N[T55/1974430 len 1.0 prnt U318 chld {}, nl 1, nn 1]
+#LEAF	1974446	56	N[T56/1974446 len 1.0 prnt U318 chld {}, nl 1, nn 1]
+#LEAF	1974444	57	N[T57/1974444 len 1.0 prnt U319 chld {}, nl 1, nn 1]
+#LEAF	1974437	58	N[T58/1974437 len 1.0 prnt U320 chld {}, nl 1, nn 1]
+#LEAF	1974424	59	N[T59/1974424 len 1.0 prnt U320 chld {}, nl 1, nn 1]
+#LEAF	1974445	60	N[T60/1974445 len 1.0 prnt U323 chld {}, nl 1, nn 1]
+#LEAF	1801881	61	N[T61/1801881 len 1.0 prnt U324 chld {}, nl 1, nn 1]
+#LEAF	1974435	62	N[T62/1974435 len 1.0 prnt U325 chld {}, nl 1, nn 1]
+#LEAF	2012515	63	N[T63/2012515 len 1.0 prnt U326 chld {}, nl 1, nn 1]
+#LEAF	1974439	64	N[T64/1974439 len 1.0 prnt U326 chld {}, nl 1, nn 1]
+#LEAF	2012514	65	N[T65/2012514 len 1.0 prnt U328/Pacearchaeota chld {}, nl 1, nn 1]
+#LEAF	662760	66	N[T66/662760 len 1.0 prnt U330/Candidatus Parvarchaeum chld {}, nl 1, nn 1]
+#LEAF	662762	67	N[T67/662762 len 1.0 prnt U330/Candidatus Parvarchaeum chld {}, nl 1, nn 1]
+#LEAF	1975556	68	N[T68/1975556 len 1.0 prnt U331 chld {}, nl 1, nn 1]
+#LEAF	1975558	69	N[T69/1975558 len 1.0 prnt U331 chld {}, nl 1, nn 1]
+#LEAF	2013767	70	N[T70/2013767 len 1.0 prnt U335/NH chld {}, nl 1, nn 1]
+#LEAF	1849261	71	N[T71/1849261 len 1.0 prnt U341 chld {}, nl 1, nn 1]
+#LEAF	1878999	72	N[T72/1878999 len 1.0 prnt U340 chld {}, nl 1, nn 1]
+#LEAF	2012506	73	N[T73/2012506 len 1.0 prnt U339 chld {}, nl 1, nn 1]
+#LEAF	2012507	74	N[T74/2012507 len 1.0 prnt U339 chld {}, nl 1, nn 1]
+#LEAF	1849364	75	N[T75/1849364 len 1.0 prnt U342 chld {}, nl 1, nn 1]
+#LEAF	1933927	76	N[T76/1933927 len 1.0 prnt U344 chld {}, nl 1, nn 1]
+#LEAF	2014241	77	N[T77/2014241 len 1.0 prnt U343/unclassified Candidatus Altarchaeum chld {}, nl 1, nn 1]
+#LEAF	2014238	78	N[T78/2014238 len 1.0 prnt U343/unclassified Candidatus Altarchaeum chld {}, nl 1, nn 1]
+#LEAF	2013673	79	N[T79/2013673 len 1.0 prnt U345 chld {}, nl 1, nn 1]
+#LEAF	64091	80	N[T80/64091 len 1.0 prnt U348/Halobacterium chld {}, nl 1, nn 1]
+#LEAF	1407499	81	N[T81/1407499 len 1.0 prnt U348/Halobacterium chld {}, nl 1, nn 1]
+#LEAF	1604004	82	N[T82/1604004 len 1.0 prnt U349 chld {}, nl 1, nn 1]
+#LEAF	1873524	83	N[T83/1873524 len 1.0 prnt U349 chld {}, nl 1, nn 1]
+#LEAF	416348	84	N[T84/416348 len 1.0 prnt U353/Haloferacales chld {}, nl 1, nn 1]
+#LEAF	469382	85	N[T85/469382 len 1.0 prnt U351 chld {}, nl 1, nn 1]
+#LEAF	768065	86	N[T86/768065 len 1.0 prnt U351 chld {}, nl 1, nn 1]
+#LEAF	523841	87	N[T87/523841 len 1.0 prnt U352/Haloferacaceae chld {}, nl 1, nn 1]
+#LEAF	543526	88	N[T88/543526 len 1.0 prnt U354 chld {}, nl 1, nn 1]
+#LEAF	797303	89	N[T89/797303 len 1.0 prnt U354 chld {}, nl 1, nn 1]
+#LEAF	588898	90	N[T90/588898 len 1.0 prnt U355 chld {}, nl 1, nn 1]
+#LEAF	547559	91	N[T91/547559 len 1.0 prnt U358 chld {}, nl 1, nn 1]
+#LEAF	797210	92	N[T92/797210 len 1.0 prnt U357 chld {}, nl 1, nn 1]
+#LEAF	358396	93	N[T93/358396 len 1.0 prnt U356 chld {}, nl 1, nn 1]
+#LEAF	797304	94	N[T94/797304 len 1.0 prnt U356 chld {}, nl 1, nn 1]
+#LEAF	694430	95	N[T95/694430 len 1.0 prnt U360 chld {}, nl 1, nn 1]
+#LEAF	797299	96	N[T96/797299 len 1.0 prnt U361/Natrialbaceae chld {}, nl 1, nn 1]
+#LEAF	795797	97	N[T97/795797 len 1.0 prnt U362 chld {}, nl 1, nn 1]
+#LEAF	485914	98	N[T98/485914 len 1.0 prnt U364 chld {}, nl 1, nn 1]
+#LEAF	1033806	99	N[T99/1033806 len 1.0 prnt U364 chld {}, nl 1, nn 1]
+#LEAF	348780	100	N[T100/348780 len 1.0 prnt U365/Natronomonas chld {}, nl 1, nn 1]
+#LEAF	268739	101	N[T101/268739 len 1.0 prnt U365/Natronomonas chld {}, nl 1, nn 1]
+#LEAF	1903181	102	N[T102/1903181 len 1.0 prnt U369/Methanonatronarchaeaceae chld {}, nl 1, nn 1]
+#LEAF	1927129	103	N[T103/1927129 len 1.0 prnt U369/Methanonatronarchaeaceae chld {}, nl 1, nn 1]
+#LEAF	188937	104	N[T104/188937 len 1.0 prnt U371 chld {}, nl 1, nn 1]
+#LEAF	1434120	105	N[T105/1434120 len 1.0 prnt U371 chld {}, nl 1, nn 1]
+#LEAF	213585	106	N[T106/213585 len 1.0 prnt U372 chld {}, nl 1, nn 1]
+#LEAF	1434108	107	N[T107/1434108 len 1.0 prnt U373 chld {}, nl 1, nn 1]
+#LEAF	523844	108	N[T108/523844 len 1.0 prnt U374/Methanosarcina chld {}, nl 1, nn 1]
+#LEAF	259564	109	N[T109/259564 len 1.0 prnt U375 chld {}, nl 1, nn 1]
+#LEAF	2177	110	N[T110/2177 len 1.0 prnt U375 chld {}, nl 1, nn 1]
+#LEAF	1094980	111	N[T111/1094980 len 1.0 prnt U376 chld {}, nl 1, nn 1]
+#LEAF	867904	112	N[T112/867904 len 1.0 prnt U376 chld {}, nl 1, nn 1]
+#LEAF	644295	113	N[T113/644295 len 1.0 prnt U378 chld {}, nl 1, nn 1]
+#LEAF	679901	114	N[T114/679901 len 1.0 prnt U378 chld {}, nl 1, nn 1]
+#LEAF	990316	115	N[T115/990316 len 1.0 prnt U381 chld {}, nl 1, nn 1]
+#LEAF	351160	116	N[T116/351160 len 1.0 prnt U382/Methanocella chld {}, nl 1, nn 1]
+#LEAF	1041930	117	N[T117/1041930 len 1.0 prnt U382/Methanocella chld {}, nl 1, nn 1]
+#LEAF	323259	118	N[T118/323259 len 1.0 prnt U385 chld {}, nl 1, nn 1]
+#LEAF	521011	119	N[T119/521011 len 1.0 prnt U384/Methanoregulaceae chld {}, nl 1, nn 1]
+#LEAF	593750	120	N[T120/593750 len 1.0 prnt U384/Methanoregulaceae chld {}, nl 1, nn 1]
+#LEAF	679926	121	N[T121/679926 len 1.0 prnt U386/Methanomicrobiaceae chld {}, nl 1, nn 1]
+#LEAF	1201294	122	N[T122/1201294 len 1.0 prnt U386/Methanomicrobiaceae chld {}, nl 1, nn 1]
+#LEAF	410358	123	N[T123/410358 len 1.0 prnt U388/Methanomicrobiales chld {}, nl 1, nn 1]
+#LEAF	224325	124	N[T124/224325 len 1.0 prnt U391 chld {}, nl 1, nn 1]
+#LEAF	572546	125	N[T125/572546 len 1.0 prnt U391 chld {}, nl 1, nn 1]
+#LEAF	693661	126	N[T126/693661 len 1.0 prnt U392 chld {}, nl 1, nn 1]
+#LEAF	387631	127	N[T127/387631 len 1.0 prnt U392 chld {}, nl 1, nn 1]
+#LEAF	589924	128	N[T128/589924 len 1.0 prnt U395 chld {}, nl 1, nn 1]
+#LEAF	565033	129	N[T129/565033 len 1.0 prnt U394/Geoglobus chld {}, nl 1, nn 1]
+#LEAF	113653	130	N[T130/113653 len 1.0 prnt U394/Geoglobus chld {}, nl 1, nn 1]
+#LEAF	1122961	131	N[T131/1122961 len 1.0 prnt U398 chld {}, nl 1, nn 1]
+#LEAF	74969	132	N[T132/74969 len 1.0 prnt U398 chld {}, nl 1, nn 1]
+#LEAF	667135	133	N[T133/667135 len 1.0 prnt U400 chld {}, nl 1, nn 1]
+#LEAF	115547	134	N[T134/115547 len 1.0 prnt U399 chld {}, nl 1, nn 1]
+#LEAF	1961136	135	N[T135/1961136 len 1.0 prnt U399 chld {}, nl 1, nn 1]
+#LEAF	261391	136	N[T136/261391 len 1.0 prnt U401 chld {}, nl 1, nn 1]
+#LEAF	1673428	137	N[T137/1673428 len 1.0 prnt U401 chld {}, nl 1, nn 1]
+#LEAF	1961135	138	N[T138/1961135 len 1.0 prnt U402 chld {}, nl 1, nn 1]
+#LEAF	273116	139	N[T139/273116 len 1.0 prnt U405/Thermoplasma chld {}, nl 1, nn 1]
+#LEAF	273075	140	N[T140/273075 len 1.0 prnt U405/Thermoplasma chld {}, nl 1, nn 1]
+#LEAF	667138	141	N[T141/667138 len 1.0 prnt U407 chld {}, nl 1, nn 1]
+#LEAF	439481	142	N[T142/439481 len 1.0 prnt U408/Aciduliprofundum chld {}, nl 1, nn 1]
+#LEAF	2060325	143	N[T143/2060325 len 1.0 prnt U408/Aciduliprofundum chld {}, nl 1, nn 1]
+#LEAF	1236689	144	N[T144/1236689 len 1.0 prnt U410 chld {}, nl 1, nn 1]
+#LEAF	1054217	145	N[T145/1054217 len 1.0 prnt U410 chld {}, nl 1, nn 1]
+#LEAF	1577791	146	N[T146/1577791 len 1.0 prnt U411 chld {}, nl 1, nn 1]
+#LEAF	1295009	147	N[T147/1295009 len 1.0 prnt U412 chld {}, nl 1, nn 1]
+#LEAF	2007298	148	N[T148/2007298 len 1.0 prnt U414 chld {}, nl 1, nn 1]
+#LEAF	2007297	149	N[T149/2007297 len 1.0 prnt U414 chld {}, nl 1, nn 1]
+#LEAF	2007296	150	N[T150/2007296 len 1.0 prnt U415 chld {}, nl 1, nn 1]
+#LEAF	2163009	151	N[T151/2163009 len 1.0 prnt U416/Poseidoniales chld {}, nl 1, nn 1]
+#LEAF	1888995	152	N[T152/1888995 len 1.0 prnt U417 chld {}, nl 1, nn 1]
+#LEAF	1888997	153	N[T153/1888997 len 1.0 prnt U417 chld {}, nl 1, nn 1]
+#LEAF	1889001	154	N[T154/1889001 len 1.0 prnt U418/Thermoprofundales chld {}, nl 1, nn 1]
+#LEAF	2013852	155	N[T155/2013852 len 1.0 prnt U423/unclassified Thermoplasmata chld {}, nl 1, nn 1]
+#LEAF	1933279	156	N[T156/1933279 len 1.0 prnt U422 chld {}, nl 1, nn 1]
+#LEAF	1933281	157	N[T157/1933281 len 1.0 prnt U421 chld {}, nl 1, nn 1]
+#LEAF	1933280	158	N[T158/1933280 len 1.0 prnt U421 chld {}, nl 1, nn 1]
+#LEAF	406327	159	N[T159/406327 len 1.0 prnt U427/Methanococcaceae chld {}, nl 1, nn 1]
+#LEAF	419665	160	N[T160/419665 len 1.0 prnt U426 chld {}, nl 1, nn 1]
+#LEAF	647113	161	N[T161/647113 len 1.0 prnt U426 chld {}, nl 1, nn 1]
+#LEAF	880724	162	N[T162/880724 len 1.0 prnt U428 chld {}, nl 1, nn 1]
+#LEAF	573064	163	N[T163/573064 len 1.0 prnt U429 chld {}, nl 1, nn 1]
+#LEAF	579137	164	N[T164/579137 len 1.0 prnt U429 chld {}, nl 1, nn 1]
+#LEAF	573063	165	N[T165/573063 len 1.0 prnt U430/Methanocaldococcus chld {}, nl 1, nn 1]
+#LEAF	190192	166	N[T166/190192 len 1.0 prnt U433/Methanopyrus chld {}, nl 1, nn 1]
+#LEAF	1937005	167	N[T167/1937005 len 1.0 prnt U432/unclassified Methanopyrus chld {}, nl 1, nn 1]
+#LEAF	1937004	168	N[T168/1937004 len 1.0 prnt U432/unclassified Methanopyrus chld {}, nl 1, nn 1]
+#LEAF	339860	169	N[T169/339860 len 1.0 prnt U434 chld {}, nl 1, nn 1]
+#LEAF	868131	170	N[T170/868131 len 1.0 prnt U434 chld {}, nl 1, nn 1]
+#LEAF	420247	171	N[T171/420247 len 1.0 prnt U435 chld {}, nl 1, nn 1]
+#LEAF	79929	172	N[T172/79929 len 1.0 prnt U436/Methanobacteriaceae chld {}, nl 1, nn 1]
+#LEAF	523846	173	N[T173/523846 len 1.0 prnt U437/Methanobacteriales chld {}, nl 1, nn 1]
+#LEAF	186497	174	N[T174/186497 len 1.0 prnt U442/Pyrococcus chld {}, nl 1, nn 1]
+#LEAF	70601	175	N[T175/70601 len 1.0 prnt U442/Pyrococcus chld {}, nl 1, nn 1]
+#LEAF	1712654	176	N[T176/1712654 len 1.0 prnt U445 chld {}, nl 1, nn 1]
+#LEAF	71998	177	N[T177/71998 len 1.0 prnt U443 chld {}, nl 1, nn 1]
+#LEAF	49899	178	N[T178/49899 len 1.0 prnt U443 chld {}, nl 1, nn 1]
+#LEAF	277988	179	N[T179/277988 len 1.0 prnt U444 chld {}, nl 1, nn 1]
+#LEAF	391623	180	N[T180/391623 len 1.0 prnt U447 chld {}, nl 1, nn 1]
+#LEAF	582419	181	N[T181/582419 len 1.0 prnt U447 chld {}, nl 1, nn 1]
+#LEAF	604354	182	N[T182/604354 len 1.0 prnt U449 chld {}, nl 1, nn 1]
+#LEAF	523849	183	N[T183/523849 len 1.0 prnt U449 chld {}, nl 1, nn 1]
+#LEAF	1343739	184	N[T184/1343739 len 1.0 prnt U451/Thermococcaceae chld {}, nl 1, nn 1]
+#LEAF	1803813	185	N[T185/1803813 len 1.0 prnt U452/Theionarchaea chld {}, nl 1, nn 1]
+#LEAF	1803814	186	N[T186/1803814 len 1.0 prnt U452/Theionarchaea chld {}, nl 1, nn 1]
+#LEAF	1775754	187	N[T187/1775754 len 1.0 prnt U455 chld {}, nl 1, nn 1]
+#LEAF	1776334	188	N[T188/1776334 len 1.0 prnt U455 chld {}, nl 1, nn 1]
+#LEAF	1775755	189	N[T189/1775755 len 1.0 prnt U456 chld {}, nl 1, nn 1]
+#LEAF	1776333	190	N[T190/1776333 len 1.0 prnt U457/Hadesarchaea chld {}, nl 1, nn 1]
+#LEAF	1698267	191	N[T191/1698267 len 1.0 prnt U458 chld {}, nl 1, nn 1]
+#LEAF	1698264	192	N[T192/1698264 len 1.0 prnt U458 chld {}, nl 1, nn 1]
+#LEAF	1698273	193	N[T193/1698273 len 1.0 prnt U459/Persephonarchaea chld {}, nl 1, nn 1]
+#LEAF	1706445	194	N[T194/1706445 len 1.0 prnt U464/Thorarchaeota chld {}, nl 1, nn 1]
+#LEAF	1706444	195	N[T195/1706444 len 1.0 prnt U462 chld {}, nl 1, nn 1]
+#LEAF	1706443	196	N[T196/1706443 len 1.0 prnt U462 chld {}, nl 1, nn 1]
+#LEAF	1837170	197	N[T197/1837170 len 1.0 prnt U463 chld {}, nl 1, nn 1]
+#LEAF	1849166	198	N[T198/1849166 len 1.0 prnt U465/Lokiarchaeota chld {}, nl 1, nn 1]
+#LEAF	2053489	199	N[T199/2053489 len 1.0 prnt U465/Lokiarchaeota chld {}, nl 1, nn 1]
+#LEAF	1841599	200	N[T200/1841599 len 1.0 prnt U466 chld {}, nl 1, nn 1]
+#LEAF	1841598	201	N[T201/1841598 len 1.0 prnt U468 chld {}, nl 1, nn 1]
+#LEAF	2012493	202	N[T202/2012493 len 1.0 prnt U468 chld {}, nl 1, nn 1]
+#LEAF	1841597	203	N[T203/1841597 len 1.0 prnt U469 chld {}, nl 1, nn 1]
+#LEAF	2026747	204	N[T204/2026747 len 1.0 prnt U469 chld {}, nl 1, nn 1]
+#LEAF	1841596	205	N[T205/1841596 len 1.0 prnt U470 chld {}, nl 1, nn 1]
+#LEAF	374847	206	N[T206/374847 len 1.0 prnt U473 chld {}, nl 1, nn 1]
+#LEAF	1868214	207	N[T207/1868214 len 1.0 prnt U473 chld {}, nl 1, nn 1]
+#LEAF	2056630	208	N[T208/2056630 len 1.0 prnt U474/Korarchaeota chld {}, nl 1, nn 1]
+#LEAF	272557	209	N[T209/272557 len 1.0 prnt U477 chld {}, nl 1, nn 1]
+#LEAF	666510	210	N[T210/666510 len 1.0 prnt U475/Acidilobus chld {}, nl 1, nn 1]
+#LEAF	1577685	211	N[T211/1577685 len 1.0 prnt U475/Acidilobus chld {}, nl 1, nn 1]
+#LEAF	1056495	212	N[T212/1056495 len 1.0 prnt U476/Acidilobales chld {}, nl 1, nn 1]
+#LEAF	415426	213	N[T213/415426 len 1.0 prnt U478 chld {}, nl 1, nn 1]
+#LEAF	1273541	214	N[T214/1273541 len 1.0 prnt U478 chld {}, nl 1, nn 1]
+#LEAF	694429	215	N[T215/694429 len 1.0 prnt U479/Pyrodictiaceae chld {}, nl 1, nn 1]
+#LEAF	399550	216	N[T216/399550 len 1.0 prnt U483 chld {}, nl 1, nn 1]
+#LEAF	490899	217	N[T217/490899 len 1.0 prnt U481 chld {}, nl 1, nn 1]
+#LEAF	633148	218	N[T218/633148 len 1.0 prnt U481 chld {}, nl 1, nn 1]
+#LEAF	1184251	219	N[T219/1184251 len 1.0 prnt U482 chld {}, nl 1, nn 1]
+#LEAF	453591	220	N[T220/453591 len 1.0 prnt U485/Ignicoccus chld {}, nl 1, nn 1]
+#LEAF	940295	221	N[T221/940295 len 1.0 prnt U485/Ignicoccus chld {}, nl 1, nn 1]
+#LEAF	1163730	222	N[T222/1163730 len 1.0 prnt U486 chld {}, nl 1, nn 1]
+#LEAF	273063	223	N[T223/273063 len 1.0 prnt U488 chld {}, nl 1, nn 1]
+#LEAF	330779	224	N[T224/330779 len 1.0 prnt U488 chld {}, nl 1, nn 1]
+#LEAF	399549	225	N[T225/399549 len 1.0 prnt U489 chld {}, nl 1, nn 1]
+#LEAF	619593	226	N[T226/619593 len 1.0 prnt U489 chld {}, nl 1, nn 1]
+#LEAF	1294123	227	N[T227/1294123 len 1.0 prnt U491/Sulfolobales chld {}, nl 1, nn 1]
+#LEAF	1973259	228	N[T228/1973259 len 1.0 prnt U492 chld {}, nl 1, nn 1]
+#LEAF	368408	229	N[T229/368408 len 1.0 prnt U494/Thermofilaceae chld {}, nl 1, nn 1]
+#LEAF	1550241	230	N[T230/1550241 len 1.0 prnt U494/Thermofilaceae chld {}, nl 1, nn 1]
+#LEAF	397948	231	N[T231/397948 len 1.0 prnt U495 chld {}, nl 1, nn 1]
+#LEAF	1293040	232	N[T232/1293040 len 1.0 prnt U495 chld {}, nl 1, nn 1]
+#LEAF	572478	233	N[T233/572478 len 1.0 prnt U496/Vulcanisaeta chld {}, nl 1, nn 1]
+#LEAF	867917	234	N[T234/867917 len 1.0 prnt U496/Vulcanisaeta chld {}, nl 1, nn 1]
+#LEAF	1104324	235	N[T235/1104324 len 1.0 prnt U498 chld {}, nl 1, nn 1]
+#LEAF	768679	236	N[T236/768679 len 1.0 prnt U498 chld {}, nl 1, nn 1]
+#LEAF	1052801	237	N[T237/1052801 len 1.0 prnt U505 chld {}, nl 1, nn 1]
+#LEAF	1978153	238	N[T238/1978153 len 1.0 prnt U502/Marsarchaeota group 1 chld {}, nl 1, nn 1]
+#LEAF	1978156	239	N[T239/1978156 len 1.0 prnt U502/Marsarchaeota group 1 chld {}, nl 1, nn 1]
+#LEAF	1978159	240	N[T240/1978159 len 1.0 prnt U503/Marsarchaeota group 2 chld {}, nl 1, nn 1]
+#LEAF	1978157	241	N[T241/1978157 len 1.0 prnt U503/Marsarchaeota group 2 chld {}, nl 1, nn 1]
+#LEAF	1685126	242	N[T242/1685126 len 1.0 prnt U508 chld {}, nl 1, nn 1]
+#LEAF	1974385	243	N[T243/1974385 len 1.0 prnt U507 chld {}, nl 1, nn 1]
+#LEAF	1974384	244	N[T244/1974384 len 1.0 prnt U507 chld {}, nl 1, nn 1]
+#LEAF	1700836	245	N[T245/1700836 len 1.0 prnt U509 chld {}, nl 1, nn 1]
+#LEAF	1700835	246	N[T246/1700835 len 1.0 prnt U509 chld {}, nl 1, nn 1]
+#LEAF	2012513	247	N[T247/2012513 len 1.0 prnt U511 chld {}, nl 1, nn 1]
+#LEAF	1685135	248	N[T248/1685135 len 1.0 prnt U512 chld {}, nl 1, nn 1]
+#LEAF	1797377	249	N[T249/1797377 len 1.0 prnt U512 chld {}, nl 1, nn 1]
+#LEAF	1779367	250	N[T250/1779367 len 1.0 prnt U516 chld {}, nl 1, nn 1]
+#LEAF	1797379	251	N[T251/1797379 len 1.0 prnt U515 chld {}, nl 1, nn 1]
+#LEAF	1797380	252	N[T252/1797380 len 1.0 prnt U514 chld {}, nl 1, nn 1]
+#LEAF	1797382	253	N[T253/1797382 len 1.0 prnt U514 chld {}, nl 1, nn 1]
+#LEAF	311458	254	N[T254/311458 len 1.0 prnt U519 chld {}, nl 1, nn 1]
+#LEAF	1130285	255	N[T255/1130285 len 1.0 prnt U518/Candidatus Wolframiiraptoraceae chld {}, nl 1, nn 1]
+#LEAF	1980982	256	N[T256/1980982 len 1.0 prnt U518/Candidatus Wolframiiraptoraceae chld {}, nl 1, nn 1]
+#LEAF	1052827	257	N[T257/1052827 len 1.0 prnt U520 chld {}, nl 1, nn 1]
+#LEAF	1052829	258	N[T258/1052829 len 1.0 prnt U520 chld {}, nl 1, nn 1]
+#LEAF	436308	259	N[T259/436308 len 1.0 prnt U522 chld {}, nl 1, nn 1]
+#LEAF	414004	260	N[T260/414004 len 1.0 prnt U522 chld {}, nl 1, nn 1]
+#LEAF	1410606	261	N[T261/1410606 len 1.0 prnt U523 chld {}, nl 1, nn 1]
+#LEAF	1407055	262	N[T262/1407055 len 1.0 prnt U524/Candidatus Nitrosotenuis chld {}, nl 1, nn 1]
+#LEAF	1846278	263	N[T263/1846278 len 1.0 prnt U524/Candidatus Nitrosotenuis chld {}, nl 1, nn 1]
+#LEAF	1805383	264	N[T264/1805383 len 1.0 prnt U526 chld {}, nl 1, nn 1]
+#LEAF	1078905	265	N[T265/1078905 len 1.0 prnt U526 chld {}, nl 1, nn 1]
+#LEAF	926571	266	N[T266/926571 len 1.0 prnt U528 chld {}, nl 1, nn 1]
+#LEAF	2058097	267	N[T267/2058097 len 1.0 prnt U529 chld {}, nl 1, nn 1]
+#LEAF	1802371	268	N[T268/1802371 len 1.0 prnt U530 chld {}, nl 1, nn 1]
+#NODE	U269	269	N[U269 len 1.0 prnt U270 chld {T0/1104576, T1/1974407}, nl 2, nn 3]
+#NODE	U270	270	N[U270 len 1.0 prnt U271 chld {U269, T2/1579370}, nl 3, nn 5]
+#NODE	U271	271	N[U271 len 1.0 prnt U272 chld {U270, T3/1974406}, nl 4, nn 7]
+#NODE	U272	272	N[U272 len 1.0 prnt U273/Iainarchaeota chld {U271, T4/1974404}, nl 5, nn 9]
+#NODE	U273	273	N[U273/Iainarchaeota len 1.0 prnt U283/IaiMic chld {U272, T5/1974403}, nl 6, nn 11]
+#NODE	U274	274	N[U274 len 1.0 prnt U275 chld {T6/1805247, T7/1974417}, nl 2, nn 3]
+#NODE	U275	275	N[U275 len 1.0 prnt U278 chld {U274, T8/1974408}, nl 3, nn 5]
+#NODE	U276	276	N[U276 len 1.0 prnt U277 chld {T9/1531428, T10/1961137}, nl 2, nn 3]
+#NODE	U277	277	N[U277 len 1.0 prnt U278 chld {U276, T11/1920749}, nl 3, nn 5]
+#NODE	U278	278	N[U278 len 1.0 prnt U282/Micrarchaeota chld {U275, U277}, nl 6, nn 11]
+#NODE	U279	279	N[U279 len 1.0 prnt U280 chld {T13/1805251, T14/1974410}, nl 2, nn 3]
+#NODE	U280	280	N[U280 len 1.0 prnt U281 chld {U279, T15/1974419}, nl 3, nn 5]
+#NODE	U281	281	N[U281 len 1.0 prnt U282/Micrarchaeota chld {T12/1805249, U280}, nl 4, nn 7]
+#NODE	U282	282	N[U282/Micrarchaeota len 1.0 prnt U283/IaiMic chld {U278, U281}, nl 10, nn 19]
+#NODE	U283	283	N[U283/IaiMic len 2.0 prnt U338 chld {U273/Iainarchaeota, U282/Micrarchaeota}, nl 16, nn 31]
+#NODE	U284	284	N[U284/unclassified Candidatus Nanohaloarchaea len 1.0 prnt U285/Nanohaloarchaeota chld {T18/1919221, T19/1737403}, nl 2, nn 3]
+#NODE	U285	285	N[U285/Nanohaloarchaeota len 1.0 prnt U289/AN chld {T17/889962, U284/unclassified Candidatus Nanohaloarchaea}, nl 3, nn 5]
+#NODE	U286	286	N[U286 len 1.0 prnt U288/Aenigmarchaeota chld {T20/1579367, T21/2012502}, nl 2, nn 3]
+#NODE	U287	287	N[U287 len 1.0 prnt U288/Aenigmarchaeota chld {T22/2012503, T23/2012505}, nl 2, nn 3]
+#NODE	U288	288	N[U288/Aenigmarchaeota len 1.0 prnt U289/AN chld {U286, U287}, nl 4, nn 7]
+#NODE	U289	289	N[U289/AN len 1.0 prnt U336/PANN chld {U285/Nanohaloarchaeota, U288/Aenigmarchaeota}, nl 7, nn 13]
+#NODE	U290	290	N[U290/Nanopusillaceae len 1.0 prnt U291 chld {T25/1294122, T26/1577684}, nl 2, nn 3]
+#NODE	U291	291	N[U291 len 1.0 prnt U292/Nanoarchaeia chld {U290/Nanopusillaceae, T27/1852704}, nl 3, nn 5]
+#NODE	U292	292	N[U292/Nanoarchaeia len 1.0 prnt U334/Nanoarchaeota chld {T24/228908, U291}, nl 4, nn 7]
+#NODE	U293	293	N[U293 len 1.0 prnt U295 chld {T28/1104577, T29/1579375}, nl 2, nn 3]
+#NODE	U294	294	N[U294 len 1.0 prnt U295 chld {T30/1579376, T31/1579378}, nl 2, nn 3]
+#NODE	U295	295	N[U295 len 1.0 prnt U310/Woesearchaeota chld {U293, U294}, nl 4, nn 7]
+#NODE	U296	296	N[U296 len 1.0 prnt U297 chld {T33/1974468, T34/1974464}, nl 2, nn 3]
+#NODE	U297	297	N[U297 len 1.0 prnt U300 chld {T32/1579365, U296}, nl 3, nn 5]
+#NODE	U298	298	N[U298 len 1.0 prnt U299 chld {T36/1805423, T37/1974459}, nl 2, nn 3]
+#NODE	U299	299	N[U299 len 1.0 prnt U300 chld {T35/1579371, U298}, nl 3, nn 5]
+#NODE	U300	300	N[U300 len 1.0 prnt U303 chld {U297, U299}, nl 6, nn 11]
+#NODE	U301	301	N[U301 len 1.0 prnt U302 chld {T38/1579366, T39/1805424}, nl 2, nn 3]
+#NODE	U302	302	N[U302 len 1.0 prnt U303 chld {U301, T40/1974463}, nl 3, nn 5]
+#NODE	U303	303	N[U303 len 1.0 prnt U305 chld {U300, U302}, nl 9, nn 17]
+#NODE	U304	304	N[U304 len 1.0 prnt U305 chld {T41/1579373, T42/1974458}, nl 2, nn 3]
+#NODE	U305	305	N[U305 len 1.0 prnt U309 chld {U303, U304}, nl 11, nn 21]
+#NODE	U306	306	N[U306 len 1.0 prnt U307 chld {T43/1974465, T44/1974457}, nl 2, nn 3]
+#NODE	U307	307	N[U307 len 1.0 prnt U308 chld {U306, T45/1974462}, nl 3, nn 5]
+#NODE	U308	308	N[U308 len 1.0 prnt U309 chld {U307, T46/1974449}, nl 4, nn 7]
+#NODE	U309	309	N[U309 len 1.0 prnt U310/Woesearchaeota chld {U305, U308}, nl 15, nn 29]
+#NODE	U310	310	N[U310/Woesearchaeota len 1.0 prnt U329/WoePac chld {U295, U309}, nl 19, nn 37]
+#NODE	U311	311	N[U311 len 1.0 prnt U312 chld {T48/1579364, T49/2012516}, nl 2, nn 3]
+#NODE	U312	312	N[U312 len 1.0 prnt U313 chld {T47/1579372, U311}, nl 3, nn 5]
+#NODE	U313	313	N[U313 len 1.0 prnt U315 chld {U312, T50/2005741}, nl 4, nn 7]
+#NODE	U314	314	N[U314 len 1.0 prnt U315 chld {T51/1801883, T52/1801882}, nl 2, nn 3]
+#NODE	U315	315	N[U315 len 1.0 prnt U316 chld {U313, U314}, nl 6, nn 11]
+#NODE	U316	316	N[U316 len 1.0 prnt U317 chld {U315, T53/1579377}, nl 7, nn 13]
+#NODE	U317	317	N[U317 len 1.0 prnt U322 chld {U316, T54/1974441}, nl 8, nn 15]
+#NODE	U318	318	N[U318 len 1.0 prnt U319 chld {T55/1974430, T56/1974446}, nl 2, nn 3]
+#NODE	U319	319	N[U319 len 1.0 prnt U321 chld {U318, T57/1974444}, nl 3, nn 5]
+#NODE	U320	320	N[U320 len 1.0 prnt U321 chld {T58/1974437, T59/1974424}, nl 2, nn 3]
+#NODE	U321	321	N[U321 len 1.0 prnt U322 chld {U319, U320}, nl 5, nn 9]
+#NODE	U322	322	N[U322 len 1.0 prnt U323 chld {U317, U321}, nl 13, nn 25]
+#NODE	U323	323	N[U323 len 1.0 prnt U324 chld {U322, T60/1974445}, nl 14, nn 27]
+#NODE	U324	324	N[U324 len 1.0 prnt U325 chld {U323, T61/1801881}, nl 15, nn 29]
+#NODE	U325	325	N[U325 len 1.0 prnt U327 chld {U324, T62/1974435}, nl 16, nn 31]
+#NODE	U326	326	N[U326 len 1.0 prnt U327 chld {T63/2012515, T64/1974439}, nl 2, nn 3]
+#NODE	U327	327	N[U327 len 1.0 prnt U328/Pacearchaeota chld {U325, U326}, nl 18, nn 35]
+#NODE	U328	328	N[U328/Pacearchaeota len 1.0 prnt U329/WoePac chld {U327, T65/2012514}, nl 19, nn 37]
+#NODE	U329	329	N[U329/WoePac len 1.0 prnt U333/WPP chld {U310/Woesearchaeota, U328/Pacearchaeota}, nl 38, nn 75]
+#NODE	U330	330	N[U330/Candidatus Parvarchaeum len 1.0 prnt U332/Parvarchaeota chld {T66/662760, T67/662762}, nl 2, nn 3]
+#NODE	U331	331	N[U331 len 1.0 prnt U332/Parvarchaeota chld {T68/1975556, T69/1975558}, nl 2, nn 3]
+#NODE	U332	332	N[U332/Parvarchaeota len 1.0 prnt U333/WPP chld {U330/Candidatus Parvarchaeum, U331}, nl 4, nn 7]
+#NODE	U333	333	N[U333/WPP len 1.0 prnt U334/Nanoarchaeota chld {U329/WoePac, U332/Parvarchaeota}, nl 42, nn 83]
+#NODE	U334	334	N[U334/Nanoarchaeota len 1.0 prnt U335/NH chld {U292/Nanoarchaeia, U333/WPP}, nl 46, nn 91]
+#NODE	U335	335	N[U335/NH len 1.0 prnt U336/PANN chld {U334/Nanoarchaeota, T70/2013767}, nl 47, nn 93]
+#NODE	U336	336	N[U336/PANN len 1.0 prnt U337/UPANN chld {U289/AN, U335/NH}, nl 54, nn 107]
+#NODE	U337	337	N[U337/UPANN len 1.0 prnt U338 chld {T16/2026739, U336/PANN}, nl 55, nn 109]
+#NODE	U338	338	N[U338 len 1.0 prnt U347/DPANN chld {U283/IaiMic, U337/UPANN}, nl 71, nn 141]
+#NODE	U339	339	N[U339 len 1.0 prnt U340 chld {T73/2012506, T74/2012507}, nl 2, nn 3]
+#NODE	U340	340	N[U340 len 1.0 prnt U341 chld {T72/1878999, U339}, nl 3, nn 5]
+#NODE	U341	341	N[U341 len 1.0 prnt U342 chld {T71/1849261, U340}, nl 4, nn 7]
+#NODE	U342	342	N[U342 len 1.0 prnt U346/Altiarchaeota chld {U341, T75/1849364}, nl 5, nn 9]
+#NODE	U343	343	N[U343/unclassified Candidatus Altarchaeum len 1.0 prnt U344 chld {T77/2014241, T78/2014238}, nl 2, nn 3]
+#NODE	U344	344	N[U344 len 1.0 prnt U345 chld {T76/1933927, U343/unclassified Candidatus Altarchaeum}, nl 3, nn 5]
+#NODE	U345	345	N[U345 len 1.0 prnt U346/Altiarchaeota chld {U344, T79/2013673}, nl 4, nn 7]
+#NODE	U346	346	N[U346/Altiarchaeota len 1.0 prnt U347/DPANN chld {U342, U345}, nl 9, nn 17]
+#NODE	U347	347	N[U347/DPANN len 1.0 prnt U441 chld {U338, U346/Altiarchaeota}, nl 80, nn 159]
+#NODE	U348	348	N[U348/Halobacterium len 1.0 prnt U350 chld {T80/64091, T81/1407499}, nl 2, nn 3]
+#NODE	U349	349	N[U349 len 1.0 prnt U350 chld {T82/1604004, T83/1873524}, nl 2, nn 3]
+#NODE	U350	350	N[U350 len 1.0 prnt U368/Halobacteria chld {U348/Halobacterium, U349}, nl 4, nn 7]
+#NODE	U351	351	N[U351 len 1.0 prnt U352/Haloferacaceae chld {T85/469382, T86/768065}, nl 2, nn 3]
+#NODE	U352	352	N[U352/Haloferacaceae len 1.0 prnt U353/Haloferacales chld {U351, T87/523841}, nl 3, nn 5]
+#NODE	U353	353	N[U353/Haloferacales len 1.0 prnt U363 chld {T84/416348, U352/Haloferacaceae}, nl 4, nn 7]
+#NODE	U354	354	N[U354 len 1.0 prnt U355 chld {T88/543526, T89/797303}, nl 2, nn 3]
+#NODE	U355	355	N[U355 len 1.0 prnt U359 chld {U354, T90/588898}, nl 3, nn 5]
+#NODE	U356	356	N[U356 len 1.0 prnt U357 chld {T93/358396, T94/797304}, nl 2, nn 3]
+#NODE	U357	357	N[U357 len 1.0 prnt U358 chld {T92/797210, U356}, nl 3, nn 5]
+#NODE	U358	358	N[U358 len 1.0 prnt U359 chld {T91/547559, U357}, nl 4, nn 7]
+#NODE	U359	359	N[U359 len 1.0 prnt U360 chld {U355, U358}, nl 7, nn 13]
+#NODE	U360	360	N[U360 len 1.0 prnt U361/Natrialbaceae chld {U359, T95/694430}, nl 8, nn 15]
+#NODE	U361	361	N[U361/Natrialbaceae len 1.0 prnt U362 chld {U360, T96/797299}, nl 9, nn 17]
+#NODE	U362	362	N[U362 len 1.0 prnt U363 chld {U361/Natrialbaceae, T97/795797}, nl 10, nn 19]
+#NODE	U363	363	N[U363 len 1.0 prnt U367 chld {U353/Haloferacales, U362}, nl 14, nn 27]
+#NODE	U364	364	N[U364 len 1.0 prnt U366/Haloarculaceae chld {T98/485914, T99/1033806}, nl 2, nn 3]
+#NODE	U365	365	N[U365/Natronomonas len 1.0 prnt U366/Haloarculaceae chld {T100/348780, T101/268739}, nl 2, nn 3]
+#NODE	U366	366	N[U366/Haloarculaceae len 1.0 prnt U367 chld {U364, U365/Natronomonas}, nl 4, nn 7]
+#NODE	U367	367	N[U367 len 1.0 prnt U368/Halobacteria chld {U363, U366/Haloarculaceae}, nl 18, nn 35]
+#NODE	U368	368	N[U368/Halobacteria len 1.0 prnt U370 chld {U350, U367}, nl 22, nn 43]
+#NODE	U369	369	N[U369/Methanonatronarchaeaceae len 1.0 prnt U370 chld {T102/1903181, T103/1927129}, nl 2, nn 3]
+#NODE	U370	370	N[U370 len 1.0 prnt U390 chld {U368/Halobacteria, U369/Methanonatronarchaeaceae}, nl 24, nn 47]
+#NODE	U371	371	N[U371 len 1.0 prnt U372 chld {T104/188937, T105/1434120}, nl 2, nn 3]
+#NODE	U372	372	N[U372 len 1.0 prnt U373 chld {U371, T106/213585}, nl 3, nn 5]
+#NODE	U373	373	N[U373 len 1.0 prnt U374/Methanosarcina chld {U372, T107/1434108}, nl 4, nn 7]
+#NODE	U374	374	N[U374/Methanosarcina len 1.0 prnt U380/Methanosarcinaceae chld {U373, T108/523844}, nl 5, nn 9]
+#NODE	U375	375	N[U375 len 1.0 prnt U377 chld {T109/259564, T110/2177}, nl 2, nn 3]
+#NODE	U376	376	N[U376 len 1.0 prnt U377 chld {T111/1094980, T112/867904}, nl 2, nn 3]
+#NODE	U377	377	N[U377 len 1.0 prnt U379 chld {U375, U376}, nl 4, nn 7]
+#NODE	U378	378	N[U378 len 1.0 prnt U379 chld {T113/644295, T114/679901}, nl 2, nn 3]
+#NODE	U379	379	N[U379 len 1.0 prnt U380/Methanosarcinaceae chld {U377, U378}, nl 6, nn 11]
+#NODE	U380	380	N[U380/Methanosarcinaceae len 1.0 prnt U381 chld {U374/Methanosarcina, U379}, nl 11, nn 21]
+#NODE	U381	381	N[U381 len 1.0 prnt U383 chld {U380/Methanosarcinaceae, T115/990316}, nl 12, nn 23]
+#NODE	U382	382	N[U382/Methanocella len 1.0 prnt U383 chld {T116/351160, T117/1041930}, nl 2, nn 3]
+#NODE	U383	383	N[U383 len 1.0 prnt U389/Methanomicrobia chld {U381, U382/Methanocella}, nl 14, nn 27]
+#NODE	U384	384	N[U384/Methanoregulaceae len 1.0 prnt U385 chld {T119/521011, T120/593750}, nl 2, nn 3]
+#NODE	U385	385	N[U385 len 1.0 prnt U387 chld {T118/323259, U384/Methanoregulaceae}, nl 3, nn 5]
+#NODE	U386	386	N[U386/Methanomicrobiaceae len 1.0 prnt U387 chld {T121/679926, T122/1201294}, nl 2, nn 3]
+#NODE	U387	387	N[U387 len 1.0 prnt U388/Methanomicrobiales chld {U385, U386/Methanomicrobiaceae}, nl 5, nn 9]
+#NODE	U388	388	N[U388/Methanomicrobiales len 1.0 prnt U389/Methanomicrobia chld {U387, T123/410358}, nl 6, nn 11]
+#NODE	U389	389	N[U389/Methanomicrobia len 1.0 prnt U390 chld {U383, U388/Methanomicrobiales}, nl 20, nn 39]
+#NODE	U390	390	N[U390 len 1.0 prnt U397/Halobacteriota chld {U370, U389/Methanomicrobia}, nl 44, nn 87]
+#NODE	U391	391	N[U391 len 1.0 prnt U393/Archaeoglobus chld {T124/224325, T125/572546}, nl 2, nn 3]
+#NODE	U392	392	N[U392 len 1.0 prnt U393/Archaeoglobus chld {T126/693661, T127/387631}, nl 2, nn 3]
+#NODE	U393	393	N[U393/Archaeoglobus len 1.0 prnt U396/Archaeoglobaceae chld {U391, U392}, nl 4, nn 7]
+#NODE	U394	394	N[U394/Geoglobus len 1.0 prnt U395 chld {T129/565033, T130/113653}, nl 2, nn 3]
+#NODE	U395	395	N[U395 len 1.0 prnt U396/Archaeoglobaceae chld {T128/589924, U394/Geoglobus}, nl 3, nn 5]
+#NODE	U396	396	N[U396/Archaeoglobaceae len 1.0 prnt U397/Halobacteriota chld {U393/Archaeoglobus, U395}, nl 7, nn 13]
+#NODE	U397	397	N[U397/Halobacteriota len 1.0 prnt U425/EuryB chld {U390, U396/Archaeoglobaceae}, nl 51, nn 101]
+#NODE	U398	398	N[U398 len 1.0 prnt U404 chld {T131/1122961, T132/74969}, nl 2, nn 3]
+#NODE	U399	399	N[U399 len 1.0 prnt U400 chld {T134/115547, T135/1961136}, nl 2, nn 3]
+#NODE	U400	400	N[U400 len 1.0 prnt U403 chld {T133/667135, U399}, nl 3, nn 5]
+#NODE	U401	401	N[U401 len 1.0 prnt U402 chld {T136/261391, T137/1673428}, nl 2, nn 3]
+#NODE	U402	402	N[U402 len 1.0 prnt U403 chld {U401, T138/1961135}, nl 3, nn 5]
+#NODE	U403	403	N[U403 len 1.0 prnt U404 chld {U400, U402}, nl 6, nn 11]
+#NODE	U404	404	N[U404 len 1.0 prnt U406 chld {U398, U403}, nl 8, nn 15]
+#NODE	U405	405	N[U405/Thermoplasma len 1.0 prnt U406 chld {T139/273116, T140/273075}, nl 2, nn 3]
+#NODE	U406	406	N[U406 len 1.0 prnt U407 chld {U404, U405/Thermoplasma}, nl 10, nn 19]
+#NODE	U407	407	N[U407 len 1.0 prnt U409 chld {U406, T141/667138}, nl 11, nn 21]
+#NODE	U408	408	N[U408/Aciduliprofundum len 1.0 prnt U409 chld {T142/439481, T143/2060325}, nl 2, nn 3]
+#NODE	U409	409	N[U409 len 1.0 prnt U413 chld {U407, U408/Aciduliprofundum}, nl 13, nn 25]
+#NODE	U410	410	N[U410 len 1.0 prnt U411 chld {T144/1236689, T145/1054217}, nl 2, nn 3]
+#NODE	U411	411	N[U411 len 1.0 prnt U412 chld {U410, T146/1577791}, nl 3, nn 5]
+#NODE	U412	412	N[U412 len 1.0 prnt U413 chld {U411, T147/1295009}, nl 4, nn 7]
+#NODE	U413	413	N[U413 len 1.0 prnt U420 chld {U409, U412}, nl 17, nn 33]
+#NODE	U414	414	N[U414 len 1.0 prnt U415 chld {T148/2007298, T149/2007297}, nl 2, nn 3]
+#NODE	U415	415	N[U415 len 1.0 prnt U416/Poseidoniales chld {U414, T150/2007296}, nl 3, nn 5]
+#NODE	U416	416	N[U416/Poseidoniales len 1.0 prnt U419 chld {U415, T151/2163009}, nl 4, nn 7]
+#NODE	U417	417	N[U417 len 1.0 prnt U418/Thermoprofundales chld {T152/1888995, T153/1888997}, nl 2, nn 3]
+#NODE	U418	418	N[U418/Thermoprofundales len 1.0 prnt U419 chld {U417, T154/1889001}, nl 3, nn 5]
+#NODE	U419	419	N[U419 len 1.0 prnt U420 chld {U416/Poseidoniales, U418/Thermoprofundales}, nl 7, nn 13]
+#NODE	U420	420	N[U420 len 1.0 prnt U424/Thermoplasmatota chld {U413, U419}, nl 24, nn 47]
+#NODE	U421	421	N[U421 len 1.0 prnt U422 chld {T157/1933281, T158/1933280}, nl 2, nn 3]
+#NODE	U422	422	N[U422 len 1.0 prnt U423/unclassified Thermoplasmata chld {T156/1933279, U421}, nl 3, nn 5]
+#NODE	U423	423	N[U423/unclassified Thermoplasmata len 1.0 prnt U424/Thermoplasmatota chld {T155/2013852, U422}, nl 4, nn 7]
+#NODE	U424	424	N[U424/Thermoplasmatota len 1.0 prnt U425/EuryB chld {U420, U423/unclassified Thermoplasmata}, nl 28, nn 55]
+#NODE	U425	425	N[U425/EuryB len 1.0 prnt U440/TMHH chld {U397/Halobacteriota, U424/Thermoplasmatota}, nl 79, nn 157]
+#NODE	U426	426	N[U426 len 1.0 prnt U427/Methanococcaceae chld {T160/419665, T161/647113}, nl 2, nn 3]
+#NODE	U427	427	N[U427/Methanococcaceae len 1.0 prnt U428 chld {T159/406327, U426}, nl 3, nn 5]
+#NODE	U428	428	N[U428 len 1.0 prnt U431/Methanococcales chld {U427/Methanococcaceae, T162/880724}, nl 4, nn 7]
+#NODE	U429	429	N[U429 len 1.0 prnt U430/Methanocaldococcus chld {T163/573064, T164/579137}, nl 2, nn 3]
+#NODE	U430	430	N[U430/Methanocaldococcus len 1.0 prnt U431/Methanococcales chld {U429, T165/573063}, nl 3, nn 5]
+#NODE	U431	431	N[U431/Methanococcales len 1.0 prnt U439/Methanomada chld {U428, U430/Methanocaldococcus}, nl 7, nn 13]
+#NODE	U432	432	N[U432/unclassified Methanopyrus len 1.0 prnt U433/Methanopyrus chld {T167/1937005, T168/1937004}, nl 2, nn 3]
+#NODE	U433	433	N[U433/Methanopyrus len 1.0 prnt U438 chld {T166/190192, U432/unclassified Methanopyrus}, nl 3, nn 5]
+#NODE	U434	434	N[U434 len 1.0 prnt U435 chld {T169/339860, T170/868131}, nl 2, nn 3]
+#NODE	U435	435	N[U435 len 1.0 prnt U436/Methanobacteriaceae chld {U434, T171/420247}, nl 3, nn 5]
+#NODE	U436	436	N[U436/Methanobacteriaceae len 1.0 prnt U437/Methanobacteriales chld {U435, T172/79929}, nl 4, nn 7]
+#NODE	U437	437	N[U437/Methanobacteriales len 1.0 prnt U438 chld {U436/Methanobacteriaceae, T173/523846}, nl 5, nn 9]
+#NODE	U438	438	N[U438 len 1.0 prnt U439/Methanomada chld {U433/Methanopyrus, U437/Methanobacteriales}, nl 8, nn 15]
+#NODE	U439	439	N[U439/Methanomada len 1.0 prnt U440/TMHH chld {U431/Methanococcales, U438}, nl 15, nn 29]
+#NODE	U440	440	N[U440/TMHH len 1.0 prnt U441 chld {U425/EuryB, U439/Methanomada}, nl 94, nn 187]
+#NODE	U441	441	N[U441 len 1.0 prnt U454 chld {U347/DPANN, U440/TMHH}, nl 174, nn 347]
+#NODE	U442	442	N[U442/Pyrococcus len 1.0 prnt U446 chld {T174/186497, T175/70601}, nl 2, nn 3]
+#NODE	U443	443	N[U443 len 1.0 prnt U444 chld {T177/71998, T178/49899}, nl 2, nn 3]
+#NODE	U444	444	N[U444 len 1.0 prnt U445 chld {U443, T179/277988}, nl 3, nn 5]
+#NODE	U445	445	N[U445 len 1.0 prnt U446 chld {T176/1712654, U444}, nl 4, nn 7]
+#NODE	U446	446	N[U446 len 1.0 prnt U448 chld {U442/Pyrococcus, U445}, nl 6, nn 11]
+#NODE	U447	447	N[U447 len 1.0 prnt U448 chld {T180/391623, T181/582419}, nl 2, nn 3]
+#NODE	U448	448	N[U448 len 1.0 prnt U450 chld {U446, U447}, nl 8, nn 15]
+#NODE	U449	449	N[U449 len 1.0 prnt U450 chld {T182/604354, T183/523849}, nl 2, nn 3]
+#NODE	U450	450	N[U450 len 1.0 prnt U451/Thermococcaceae chld {U448, U449}, nl 10, nn 19]
+#NODE	U451	451	N[U451/Thermococcaceae len 1.0 prnt U453/Acherontia chld {U450, T184/1343739}, nl 11, nn 21]
+#NODE	U452	452	N[U452/Theionarchaea len 1.0 prnt U453/Acherontia chld {T185/1803813, T186/1803814}, nl 2, nn 3]
+#NODE	U453	453	N[U453/Acherontia len 1.0 prnt U454 chld {U451/Thermococcaceae, U452/Theionarchaea}, nl 13, nn 25]
+#NODE	U454	454	N[U454 len 1.0 prnt U461 chld {U441, U453/Acherontia}, nl 187, nn 373]
+#NODE	U455	455	N[U455 len 1.0 prnt U456 chld {T187/1775754, T188/1776334}, nl 2, nn 3]
+#NODE	U456	456	N[U456 len 1.0 prnt U457/Hadesarchaea chld {U455, T189/1775755}, nl 3, nn 5]
+#NODE	U457	457	N[U457/Hadesarchaea len 1.0 prnt U460/Hadarchaeota chld {U456, T190/1776333}, nl 4, nn 7]
+#NODE	U458	458	N[U458 len 1.0 prnt U459/Persephonarchaea chld {T191/1698267, T192/1698264}, nl 2, nn 3]
+#NODE	U459	459	N[U459/Persephonarchaea len 1.0 prnt U460/Hadarchaeota chld {U458, T193/1698273}, nl 3, nn 5]
+#NODE	U460	460	N[U460/Hadarchaeota len 1.0 prnt U461 chld {U457/Hadesarchaea, U459/Persephonarchaea}, nl 7, nn 13]
+#NODE	U461	461	N[U461 len 1.0 prnt U536/Archaea chld {U454, U460/Hadarchaeota}, nl 194, nn 387]
+#NODE	U462	462	N[U462 len 1.0 prnt U463 chld {T195/1706444, T196/1706443}, nl 2, nn 3]
+#NODE	U463	463	N[U463 len 1.0 prnt U464/Thorarchaeota chld {U462, T197/1837170}, nl 3, nn 5]
+#NODE	U464	464	N[U464/Thorarchaeota len 1.0 prnt U467 chld {T194/1706445, U463}, nl 4, nn 7]
+#NODE	U465	465	N[U465/Lokiarchaeota len 1.0 prnt U466 chld {T198/1849166, T199/2053489}, nl 2, nn 3]
+#NODE	U466	466	N[U466 len 1.0 prnt U467 chld {U465/Lokiarchaeota, T200/1841599}, nl 3, nn 5]
+#NODE	U467	467	N[U467 len 1.0 prnt U472/Asgard chld {U464/Thorarchaeota, U466}, nl 7, nn 13]
+#NODE	U468	468	N[U468 len 1.0 prnt U471/Heimdallarchaeota chld {T201/1841598, T202/2012493}, nl 2, nn 3]
+#NODE	U469	469	N[U469 len 1.0 prnt U470 chld {T203/1841597, T204/2026747}, nl 2, nn 3]
+#NODE	U470	470	N[U470 len 1.0 prnt U471/Heimdallarchaeota chld {U469, T205/1841596}, nl 3, nn 5]
+#NODE	U471	471	N[U471/Heimdallarchaeota len 1.0 prnt U472/Asgard chld {U468, U470}, nl 5, nn 9]
+#NODE	U472	472	N[U472/Asgard len 1.0 prnt U535/Proteoarchaeota chld {U467, U471/Heimdallarchaeota}, nl 12, nn 23]
+#NODE	U473	473	N[U473 len 1.0 prnt U474/Korarchaeota chld {T206/374847, T207/1868214}, nl 2, nn 3]
+#NODE	U474	474	N[U474/Korarchaeota len 1.0 prnt U534/Thermoproteota chld {U473, T208/2056630}, nl 3, nn 5]
+#NODE	U475	475	N[U475/Acidilobus len 1.0 prnt U476/Acidilobales chld {T210/666510, T211/1577685}, nl 2, nn 3]
+#NODE	U476	476	N[U476/Acidilobales len 1.0 prnt U477 chld {U475/Acidilobus, T212/1056495}, nl 3, nn 5]
+#NODE	U477	477	N[U477 len 1.0 prnt U480 chld {T209/272557, U476/Acidilobales}, nl 4, nn 7]
+#NODE	U478	478	N[U478 len 1.0 prnt U479/Pyrodictiaceae chld {T213/415426, T214/1273541}, nl 2, nn 3]
+#NODE	U479	479	N[U479/Pyrodictiaceae len 1.0 prnt U480 chld {U478, T215/694429}, nl 3, nn 5]
+#NODE	U480	480	N[U480 len 1.0 prnt U484 chld {U477, U479/Pyrodictiaceae}, nl 7, nn 13]
+#NODE	U481	481	N[U481 len 1.0 prnt U482 chld {T217/490899, T218/633148}, nl 2, nn 3]
+#NODE	U482	482	N[U482 len 1.0 prnt U483 chld {U481, T219/1184251}, nl 3, nn 5]
+#NODE	U483	483	N[U483 len 1.0 prnt U484 chld {T216/399550, U482}, nl 4, nn 7]
+#NODE	U484	484	N[U484 len 1.0 prnt U487 chld {U480, U483}, nl 11, nn 21]
+#NODE	U485	485	N[U485/Ignicoccus len 1.0 prnt U486 chld {T220/453591, T221/940295}, nl 2, nn 3]
+#NODE	U486	486	N[U486 len 1.0 prnt U487 chld {U485/Ignicoccus, T222/1163730}, nl 3, nn 5]
+#NODE	U487	487	N[U487 len 1.0 prnt U493 chld {U484, U486}, nl 14, nn 27]
+#NODE	U488	488	N[U488 len 1.0 prnt U490/Sulfolobaceae chld {T223/273063, T224/330779}, nl 2, nn 3]
+#NODE	U489	489	N[U489 len 1.0 prnt U490/Sulfolobaceae chld {T225/399549, T226/619593}, nl 2, nn 3]
+#NODE	U490	490	N[U490/Sulfolobaceae len 1.0 prnt U491/Sulfolobales chld {U488, U489}, nl 4, nn 7]
+#NODE	U491	491	N[U491/Sulfolobales len 1.0 prnt U492 chld {U490/Sulfolobaceae, T227/1294123}, nl 5, nn 9]
+#NODE	U492	492	N[U492 len 1.0 prnt U493 chld {U491/Sulfolobales, T228/1973259}, nl 6, nn 11]
+#NODE	U493	493	N[U493 len 1.0 prnt U501/Thermoprotei chld {U487, U492}, nl 20, nn 39]
+#NODE	U494	494	N[U494/Thermofilaceae len 1.0 prnt U500 chld {T229/368408, T230/1550241}, nl 2, nn 3]
+#NODE	U495	495	N[U495 len 1.0 prnt U497 chld {T231/397948, T232/1293040}, nl 2, nn 3]
+#NODE	U496	496	N[U496/Vulcanisaeta len 1.0 prnt U497 chld {T233/572478, T234/867917}, nl 2, nn 3]
+#NODE	U497	497	N[U497 len 1.0 prnt U499/Thermoproteaceae chld {U495, U496/Vulcanisaeta}, nl 4, nn 7]
+#NODE	U498	498	N[U498 len 1.0 prnt U499/Thermoproteaceae chld {T235/1104324, T236/768679}, nl 2, nn 3]
+#NODE	U499	499	N[U499/Thermoproteaceae len 1.0 prnt U500 chld {U497, U498}, nl 6, nn 11]
+#NODE	U500	500	N[U500 len 1.0 prnt U501/Thermoprotei chld {U494/Thermofilaceae, U499/Thermoproteaceae}, nl 8, nn 15]
+#NODE	U501	501	N[U501/Thermoprotei len 1.0 prnt U506 chld {U493, U500}, nl 28, nn 55]
+#NODE	U502	502	N[U502/Marsarchaeota group 1 len 1.0 prnt U504/Marsarchaeota chld {T238/1978153, T239/1978156}, nl 2, nn 3]
+#NODE	U503	503	N[U503/Marsarchaeota group 2 len 1.0 prnt U504/Marsarchaeota chld {T240/1978159, T241/1978157}, nl 2, nn 3]
+#NODE	U504	504	N[U504/Marsarchaeota len 1.0 prnt U505 chld {U502/Marsarchaeota group 1, U503/Marsarchaeota group 2}, nl 4, nn 7]
+#NODE	U505	505	N[U505 len 1.0 prnt U506 chld {T237/1052801, U504/Marsarchaeota}, nl 5, nn 9]
+#NODE	U506	506	N[U506 len 1.0 prnt U533 chld {U501/Thermoprotei, U505}, nl 33, nn 65]
+#NODE	U507	507	N[U507 len 1.0 prnt U508 chld {T243/1974385, T244/1974384}, nl 2, nn 3]
+#NODE	U508	508	N[U508 len 1.0 prnt U510 chld {T242/1685126, U507}, nl 3, nn 5]
+#NODE	U509	509	N[U509 len 1.0 prnt U510 chld {T245/1700836, T246/1700835}, nl 2, nn 3]
+#NODE	U510	510	N[U510 len 1.0 prnt U511 chld {U508, U509}, nl 5, nn 9]
+#NODE	U511	511	N[U511 len 1.0 prnt U513 chld {U510, T247/2012513}, nl 6, nn 11]
+#NODE	U512	512	N[U512 len 1.0 prnt U513 chld {T248/1685135, T249/1797377}, nl 2, nn 3]
+#NODE	U513	513	N[U513 len 1.0 prnt U517/Bathyarchaeota chld {U511, U512}, nl 8, nn 15]
+#NODE	U514	514	N[U514 len 1.0 prnt U515 chld {T252/1797380, T253/1797382}, nl 2, nn 3]
+#NODE	U515	515	N[U515 len 1.0 prnt U516 chld {T251/1797379, U514}, nl 3, nn 5]
+#NODE	U516	516	N[U516 len 1.0 prnt U517/Bathyarchaeota chld {T250/1779367, U515}, nl 4, nn 7]
+#NODE	U517	517	N[U517/Bathyarchaeota len 1.0 prnt U532 chld {U513, U516}, nl 12, nn 23]
+#NODE	U518	518	N[U518/Candidatus Wolframiiraptoraceae len 1.0 prnt U519 chld {T255/1130285, T256/1980982}, nl 2, nn 3]
+#NODE	U519	519	N[U519 len 1.0 prnt U521/Aigarchaeota chld {T254/311458, U518/Candidatus Wolframiiraptoraceae}, nl 3, nn 5]
+#NODE	U520	520	N[U520 len 1.0 prnt U521/Aigarchaeota chld {T257/1052827, T258/1052829}, nl 2, nn 3]
+#NODE	U521	521	N[U521/Aigarchaeota len 1.0 prnt U531/Nitrososphaerota chld {U519, U520}, nl 5, nn 9]
+#NODE	U522	522	N[U522 len 1.0 prnt U523 chld {T259/436308, T260/414004}, nl 2, nn 3]
+#NODE	U523	523	N[U523 len 1.0 prnt U525 chld {U522, T261/1410606}, nl 3, nn 5]
+#NODE	U524	524	N[U524/Candidatus Nitrosotenuis len 1.0 prnt U525 chld {T262/1407055, T263/1846278}, nl 2, nn 3]
+#NODE	U525	525	N[U525 len 1.0 prnt U527 chld {U523, U524/Candidatus Nitrosotenuis}, nl 5, nn 9]
+#NODE	U526	526	N[U526 len 1.0 prnt U527 chld {T264/1805383, T265/1078905}, nl 2, nn 3]
+#NODE	U527	527	N[U527 len 1.0 prnt U528 chld {U525, U526}, nl 7, nn 13]
+#NODE	U528	528	N[U528 len 1.0 prnt U529 chld {U527, T266/926571}, nl 8, nn 15]
+#NODE	U529	529	N[U529 len 1.0 prnt U530 chld {U528, T267/2058097}, nl 9, nn 17]
+#NODE	U530	530	N[U530 len 1.0 prnt U531/Nitrososphaerota chld {U529, T268/1802371}, nl 10, nn 19]
+#NODE	U531	531	N[U531/Nitrososphaerota len 1.0 prnt U532 chld {U521/Aigarchaeota, U530}, nl 15, nn 29]
+#NODE	U532	532	N[U532 len 1.0 prnt U533 chld {U517/Bathyarchaeota, U531/Nitrososphaerota}, nl 27, nn 53]
+#NODE	U533	533	N[U533 len 1.0 prnt U534/Thermoproteota chld {U506, U532}, nl 60, nn 119]
+#NODE	U534	534	N[U534/Thermoproteota len 1.0 prnt U535/Proteoarchaeota chld {U474/Korarchaeota, U533}, nl 63, nn 125]
+#NODE	U535	535	N[U535/Proteoarchaeota len 1.0 prnt U536/Archaea chld {U472/Asgard, U534/Thermoproteota}, nl 75, nn 149]
+#NODE	U536	536	N[U536/Archaea len 1.0 prnt - chld {U461, U535/Proteoarchaeota}, nl 269, nn 537]
+(((((((((((([T0]1104576:1.0,
+[T1]1974407:1.0)[U269]:1.0,
+[T2]1579370:1.0)[U270]:1.0,
+[T3]1974406:1.0)[U271]:1.0,
+[T4]1974404:1.0)[U272]:1.0,
+[T5]1974403:1.0)[U273] 'p__Iainarchaeota':1.0,
+(((([T6]1805247:1.0,
+[T7]1974417:1.0)[U274]:1.0,
+[T8]1974408:1.0)[U275]:1.0,
+(([T9]1531428:1.0,
+[T10]1961137:1.0)[U276]:1.0,
+[T11]1920749:1.0)[U277]:1.0)[U278]:1.0,
+([T12]1805249:1.0,
+(([T13]1805251:1.0,
+[T14]1974410:1.0)[U279]:1.0,
+[T15]1974419:1.0)[U280]:1.0)[U281]:1.0)[U282] 'p__Micrarchaeota':1.0)[U283] IM:2.0,
+([T16]2026739:1.0,
+((([T17]889962:1.0,
+([T18]1919221:1.0,
+[T19]1737403:1.0)[U284] 'unclassified Candidatus Nanohaloarchaea':1.0)[U285] 'p__Nanohaloarchaeota':1.0,
+(([T20]1579367:1.0,
+[T21]2012502:1.0)[U286]:1.0,
+([T22]2012503:1.0,
+[T23]2012505:1.0)[U287]:1.0)[U288] 'p__Aenigmarchaeota':1.0)[U289] AN:1.0,
+((([T24]228908:1.0,
+(([T25]1294122:1.0,
+[T26]1577684:1.0)[U290] Nanopusillaceae:1.0,
+[T27]1852704:1.0)[U291]:1.0)[U292] 'Ca. Nanoarchaeia':1.0,
+((((([T28]1104577:1.0,
+[T29]1579375:1.0)[U293]:1.0,
+([T30]1579376:1.0,
+[T31]1579378:1.0)[U294]:1.0)[U295]:1.0,
+((((([T32]1579365:1.0,
+([T33]1974468:1.0,
+[T34]1974464:1.0)[U296]:1.0)[U297]:1.0,
+([T35]1579371:1.0,
+([T36]1805423:1.0,
+[T37]1974459:1.0)[U298]:1.0)[U299]:1.0)[U300]:1.0,
+(([T38]1579366:1.0,
+[T39]1805424:1.0)[U301]:1.0,
+[T40]1974463:1.0)[U302]:1.0)[U303]:1.0,
+([T41]1579373:1.0,
+[T42]1974458:1.0)[U304]:1.0)[U305]:1.0,
+((([T43]1974465:1.0,
+[T44]1974457:1.0)[U306]:1.0,
+[T45]1974462:1.0)[U307]:1.0,
+[T46]1974449:1.0)[U308]:1.0)[U309]:1.0)[U310] 'o__Woesearchaeales':1.0,
+((((((((((([T47]1579372:1.0,
+([T48]1579364:1.0,
+[T49]2012516:1.0)[U311]:1.0)[U312]:1.0,
+[T50]2005741:1.0)[U313]:1.0,
+([T51]1801883:1.0,
+[T52]1801882:1.0)[U314]:1.0)[U315]:1.0,
+[T53]1579377:1.0)[U316]:1.0,
+[T54]1974441:1.0)[U317]:1.0,
+((([T55]1974430:1.0,
+[T56]1974446:1.0)[U318]:1.0,
+[T57]1974444:1.0)[U319]:1.0,
+([T58]1974437:1.0,
+[T59]1974424:1.0)[U320]:1.0)[U321]:1.0)[U322]:1.0,
+[T60]1974445:1.0)[U323]:1.0,
+[T61]1801881:1.0)[U324]:1.0,
+[T62]1974435:1.0)[U325]:1.0,
+([T63]2012515:1.0,
+[T64]1974439:1.0)[U326]:1.0)[U327]:1.0,
+[T65]2012514:1.0)[U328] 'o__Pacearchaeales':1.0)[U329] WoePac:1.0,
+(([T66]662760:1.0,
+[T67]662762:1.0)[U330] 'Candidatus Parvarchaeum':1.0,
+([T68]1975556:1.0,
+[T69]1975558:1.0)[U331]:1.0)[U332] 'o__Parvarchaeales':1.0)[U333] WPP:1.0)[U334] 'p__Nanobdellota':1.0,
+[T70]2013767:1.0)[U335] NH:1.0)[U336] PANN:1.0)[U337] UPANN:1.0)[U338]:1.0,
+((([T71]1849261:1.0,
+([T72]1878999:1.0,
+([T73]2012506:1.0,
+[T74]2012507:1.0)[U339]:1.0)[U340]:1.0)[U341]:1.0,
+[T75]1849364:1.0)[U342]:1.0,
+(([T76]1933927:1.0,
+([T77]2014241:1.0,
+[T78]2014238:1.0)[U343] 'unclassified Candidatus Altarchaeum':1.0)[U344]:1.0,
+[T79]2013673:1.0)[U345]:1.0)[U346] 'p__Altiarchaeota':1.0)[U347] Nanobdellati:1.0,
+(((((((([T80]64091:1.0,
+[T81]1407499:1.0)[U348] Halobacterium:1.0,
+([T82]1604004:1.0,
+[T83]1873524:1.0)[U349]:1.0)[U350]:1.0,
+((([T84]416348:1.0,
+(([T85]469382:1.0,
+[T86]768065:1.0)[U351]:1.0,
+[T87]523841:1.0)[U352] Haloferacaceae:1.0)[U353] Haloferacales:1.0,
+(((((([T88]543526:1.0,
+[T89]797303:1.0)[U354]:1.0,
+[T90]588898:1.0)[U355]:1.0,
+([T91]547559:1.0,
+([T92]797210:1.0,
+([T93]358396:1.0,
+[T94]797304:1.0)[U356]:1.0)[U357]:1.0)[U358]:1.0)[U359]:1.0,
+[T95]694430:1.0)[U360]:1.0,
+[T96]797299:1.0)[U361] Natrialbaceae:1.0,
+[T97]795797:1.0)[U362]:1.0)[U363]:1.0,
+(([T98]485914:1.0,
+[T99]1033806:1.0)[U364]:1.0,
+([T100]348780:1.0,
+[T101]268739:1.0)[U365] Natronomonas:1.0)[U366] Haloarculaceae:1.0)[U367]:1.0)[U368] 'c__Halobacteria':1.0,
+([T102]1903181:1.0,
+[T103]1927129:1.0)[U369] 'c__Methanonatronarchaeia':1.0)[U370]:1.0,
+(((((((([T104]188937:1.0,
+[T105]1434120:1.0)[U371]:1.0,
+[T106]213585:1.0)[U372]:1.0,
+[T107]1434108:1.0)[U373]:1.0,
+[T108]523844:1.0)[U374] Methanosarcina:1.0,
+((([T109]259564:1.0,
+[T110]2177:1.0)[U375]:1.0,
+([T111]1094980:1.0,
+[T112]867904:1.0)[U376]:1.0)[U377]:1.0,
+([T113]644295:1.0,
+[T114]679901:1.0)[U378]:1.0)[U379]:1.0)[U380] Methanosarcinaceae:1.0,
+[T115]990316:1.0)[U381]:1.0,
+([T116]351160:1.0,
+[T117]1041930:1.0)[U382] Methanocella:1.0)[U383]:1.0,
+((([T118]323259:1.0,
+([T119]521011:1.0,
+[T120]593750:1.0)[U384] Methanoregulaceae:1.0)[U385]:1.0,
+([T121]679926:1.0,
+[T122]1201294:1.0)[U386] Methanomicrobiaceae:1.0)[U387]:1.0,
+[T123]410358:1.0)[U388] Methanomicrobiales:1.0)[U389] 'c__Methanomicrobia':1.0)[U390]:1.0,
+((([T124]224325:1.0,
+[T125]572546:1.0)[U391]:1.0,
+([T126]693661:1.0,
+[T127]387631:1.0)[U392]:1.0)[U393] Archaeoglobus:1.0,
+([T128]589924:1.0,
+([T129]565033:1.0,
+[T130]113653:1.0)[U394] Geoglobus:1.0)[U395]:1.0)[U396] 'c__Archaeoglobi':1.0)[U397] 'p__Halobacteriota':1.0,
+(((((((([T131]1122961:1.0,
+[T132]74969:1.0)[U398]:1.0,
+(([T133]667135:1.0,
+([T134]115547:1.0,
+[T135]1961136:1.0)[U399]:1.0)[U400]:1.0,
+(([T136]261391:1.0,
+[T137]1673428:1.0)[U401]:1.0,
+[T138]1961135:1.0)[U402]:1.0)[U403]:1.0)[U404]:1.0,
+([T139]273116:1.0,
+[T140]273075:1.0)[U405] Thermoplasma:1.0)[U406]:1.0,
+[T141]667138:1.0)[U407] 'o__Thermoplasmatales':1.0,
+([T142]439481:1.0,
+[T143]2060325:1.0)[U408] 'o__Aciduliprofundales':1.0)[U409]:1.0,
+((([T144]1236689:1.0,
+[T145]1054217:1.0)[U410]:1.0,
+[T146]1577791:1.0)[U411]:1.0,
+[T147]1295009:1.0)[U412] 'o__Methanomassiliicoccales':1.0)[U413] 'c__Thermoplasmata':1.0,
+(((([T148]2007298:1.0,
+[T149]2007297:1.0)[U414]:1.0,
+[T150]2007296:1.0)[U415]:1.0,
+[T151]2163009:1.0)[U416] Poseidoniales:1.0,
+(([T152]1888995:1.0,
+[T153]1888997:1.0)[U417]:1.0,
+[T154]1889001:1.0)[U418] 'Pontarchaea (MGIII)':1.0)[U419] 'c__Poseidoniia':1.0)[U420]:1.0,
+([T155]2013852:1.0,
+([T156]1933279:1.0,
+([T157]1933281:1.0,
+[T158]1933280:1.0)[U421]:1.0)[U422]:1.0)[U423] 'Thermoprofundales (MBG-D)':1.0)[U424] 'p__Thermoplasmatota':1.0)[U425] 'TH':1.0,
+(((([T159]406327:1.0,
+([T160]419665:1.0,
+[T161]647113:1.0)[U426]:1.0)[U427] Methanococcaceae:1.0,
+[T162]880724:1.0)[U428]:1.0,
+(([T163]573064:1.0,
+[T164]579137:1.0)[U429]:1.0,
+[T165]573063:1.0)[U430] Methanocaldococcus:1.0)[U431] 'c__Methanococci':1.0,
+(([T166]190192:1.0,
+([T167]1937005:1.0,
+[T168]1937004:1.0)[U432] 'unclassified Methanopyrus':1.0)[U433] 'c__Methanopyri':1.0,
+(((([T169]339860:1.0,
+[T170]868131:1.0)[U434]:1.0,
+[T171]420247:1.0)[U435]:1.0,
+[T172]79929:1.0)[U436] Methanobacteriaceae:1.0,
+[T173]523846:1.0)[U437] 'c__Methanobacteria':1.0)[U438]:1.0)[U439] Methanomada:1.0)[U440] THM:1.0)[U441]:1.0,
+(((((([T174]186497:1.0,
+[T175]70601:1.0)[U442] Pyrococcus:1.0,
+([T176]1712654:1.0,
+(([T177]71998:1.0,
+[T178]49899:1.0)[U443]:1.0,
+[T179]277988:1.0)[U444]:1.0)[U445]:1.0)[U446]:1.0,
+([T180]391623:1.0,
+[T181]582419:1.0)[U447]:1.0)[U448]:1.0,
+([T182]604354:1.0,
+[T183]523849:1.0)[U449]:1.0)[U450]:1.0,
+[T184]1343739:1.0)[U451] 'c__Thermococci':1.0,
+([T185]1803813:1.0,
+[T186]1803814:1.0)[U452] Theionarchaea:1.0)[U453] Acherontia:1.0)[U454]:1.0,
+(((([T187]1775754:1.0,
+[T188]1776334:1.0)[U455]:1.0,
+[T189]1775755:1.0)[U456]:1.0,
+[T190]1776333:1.0)[U457] Hadesarchaea:1.0,
+(([T191]1698267:1.0,
+[T192]1698264:1.0)[U458]:1.0,
+[T193]1698273:1.0)[U459] Persephonarchaea:1.0)[U460] 'p__Hadarchaeota':1.0)[U461]:1.0,
+(((([T194]1706445:1.0,
+(([T195]1706444:1.0,
+[T196]1706443:1.0)[U462]:1.0,
+[T197]1837170:1.0)[U463]:1.0)[U464] Thorarchaeota:1.0,
+(([T198]1849166:1.0,
+[T199]2053489:1.0)[U465] Lokiarchaeota:1.0,
+[T200]1841599:1.0)[U466] 'LokiOdin':1.0)[U467]:1.0,
+(([T201]1841598:1.0,
+[T202]2012493:1.0)[U468]:1.0,
+(([T203]1841597:1.0,
+[T204]2026747:1.0)[U469]:1.0,
+[T205]1841596:1.0)[U470]:1.0)[U471] Heimdallarchaeota:1.0)[U472] 'p__Asgardarchaeota':1.0,
+((([T206]374847:1.0,
+[T207]1868214:1.0)[U473]:1.0,
+[T208]2056630:1.0)[U474] 'p__Korarchaeota':1.0,
+(((((((([T209]272557:1.0,
+(([T210]666510:1.0,
+[T211]1577685:1.0)[U475] Acidilobus:1.0,
+[T212]1056495:1.0)[U476] Acidilobales:1.0)[U477]:1.0,
+(([T213]415426:1.0,
+[T214]1273541:1.0)[U478]:1.0,
+[T215]694429:1.0)[U479] Pyrodictiaceae:1.0)[U480]:1.0,
+([T216]399550:1.0,
+(([T217]490899:1.0,
+[T218]633148:1.0)[U481]:1.0,
+[T219]1184251:1.0)[U482]:1.0)[U483]:1.0)[U484]:1.0,
+(([T220]453591:1.0,
+[T221]940295:1.0)[U485] Ignicoccus:1.0,
+[T222]1163730:1.0)[U486]:1.0)[U487]:1.0,
+(((([T223]273063:1.0,
+[T224]330779:1.0)[U488]:1.0,
+([T225]399549:1.0,
+[T226]619593:1.0)[U489]:1.0)[U490] Sulfolobaceae:1.0,
+[T227]1294123:1.0)[U491]:1.0,
+[T228]1973259:1.0)[U492]:1.0)[U493] 'o__Sulfolobales':1.0,
+(([T229]368408:1.0,
+[T230]1550241:1.0)[U494] Thermofilaceae:1.0,
+((([T231]397948:1.0,
+[T232]1293040:1.0)[U495]:1.0,
+([T233]572478:1.0,
+[T234]867917:1.0)[U496] Vulcanisaeta:1.0)[U497]:1.0,
+([T235]1104324:1.0,
+[T236]768679:1.0)[U498]:1.0)[U499] Thermoproteaceae:1.0)[U500] 'o__Thermoproteales':1.0)[U501] SulThe:1.0,
+([T237]1052801:1.0,
+(([T238]1978153:1.0,
+[T239]1978156:1.0)[U502] 'Marsarchaeota group 1':1.0,
+([T240]1978159:1.0,
+[T241]1978157:1.0)[U503] 'Marsarchaeota group 2':1.0)[U504] 'o__Marsarchaeales':1.0)[U505]:1.0)[U506] 'c__Thermoprotei':1.0,
+(((((([T242]1685126:1.0,
+([T243]1974385:1.0,
+[T244]1974384:1.0)[U507]:1.0)[U508]:1.0,
+([T245]1700836:1.0,
+[T246]1700835:1.0)[U509]:1.0)[U510]:1.0,
+[T247]2012513:1.0)[U511] 'o__Bathyarchaeales':1.0,
+([T248]1685135:1.0,
+[T249]1797377:1.0)[U512]:1.0)[U513]:1.0,
+([T250]1779367:1.0,
+([T251]1797379:1.0,
+([T252]1797380:1.0,
+[T253]1797382:1.0)[U514]:1.0)[U515]:1.0)[U516] 'o__TCS64':1.0)[U517] 'c__Bathyarchaeia':1.0,
+((([T254]311458:1.0,
+([T255]1130285:1.0,
+[T256]1980982:1.0)[U518] 'Wolframiiraptoraceae':1.0)[U519]:1.0,
+([T257]1052827:1.0,
+[T258]1052829:1.0)[U520]:1.0)[U521] 'o__Caldarchaeales':1.0,
+((((((([T259]436308:1.0,
+[T260]414004:1.0)[U522]:1.0,
+[T261]1410606:1.0)[U523]:1.0,
+([T262]1407055:1.0,
+[T263]1846278:1.0)[U524] 'Candidatus Nitrosotenuis':1.0)[U525]:1.0,
+([T264]1805383:1.0,
+[T265]1078905:1.0)[U526]:1.0)[U527]:1.0,
+[T266]926571:1.0)[U528]:1.0,
+[T267]2058097:1.0)[U529] 'o__Nitrososphaerales':1.0,
+[T268]1802371:1.0)[U530]:1.0)[U531] 'c__Nitrososphaeria':1.0)[U532]:1.0)[U533] 'p__Thermoproteota':1.0)[U534] 'TACK':1.0)[U535] Proteoarchaeota:1.0)[U536] Archaea;
