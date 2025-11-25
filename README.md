@@ -12,6 +12,8 @@ Windows, and various Unix/Linux versions. The software is
 packaged in a JAR file, and can be executed in Java versions
 1.13 and above.
 
+Download the latest JAR file from under Releases (-->)
+
 Licensed under the Apache License, Version 2.0: 
 see http://www.apache.org/licenses/LICENSE-2.0.
 
