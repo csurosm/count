@@ -1,6 +1,7 @@
 This folder contains Count analyses over kingdom-level data sets in 269 Archaea
-* tree269-gca-names-txids.txt gives the species names, NCBI assembly and taxonomy identifiers from Dombrowski et al 2020 [10.1038/s41467-020-17408-w]
-* tree269-baker-alti-gtdb.tre reflects the tree from Baker et al 2025 [10.1038/s41564-025-02024-5]; tree269-baker-alti-names.tre gives species names 
+
+* tree269-gca-names-txids.txt gives the species names, NCBI assembly and taxonomy identifiers from Dombrowski et al 2020 [https://dx.doi.org/10.1038/s41467-020-17408-w]
+* tree269-baker-alti-gtdb.tre reflects the tree from Baker et al 2025 [https://dx.doi.org/10.1038/s41564-025-02024-5]; tree269-baker-alti-names.tre gives species names 
 * arc269v24-ar14asd24multi.csv is the arCOG-format annotation for domain occurrences across all genes 
 * arc269v24-ar14asd24multi.txt is the corresponding input profile table for Count
 
