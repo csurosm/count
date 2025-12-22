@@ -20,11 +20,14 @@ import java.awt.Font;
 import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.Properties;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
+
+import count.io.CountXML;
 
 /**
  * A component with a JLabel for displaying a count, 
@@ -35,7 +38,7 @@ import javax.swing.SwingConstants;
  * @author Mikl&oacute;s Cs&#369;r&ouml;s
  *
  */
-public class CounterBox extends Box implements PropertyChangeListener
+public class CounterBox extends Box implements PropertyChangeListener, CountXML
 {
 	/**
 	 * 
@@ -57,6 +60,8 @@ public class CounterBox extends Box implements PropertyChangeListener
     private JLabel counter_label;
     private JLabel counter_value;
 
+    private static final String LABEL_INIT = "      ";
+    
     private void initComponents()
     {
         if (counter_name != null)
@@ -65,7 +70,7 @@ public class CounterBox extends Box implements PropertyChangeListener
             add(counter_label);
         }
 
-        counter_value = new JLabel("      "); //JTextField("");
+        counter_value = new JLabel(LABEL_INIT); //JTextField("");
         counter_value.setHorizontalTextPosition(SwingConstants.RIGHT);
 
         add(counter_value);
@@ -103,10 +108,14 @@ public class CounterBox extends Box implements PropertyChangeListener
     
     void setValue(String value)
     {
-        if (max_value != null)
-            value = value +max_value;
-        counter_value.setText(value);
-        repaint();
+    	if (value == null) {
+    		counter_value.setText(LABEL_INIT);
+    	} else {
+	        if (max_value != null)
+	            value = value +max_value;
+	        counter_value.setText(value);
+    	}
+        //repaint();
     }
     
     @Override
@@ -151,4 +160,31 @@ public class CounterBox extends Box implements PropertyChangeListener
         if (counter_label != null)
             counter_label.addMouseListener(listener);
     }
+    
+    public Properties getAttributes() {
+    	Properties a = new Properties();
+    	if (counter_name != null)
+    		a.setProperty(ATT_NAME, counter_name);
+    	String value = counter_value.getText();
+    	if (!LABEL_INIT.equals(value)
+    		&& value != null
+    		&& max_value != null) {
+    		value = value.substring(0, value.length()-max_value.length()-1);
+    	}
+    	if (value != null)
+        	a.setProperty(ATT_VALUE, value);
+    	if (max_value != null)
+    		a.setProperty(ATT_MAX, max_value);
+    	return a;
+    }
+    
+    public void setAttributes(Properties a) {
+    	String name = a.getProperty(ATT_NAME);
+    	counter_name = name;
+    	String max = a.getProperty(ATT_MAX);
+    	setMaximumInfo(max);
+    	String value = a.getProperty(ATT_VALUE);
+    	setValue(value);
+    }
+    
 }

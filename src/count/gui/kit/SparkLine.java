@@ -22,8 +22,11 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.swing.Icon;
+
+import count.io.CountXML;
 
 /**
  * A sparkline for displaying the tail of a sequence of values (history). 
@@ -31,7 +34,7 @@ import javax.swing.Icon;
  * @author csuros
  *
  */
-public class SparkLine implements Icon
+public class SparkLine implements Icon, CountXML
 {
 	/**
 	 * Instantiation with dimensions and history tail length.
@@ -332,8 +335,37 @@ public class SparkLine implements Icon
         return plot_height;
     }
     
-
+    //private final String att_prefix = getClass().getSimpleName()+".";
     
+    public Properties getAttributes() {
+    	Properties a = new Properties();
+    	
+    	a.setProperty(ATT_COLOR, Integer.toString(spark_color.getRGB()));
+    	a.setProperty(ATT_MAX, Integer.toString(max_history));
+    	StringBuilder hist = new StringBuilder();
+    	for (int i=0; i<history.size(); i++) {
+    		if (0<i) hist.append(",");
+    		hist.append(Double.toString(history.get(i)));
+    	}
+    	a.setProperty(ATT_HISTORY, hist.toString());
+    	a.setProperty(ATT_BARS, Boolean.toString(want_bars));
+    	a.setProperty(ATT_DOTS, Boolean.toString(want_dots));
+    	a.setProperty(ATT_LEGEND, Boolean.toString(want_legend));
+    	a.setProperty(ATT_LINE, Boolean.toString(want_line));
+    	a.setProperty(ATT_INFO, info);
+    	a.setProperty(ATT_STOP, Boolean.toString(stopped_history));
+    	return a;
+    }
     
+    public void setAttributes(Properties a) {
+    	int rgb = Integer.parseInt(a.getProperty(ATT_COLOR));
+    	setSparkColor(new Color(rgb));
+    	setDrawBars(Boolean.parseBoolean(a.getProperty(ATT_BARS)));
+    	setDrawDots(Boolean.parseBoolean(a.getProperty(ATT_DOTS)));
+    	setDrawLegend(Boolean.parseBoolean(a.getProperty(ATT_LEGEND)));
+    	setDrawLine(Boolean.parseBoolean(a.getProperty(ATT_LINE)));
+    	setText(a.getProperty(ATT_INFO));
+    	this.stopped_history = Boolean.parseBoolean(a.getProperty(ATT_STOP));
+    }
 
 }

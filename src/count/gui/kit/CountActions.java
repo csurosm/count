@@ -48,6 +48,7 @@ import javax.swing.ImageIcon;
  * 	<li>open table, ignore annotations</li>
  *  <li>+ open table, add star tree</li>
  *  <li>simulate data</li>
+ *  <li>bootstrap data</li>
  *  <li>extract filtered</li>
  *  <li>convert to binary</li>
  *  </ol>
@@ -246,6 +247,10 @@ public class CountActions
 		return new Common(name, createImportTableIcon(PREFERRED_SIZE), do_it);
 	}
 	
+	public static Icon createBootstrapIcon(int size) {
+		TableIcon bottom_icon = new TableIcon(size, false);
+		return StringIcon.indexingStringIcon(bottom_icon, "✴"); // \u2734e
+	}
 	
 	public static Icon createSimulationIcon(int size)
 	{
@@ -255,14 +260,15 @@ public class CountActions
 		return StringIcon.indexingStringIcon(superposed, "✴"); // \u2734e
 	}
 	
-	
-	
-	
-	
 	public static Action createSimulation(String name, ActionListener do_it)
 	{
 		return new Common(name, createSimulationIcon(PREFERRED_SIZE), do_it);
 	}
+	
+	public static Action createBootstrap(String name, ActionListener do_it) {
+		return new Common(name, createBootstrapIcon(PREFERRED_SIZE), do_it);
+	}
+	
 	public static Icon createFilterRowsIcon(int size)
 	{
 		TableIcon bottom_icon =  new TableIcon(size, true);
