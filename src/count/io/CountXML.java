@@ -88,6 +88,19 @@ public interface CountXML
     
     public static final String ATT_BINARY = "isbinary";
     
+    // Sparkline
+    public static final String ATT_COLOR = "color";
+    public static final String ATT_MAX = "max";
+    public static final String ATT_HISTORY =  "history";
+    public static final String ATT_BARS =  "bars";
+    public static final String ATT_DOTS =  "dots";
+    public static final String ATT_LEGEND =  "legend";
+    public static final String ATT_LINE =  "line";
+    public static final String ATT_INFO =  "info";
+    public static final String ATT_STOP =  "stop";
+    
+    public static final String ATT_VALUE = "value"; 
+    
     // general setup
     public static final String ATT_THREADS = CommandLine.OPT_THREADS;
     public static final String ATT_TRUNCATE = CommandLine.OPT_TRUNCATE;

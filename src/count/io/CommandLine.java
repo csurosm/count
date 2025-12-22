@@ -611,7 +611,7 @@ public class CommandLine
 		{
 			long rnd_seed = getOptionLong(OPT_RND, 0L);
 			RND = (rnd_seed==0?new Random():new Random(rnd_seed));
-			out.println(getStandardHeader("Random initialization: -"+OPT_RND+" "+rnd_seed));    			
+			if (out!=null) out.println(getStandardHeader("Random initialization: -"+OPT_RND+" "+rnd_seed));    			
 		}
 		return RND;
 		
