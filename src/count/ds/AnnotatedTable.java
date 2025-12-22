@@ -212,6 +212,15 @@ public class AnnotatedTable implements ProfileTable
     {
         return property_names.length;
     }
+    
+    public int getPropertyIndex(String prop) {
+    	int getPropertyIndex=-1;
+    	for (int i=0; i<property_names.length && getPropertyIndex==-1; i++)
+    		if (property_names[i].equals(prop))
+    			getPropertyIndex=i;
+    	return getPropertyIndex;
+    }
+    
 
     /**
      * Each family is associated with a set of properties.
@@ -265,7 +274,7 @@ public class AnnotatedTable implements ProfileTable
         for (int j=0; j<property_names.length; j++)
         {
             if (property_name.equals(property_names[j]))
-                throw new IllegalArgumentException("Cannot add more than one property with the same name `"+property_name+"'");
+                return j;
             new_props[j]=property_names[j];
         }
         //System.out.println("#*OT.rP '"+property_name+"'\tidx "+property_names.length);
@@ -273,6 +282,8 @@ public class AnnotatedTable implements ProfileTable
         property_names = new_props;
         return property_names.length-1;
     }
+    
+    
     
     /**
      * Returns the number of families present at a terminal taxon
