@@ -752,13 +752,15 @@ public class Parsimony implements Count.UsesThreadpool //, GLDParameters
 	} // Profile
 	
 	/**
-	 * Calculates the penalty for pv→cv transition (parent to child)
+	 * Calculates the penalty for pv→cv transition (parent to child): it is 
+	 * the sum of <i>step</i> penalties for each integer difference. Unit penalty is
+	 * losing (n+1)→n with positive n.
 	 * 
 	 * @param pv
 	 * @param cv
-	 * @param gain_penalty
-	 * @param loss_penalty
-	 * @param duplication_penalty
+	 * @param gain_penalty step penalty 0→1
+	 * @param loss_penalty step penalty 1→0
+	 * @param duplication_penalty step penalty n→(n+1) for positive n
 	 * @return
 	 */
 	private static float getSankoffPenalty(int pv, int cv, double gain_penalty, double loss_penalty, double duplication_penalty)

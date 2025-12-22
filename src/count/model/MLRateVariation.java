@@ -2284,6 +2284,8 @@ public class MLRateVariation extends ML
 	@Override
 	public double optimize(double delta, final int itmax)
 	{
+		FunctionMinimization.setDebugOptimization(PRINT_OPTIMIZATION_MESSAGES);
+
 		List<Double> history = getOptimizationHistory();
 		if (history == null)
 		{
@@ -2559,6 +2561,9 @@ public class MLRateVariation extends ML
 			}
 			
 			nepoch++;
+			
+			// Let ZLNSRCH loose
+			FunctionMinimization.ZLNSRCH_MAX_CHANGE = 10.0;
 			
 			prev_state = current_state;
 		} // end of optimization loop 

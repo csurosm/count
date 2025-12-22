@@ -322,7 +322,13 @@ public class Posteriors
 		private final double[][][] edge_transitions;
 		
 		final Likelihood.Profile inside;
-		
+		/**
+		 * A currently unused trick for 
+		 * calculating true copy numbers: 
+		 * calculate priors on the ancestor[] trees 
+		 * where the ancestor is a leaf 
+		 * and its subtree is clipped.
+		 */
 		private Profile[] ancestor=null;
 		
 		public double getLogLikelihood() {

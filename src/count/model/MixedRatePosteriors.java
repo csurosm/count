@@ -52,7 +52,7 @@ public class MixedRatePosteriors
 		Arrays.fill(class_index,-1);
 		this.log_class_prob = new double[class_posteriors.length]; // precomputed
 		this.num_classes = 0; // need to compute classes
-		this.min_copies = Integer.min(table.minCopies(), 7);
+		this.min_copies = 0; //Integer.min(table.minCopies(), 7);
 	}
 	private final MixedRateModel mixed_model;
 	private final ProfileTable table;
