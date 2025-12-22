@@ -810,14 +810,19 @@ public class FunctionMinimization
     private static final boolean CG_POLAK_RIBIERE = true; // if false, 
     
     private static final boolean CHATTY_DFP = false;
+    private static boolean DFP_TIMING = false;
+    private static boolean DEBUG_ZLNSRCH = false; // during development/performance testing
+    
+    public static void setDebugOptimization(boolean doPrintMessages) {
+    	DFP_TIMING = doPrintMessages;
+    	DEBUG_ZLNSRCH = doPrintMessages;
+    }
+    
     /**
      * Whether BFGS uses the massively superior Mor&eacute;-Thuente 
      * line search instead of Armijo-style line search.
      */
-    private static final boolean DFP_LNSRCH_ZOOM = true;
-    
-    private static final boolean DFP_TIMING = true;
-    private static boolean DEBUG_ZLNSRCH = false; // during development/performance testing
+    private static  boolean DFP_LNSRCH_ZOOM = false;
     
     /**
      * Given a starting point, the Broyden-Fletcher-Goldfarb-Shanno
@@ -1941,6 +1946,12 @@ public class FunctionMinimization
 //    }
 
     /**
+     * Maximum allowed change to parameter values in trial steps
+     */
+    public static double ZLNSRCH_MAX_CHANGE = 1.0;
+    
+    
+    /**
      * Given a point x0[0..n-1], and a direction ξ[0..n-1], finds a new point x[0..n-1] 
      * along the direction ξ from x0 where the function func satisfies the strong Wolfe conditions.
      * Based on Nocedal and Wright "Numerical Optimization", 2nd ed. Springer 2008,
@@ -1964,7 +1975,7 @@ public class FunctionMinimization
      */ 
     public static boolean zlnsrch(double[] x0, double f0, double[] g, double[] ξ, double[] x, double[] fret,  Function<double[], Double> func, Function<double[], double[]> dfunc, double constantWolfe2) {
     	
-    	final double max_trial_change = 1.0; // not too big displacement for the first function evaluation
+    	final double max_trial_change = ZLNSRCH_MAX_CHANGE; // not too big displacement for the first function evaluation
     	
         final double ε = ZOOM_TOL; // minimum interval length
         
