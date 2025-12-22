@@ -17,6 +17,7 @@ package count.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -102,6 +103,10 @@ public class PosteriorsView extends HistoryView
 	public int getMinimumObserved()
 	{
 		return posteriors.getMinimumObserved();
+	}
+	
+	public void setMinimumObserved(int mincopy) {
+		min_copiesCBB.setSelectedItem(mincopy);
 	}
 	
 	
@@ -254,14 +259,26 @@ public class PosteriorsView extends HistoryView
         int data_min_copies = table_data.getContent().minCopies();
         min_copiesCBB = new SmallIntegerSelector(0,data_min_copies);
         
-        min_copiesCBB.addActionListener(click->
-			{
-			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
-			int[] selected_rows = table_scroll.getSelectedModelRows();
-			posteriors.setMinimumObserved(min_copiesCBB.getSelectedValue());
-			setUnobservedCorrections();
-			table_scroll.setSelectedModelRows(selected_rows);
-		});
+//        min_copiesCBB.addActionListener(click->
+//			{
+//			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+//			int[] selected_rows = table_scroll.getSelectedModelRows();
+//			posteriors.setMinimumObserved(min_copiesCBB.getSelectedValue());
+//			setUnobservedCorrections();
+//			table_scroll.setSelectedModelRows(selected_rows);
+//		});
+        min_copiesCBB.addItemListener(event ->
+        {
+        	if (event.getStateChange()== ItemEvent.SELECTED) {
+        		//System.out.println("#**PV.cMC.itlistener "+min_copiesCBB.getSelectedValue());
+    			TableScroll<HistoryModel> table_scroll = (TableScroll<HistoryModel>) getTopComponent();			
+    			int[] selected_rows = table_scroll.getSelectedModelRows();
+    			posteriors.setMinimumObserved(min_copiesCBB.getSelectedValue());
+    			setUnobservedCorrections();
+    			table_scroll.setSelectedModelRows(selected_rows);
+        	}
+        });
+        
         min_copiesCBB.setSelectedItem(Integer.valueOf(posteriors.getMinimumObserved()));
         
         JLabel mincopiesL = new JLabel("Min.observed");
@@ -278,25 +295,35 @@ public class PosteriorsView extends HistoryView
         //getLineageControl().add(createMincopiesControl()); // sets min_copiesRB too
         
         JTabbedPane selected_rows_display = this.getSelectedRowsDisplay();
-		String table_legend = "<p>The inferred counts are posterior expectations across selected families. "
-				+ "Copy statistics (copies, births and deaths) "
+		String table_legend = 
+				"<p>The <b>Tree</b> panel is a visual display of "
+				+ "the reconstruction at each node for the selected families in the top table."
+				+ "The <b>Table</b> panel gives the same values; you can sort by columns to see distributions "
+				+ "across lineages. Node selections are synchronized between <b>Tree</b> and <b>Table</b>.</p>"
+				+"<p>The inferred counts are posterior expectations across selected families. "
+				+ "Posterior statistics (copies, births and deaths) "
 				+ "count "
-				+ "	<b>ancestral</b> copies at each node <var>u</var>, or "
-				+ "the ancestral copy change "
+				+ "	<i>surviving</i> copies at each node <var>u</var>, or "
+				+ "the surviving copy change "
 				+ "in the lineage leading to <var>u</var>. "
-				+ "Ancestral copies have at least one "
+				+ "Surviving copies have at least one "
 				+ "descendant ortholog copy at the leaves in the subtree of <var>u</var>."
 				+ "Copy statistics thus track the provenance of the observed copies at "
 				+ "the terminal nodes. Deaths are copies at the parent which <var>u</var> "
-				+ "does not inherit; births are ancestral copies originating at <var>u</var> "
+				+ "does not inherit; births are surviving copies originating at <var>u</var> "
 				+ "by duplication or gain."
 				+ "</p>";
 		if (FAMILY_PRESENCE_BY_SURVIVAL)
 		{
 			table_legend = table_legend
-					+ "<p>Family statistics track the history of family repertoires, and  "
-					+ "count the families that have at least one ancestral copy "
-					+ "with descendant ortholog(s). ";
+					+ "<p>Family statistics (loss, gain, contraction, expansion) track the history of family repertoires, and  "
+					+ "count the families that have at least one surviving copy "
+					+ "with descendant ortholog(s). "
+					+ "Family <b>gain</b> means then acquisition of at least one copy, despite inheritance of none from parent"
+					+ "(including xenolog displacements). "
+					+ "Family <b>loss</b> means that the family is present at the parent and all copies are extinct in the child's subtree. "
+					+"Contraction and expansion are copy decreases to 1 and increases from 1 copy."
+					;
 		} else
 		{ 
 			table_legend = table_legend
@@ -307,11 +334,13 @@ public class PosteriorsView extends HistoryView
 		}
 		table_legend = table_legend
 				+ "Families with multiple copies are also inferred, and changes "
-				+ "to and from 0 (gain and loss), or between single- and multiple-members "
+				+ "to and from 0 iherited copies (family gain and loss), or between single- and multiple-members "
 				+ "(contraction and expansion)."
 				+"</p>"
 				+ "<p><b>Family correction</b> adds statistics for the implied unobserved families with "
-				+ "fewer copy numbers than selected by the radio buttons.</p>"
+				+ "fewer copy numbers than the selected minimum-copy observation threshold."
+				+ "(Set to 0 to disable correction.)"
+				+ "</p>"
 //				+ "<p>In the family table, "
 //				+ "rarity is the negative log-likelihood of the family profile, "
 //				+ "as -10 log<sub>10</sub> <var>L</var>(profile). Family statistics "
@@ -321,7 +350,6 @@ public class PosteriorsView extends HistoryView
 		JEditorPane table_explain = new JEditorPane("text/html", table_legend);
         table_explain.setEditable(false);		
 		selected_rows_display.addTab("Legend", table_explain);
-        
 	}
 	
 //	@Override

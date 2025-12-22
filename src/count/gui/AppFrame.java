@@ -60,6 +60,7 @@ import javax.swing.SwingWorker;
 import count.Count;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
+import count.ds.Reconciliation;
 import count.gui.kit.CountActions;
 import count.gui.kit.ShmancyFileDialog; 
 import count.gui.kit.StringIcon;
@@ -68,6 +69,7 @@ import count.io.GeneralizedFileReader;
 import count.io.ModelBundle;
 import count.io.NewickParser;
 import count.io.RateVariationParser;
+import count.io.ReconciliationParser;
 import count.io.TableParser;
 // import count.model.GammaInvariant; // deprecated
 import count.model.MixedRateModel;
@@ -274,25 +276,20 @@ public class AppFrame extends JFrame
 			+ "</ul>"
 			+ "</li>"
 //			+ "<h4>Data tables</h4>"
-			+ "<li>Count works with a family size <span style=\"color:rgb(128,0,0)\"><b>table</b></span>: "
-			+ "a set of genomes described "
-			+ "as a multiset of families their genes belong to. "
+			+ "<li>Count works with a <span style=\"color:rgb(128,0,0)\"><b>table</b></span> of family profiles: "
+			+ "number of genes per family in each genome. "
 			+ "Such a table is tab-delimited text file that "
-			+ "starts with a header line that "
-			+ "lists the taxon names as column headers (attention for underscore <tt>_</tt>:  they are converted to space in unquoted taxon names from the tree file as per Newick-format specification). "
-			+ "The first column has the family names. "
+			+ "starts with a header line."
+			+ "The first column has the family names; other columns must have headers matching the taxon names (attention for underscore <tt>_</tt>:  they are converted to space in unquoted taxon names from the tree file as per Newick-format specification). "
 			+ "Additional columns can be loaded as family <b>annotation</b> columns"
-			+ "(Menu: Open annotated table ... keep annotations); but they are ignored "
-			+ "by default (Load table button or menu). "
+			+ "(Load table button or menu). "
 			+ "You can either <b>open a table</b> in that format, or "
 			+ "<b>import a table</b>. from COG-style csv files or MCL clustering output. "
 			+ "You can derive further tables by <b>filtering the rows</b> of "
 			+ "an existing table (double-click on a cell for condition on values in that column), "
 			+ "or by converting it to a <b>binary</b> presence-absence table."
-			+ " In order to conveniently filter by a threshold (e.g., minimum/maximum for number of copies/lineages, or ancestral presence),"
-			+ " sort the table by clicking on the header of the given column."
-			+ ""
-			+ ""
+			+ " In order to conveniently filter,"
+			+ " <b>sort the table</b> by clicking on a column header: this is useful for thresholds on minimum/maximum for number of copies/lineages, or ancestral presence, "
 			+ "</li>"
 			+ ""
 //			+ "<h4>Phylogenies</h4>"
@@ -304,41 +301,44 @@ public class AppFrame extends JFrame
 			+ "Edit operations include rerooting, edge-contraction, and "
 			+ "subtree-prune-and-regraft.) Terminal nodes are colored the same way across "
 			+ "different phylogenies in the same session."
-			+ "</li>"
-			+ ""
+			+ "In the phylogeny displays, inner nodes that can be mapped to the main tree are shown by diamonds, "
+			+ "others by circles. You van choose various display styles: cladogram, phylogram etc. but the tabkle format is the lost convenient for larger trees."
+			+ "<br/>"
+			+ "Phylogenies with multifurcations should be avoided: a "
+			+ "completely resolved model uses a binary tree. Some functionalities do not work for non-binary trees.</li>"
+			
 //			+ "<h4>Rate models</h4>"
 			+ "<li>Rate <span style=\"color:rgb(128,0,0)\"><b>models</b></span> equip the selected phylogeny's edges with "
 			+ "a linear birth-and-death process defined by "
 			+ "rates and length: loss, duplication and gain rates. (For convenience, "
 			+ "edge lengths and rates are scaled so that loss rate=1.0. "
-			+ "Phylogenies with multifurcations are OK, but a "
-			+ "completely resolved model uses a binary tree.) "
+			+ " "
 			+ "You can <b>load a rate model</b> (previously saved from Count), "
 			+ "or make one by <b>model optimization</b>. "
 			+ "(Models are optimized by maximizing their likelihood). "
-			+ "You should set the observation (aka <em>ascertainment</em>) bias for your input table, depending "
+			+ "You should set the <b>observation bias</b> for your input table, depending "
 			+ "on how the homolog families were constructed: "
 			+ "whether they have a minimum of 0 (if even the families without any members are known), "
 			+ "1 (if the table covers all genes from all genomes), "
 			+ "2 members (if families correspond to alignments),"
 			+ "or even 3 or 4 if families are also used for gene-tree-species-tree reconciliation."
-			+ "<br />"
-			+ "Make sure you filter your table for observation bias on the membership count (<tt>#mem</tt>): "
-			+ "families with at least 1 member, or families with at least 2 members "
-			+ "if you work with rate models."	
+			+ "Use filtering by minimum copy number to set arbitrary bias."
+			
 			+"<br />"
 			+ "If you have a rate model, you can <b>simulate a table</b> "
-			+ "with a particular observation bias (e.g, in order to compare the true ancestral history to an inference)."
+			+ "with a particular observation bias, "
+			+ "or you can generate a random <b>bootstrap</b> table."
 			+ "</li>"
 			+ ""
 //			+ "<h4>Ancestral reconstructions</h4>"
-			+ "<li>Given a table, you can do <span style=\"color:rgb(128,0,0)\"><b>ancestral reconstructions</b></span>. "
+			+ "<li>Given a table, you can do the <span style=\"color:rgb(128,0,0)\"><b>analysis</b></span>"
+			+ " of <b>ancestral reconstructions</b> "
 			+ "by either <b>numerical parsimony</b> (a generalized Wagner penalization), "
 			+ "or by <b>Dollo parsimony</b> if the data is binary. "
 			+ "If you have a rate model, then you can also reconstruct the "
 			+ "ancestral genomes by <b>posteriors</b>, giving probabilities and "
 			+ "expectations for family memberships; the reconstruction includes correction "
-			+ "for the observation bias of minimum copies."
+			+ "for the observation bias. "
 			+ "<br/>"
 			+"Model optimization, ancestral reconstruction and simulations can be launched from the <b>command line interface</b>:"
 			+ " use the command-building wizard from the Count GUI (look for the CLI button in the popup dialogs). "
@@ -535,8 +535,8 @@ public class AppFrame extends JFrame
     	
 //    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(true));
 //    	bouton.setToolTipText("Load a copy-number table, keep columns with family annotations");
-    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable(false));
-    	bouton.setToolTipText("Load a copy-number table, keep columns with corresponding taxa in tree");
+    	bouton = createToolBar.addLoadAnnotations("Load table", e->doLoadTable());
+    	bouton.setToolTipText("Load a table of family profiles");
 
     	bouton = createToolBar.addImportTable("Import", e->doImportTableData());
     	bouton.setToolTipText("Load copy-number data from membership (COG) or clustering (MCL) data file.");
@@ -572,6 +572,7 @@ public class AppFrame extends JFrame
     	bouton.setToolTipText("Quit the application without saving anything");
     	return createToolBar; 
     }
+    
     
     private class MenuBar extends JMenuBar
     {
@@ -726,7 +727,8 @@ public class AppFrame extends JFrame
     	{
     		data_menu.removeAll();
     		
-    		JMenuItem data_load_table = new JMenuItem(CountActions.createLoadTable("Load table... (keep only the columns with matching leaf names)",e->doLoadTable(false) ));
+    		JMenuItem data_load_table = new JMenuItem(CountActions.createLoadTable("Load table...",e->doLoadTable() ));
+//    		JMenuItem data_load_table = new JMenuItem(CountActions.createLoadTable("Load table... (keep only the columns with matching leaf names)",e->doLoadTable(false) ));
 //            JMenuItem data_load_table = new JMenuItem("Open table... (keep only the columns with matching leaf names)");
 //            data_load_table.addActionListener(e->doLoadTable(false));
             data_load_table.setAccelerator(
@@ -734,10 +736,10 @@ public class AppFrame extends JFrame
             				Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
             data_menu.add(data_load_table);       
 
-            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nonmatching columns as annotations)", e->doLoadTable(true)));
+//            JMenuItem data_load_annotated = new JMenuItem(CountActions.createLoadAnnotations("Open annotated table ... (keep nonmatching columns as annotations)", e->doLoadTable(true)));
 //            JMenuItem data_load_annotated = new JMenuItem("Open annotated table... (keep other columns as annotations)");
 //            data_load_annotated.addActionListener(e->doLoadTable(true));
-            data_menu.add(data_load_annotated);
+//            data_menu.add(data_load_annotated);
 
 //            JMenuItem data_load_url = new JMenuItem("Load table by path name or URL...");
 //            data_load_url.addActionListener(e->doLoadTablePath());
@@ -750,6 +752,8 @@ public class AppFrame extends JFrame
 //            JMenuItem data_simulation = new JMenuItem("Simulate a table by rate model...");
 //            data_simulation.addActionListener(e->getActiveSession().doSimulation());
             data_menu.add(data_simulation);
+            JMenuItem data_bootstrap = new JMenuItem(CountActions.createBootstrap("Bootstrap table", e->getActiveSession().doBootstrap()));
+            data_menu.add(data_bootstrap);
             
             data_menu.addSeparator();
          
@@ -783,7 +787,7 @@ public class AppFrame extends JFrame
 // BUNDLE
             }
             data_load_table.setEnabled(sesh != null);
-            data_load_annotated.setEnabled(data_load_table.isEnabled());
+//            data_load_annotated.setEnabled(data_load_table.isEnabled());
 //            data_load_url.setEnabled(data_load_table.isEnabled());
             data_filter_lines.setEnabled(table_entry!=null && 
             		sesh.getDataBrowser().getSelectedItem() instanceof Session.FamilySelection); 
@@ -796,11 +800,15 @@ public class AppFrame extends JFrame
 								? null
 								: sesh.getModelBrowser().getSelectedRatesEntry();
             data_simulation.setEnabled(rates_entry != null);
+            data_bootstrap.setEnabled(table_entry!=null);
             
             // not yet implemented
 //            data_load_url.setEnabled(false);
 //            data_filter_lines.setEnabled(false);
 //            data_binary.setEnabled(false);
+
+            
+            
     	}
     	
     	void setRateMenu()
@@ -1191,55 +1199,6 @@ public class AppFrame extends JFrame
         	initSession(table_data);
     }
     
-    private void doImportTableData()
-    {
-		Session sesh = getActiveSession();
-    	ImportTable importer = new ImportTable(this);
-    	
-    	int wantsto = JOptionPane.showConfirmDialog(this, importer, "Import family profile data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_L));
-    	if (wantsto == JOptionPane.OK_OPTION)
-    	{
-    		String[] taxon_names;
-    		if (sesh==null)
-    		{
-    			taxon_names =null;
-    		} else
-    		{
-    			taxon_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
-    		}
-    		final SwingWorker<DataFile<AnnotatedTable>,Void> read_task = importer.readTableTask(taxon_names);
-    		read_task.addPropertyChangeListener(event->
-    		{
-    			if (! read_task.isCancelled()
-    					&&
-    					"state".equals(event.getPropertyName())
-    	                 && SwingWorker.StateValue.DONE == event.getNewValue())
-    			{
-    				DataFile<AnnotatedTable> table_data=null;
-//    				System.out.println("#**AF.bIT task done");
-    				try {table_data = read_task.get();} 
-    				catch (InterruptedException ignored) {}
-					catch (ExecutionException what_a_pity) 
-    				{
-						exception_handler.handle(what_a_pity, "Importing failed");						
-    				}
-    		        if (table_data != null)
-    		        {
-    		            checkTableEmpty(table_data.getContent());
-    		        	if (sesh==null)
-    		        		initSession(table_data);
-    		        	else
-    		        	{
-    		        		// no need for mapping bc readTable used the taxon name order from the main phylo
-    		        		sesh.addDataSet(table_data);
-    		        	}
-    		        }
-    			}
-    		});
-    		read_task.execute();
-    	}
-    	
-    }
     
 //    private void foregroundImportTableData()
 //    {
@@ -1613,7 +1572,123 @@ public class AppFrame extends JFrame
         }
     }
 
-    
+     
+     private void doLoadTable() {
+  		Session sesh = getActiveSession();
+     	LoadTable loader = new LoadTable(this);
+     	int wantsto = JOptionPane.showConfirmDialog(this, loader, "Open family table", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_XL));
+     	if (wantsto == JOptionPane.OK_OPTION) {
+     		final SwingWorker<DataFile<AnnotatedTable>, Void> read_task
+ 				= loader.readTableTask();  
+    		read_task.addPropertyChangeListener(event->
+	    		{
+	    			if (! read_task.isCancelled()
+	    					&&
+	    					"state".equals(event.getPropertyName())
+	    	                 && SwingWorker.StateValue.DONE == event.getNewValue())
+	    			{
+	    				DataFile<AnnotatedTable> table_data=null;
+	    				try {table_data = read_task.get();} 
+	    				catch (InterruptedException ignored) {}
+						catch (ExecutionException what_a_pity) 
+	    				{
+							exception_handler.handle(what_a_pity, "Loading failed");						
+	    				}
+	    		        if (table_data != null)
+	    		        {
+	    		            checkTableEmpty(table_data.getContent());
+	    		        	if (sesh==null)
+	    		        		initSession(table_data);
+	    		        	else
+	    		        	{
+	    		        		// no need for mapping bc readTable used the taxon name order from the main phylo
+	    		        		sesh.addDataSet(table_data);
+	    		        	}
+	    		        }
+	    			}
+	    		});
+    		read_task.execute();
+     	}
+     }
+     
+     
+     private void doImportTableData()
+     {
+ 		Session sesh = getActiveSession();
+     	ImportTable importer = new ImportTable(this);
+     	
+     	int wantsto = JOptionPane.showConfirmDialog(this, importer, "Import family profile data", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, CountActions.createLoadTableIcon(CountActions.SIZE_L));
+     	if (wantsto == JOptionPane.OK_OPTION)
+     	{
+     		if (importer.isTableTask()) {
+ 	    		String[] taxon_names;
+ 	    		if (sesh==null)
+ 	    		{
+ 	    			taxon_names =null;
+ 	    		} else
+ 	    		{
+ 	    			taxon_names = sesh.getModelBrowser().getMainPhylogeny().getLeafNames();
+ 	    		}
+ 	    		final SwingWorker<DataFile<AnnotatedTable>, Void> read_task
+ 	    			= importer.readTableTask(taxon_names);
+ 	    		read_task.addPropertyChangeListener(event->
+ 	    		{
+ 	    			if (! read_task.isCancelled()
+ 	    					&&
+ 	    					"state".equals(event.getPropertyName())
+ 	    	                 && SwingWorker.StateValue.DONE == event.getNewValue())
+ 	    			{
+ 	    				DataFile<AnnotatedTable> table_data=null;
+ 	//    				System.out.println("#**AF.bIT task done");
+ 	    				try {table_data = read_task.get();} 
+ 	    				catch (InterruptedException ignored) {}
+ 						catch (ExecutionException what_a_pity) 
+ 	    				{
+ 							exception_handler.handle(what_a_pity, "Importing failed");						
+ 	    				}
+ 	    		        if (table_data != null)
+ 	    		        {
+ 	    		            checkTableEmpty(table_data.getContent());
+ 	    		        	if (sesh==null)
+ 	    		        		initSession(table_data);
+ 	    		        	else
+ 	    		        	{
+ 	    		        		// no need for mapping bc readTable used the taxon name order from the main phylo
+ 	    		        		sesh.addDataSet(table_data);
+ 	    		        	}
+ 	    		        }
+ 	    			}
+ 	    		});
+ 	    		read_task.execute();
+     		} else {
+     			final SwingWorker<DataFile<Reconciliation<?>>, Void> load_task
+     				= importer.readReconciliationTask(sesh.getModelBrowser().getMainPhylogeny());
+                 load_task.addPropertyChangeListener(event->
+         		{
+         			if (! load_task.isCancelled()
+         					&&
+         					"state".equals(event.getPropertyName())
+         	                 && SwingWorker.StateValue.DONE == event.getNewValue())   
+         			{
+         				DataFile<Reconciliation<?>> rec_data =null;
+         				try {rec_data = load_task.get();} 
+         				catch (InterruptedException ignored) {}
+         				catch (ExecutionException bummer) {
+         					exception_handler.handle(bummer, "Loading failed");    					
+         				}
+         				if (rec_data!=null){
+         					sesh.addReconciliation(rec_data);
+         				}
+         			}
+         		});
+                 load_task.execute();    			
+     		}
+     	}
+     	
+     }
+     
+     
+     
 //    private void foregroundLoadTable(boolean with_annotation_columns)
 //    {
 //        String dialog_title = (with_annotation_columns?"Open annotated family size table":"Open family size table");
@@ -1701,6 +1776,7 @@ public class AppFrame extends JFrame
         }
     }
     
+    
 //	private void foregroundLoadRates(BufferedReader R)
 //    {
 //        File rates_file = null;
@@ -1762,8 +1838,52 @@ public class AppFrame extends JFrame
 //            } 
 //        } // file_name 		
 //    }
+
+//    private void doImportReconciliation() {
+//    	Session sesh = getActiveSession();
+//		Phylogeny main_tree = sesh.getModelBrowser().getSelectedTreeEntry().getTreeData().getContent();        				
+//
+//		ShmancyFileDialog dialog = new ShmancyFileDialog(this,"Load table of reconcilation statistics",FileDialog.LOAD,CountActions.createOpenIcon(CountActions.SIZE_XL));
+//        dialog.setVisible(true);
+//        
+//        
+//        String file_name = dialog.getFile();
+//        if (dialog.hasFile())
+//        {
+//            String directory = dialog.getDirectory();
+//            File rec_file = new File(directory,file_name);
+//            SwingWorker<DataFile<Reconciliation<?>>, Void> load_task = dialog.createTask(stream->
+//    			{                
+//    				BufferedReader recR = new BufferedReader(new InputStreamReader(stream));
+//    				Reconciliation<?> rec = ReconciliationParser.parseTable(recR, main_tree);
+//    				DataFile<Reconciliation<?>> rec_data 
+//    					= new DataFile<>(rec, rec_file);
+//    				return rec_data;
+//    			});
+//            load_task.addPropertyChangeListener(event->
+//    		{
+//    			if (! load_task.isCancelled()
+//    					&&
+//    					"state".equals(event.getPropertyName())
+//    	                 && SwingWorker.StateValue.DONE == event.getNewValue())   
+//    			{
+//    				DataFile<Reconciliation<?>> rec_data =null;
+//    				try {rec_data = load_task.get();} 
+//    				catch (InterruptedException ignored) {}
+//    				catch (ExecutionException bummer) {
+//    					exception_handler.handle(bummer, "Loading failed");    					
+//    				}
+//    				if (rec_data!=null){
+//    					sesh.addReconciliation(rec_data);
+//    				}
+//    			}
+//    		});
+//            load_task.execute();
+//        }    	
+//    }
     
-    private void checkTableEmpty(AnnotatedTable table)
+    
+    void checkTableEmpty(AnnotatedTable table)
     {
         String[] leaf_names = table.getTaxonNames();
         int has_zero = 0;

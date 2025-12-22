@@ -339,6 +339,11 @@ public class RateOptimizationPanel extends RateVariationPanel
 
 		
 	}		
+	
+	// TODO 
+	// (1) save/load attributes (2 graphers, 1 counterbox, 1 stage)
+	// init as in launchOptimization but call done 
+	// (2) capture System.out from factory and write into JTextArea; in 2nd tab with this panel
 
 	/**
 	 * Main entrance point 

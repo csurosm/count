@@ -18,18 +18,16 @@ package count.gui;
 
 import javax.swing.border.Border;
 
-import static count.io.CommandLine.OPT_OUTPUT;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.IOException;
 
 import java.text.NumberFormat;
 import java.util.Map;
@@ -49,10 +47,10 @@ import javax.swing.SwingWorker;
 
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
-//import count.gui.kit.FancyFileDialog;
+import count.ds.Reconciliation;
 import count.gui.kit.ShmancyFileDialog;
-import count.io.CommandLine;
 import count.io.DataFile;
+import count.io.ReconciliationParser;
 import count.io.TableParser;
 
 /**
@@ -64,7 +62,8 @@ import count.io.TableParser;
  * ---
  * p2o chooser 
  * mcloutput chooser
- * 
+ * ---
+ * rec statistics table chooser
  * @author csuros
  *
  */
@@ -81,6 +80,8 @@ public class ImportTable extends JPanel
 	
 	private JRadioButton cogRB;
 	private JRadioButton mclRB;
+	private JRadioButton recRB;
+	
 	
 	/*
 	 * COG interface
@@ -88,8 +89,10 @@ public class ImportTable extends JPanel
 	private ShmancyFileDialog genomeD;
 	private ShmancyFileDialog cogD;
 	private ShmancyFileDialog p2oD;
+	
 	private ShmancyFileDialog mclD;
 	
+	private ShmancyFileDialog recD;
 	private JFormattedTextField col_genomeT;
 	private JFormattedTextField col_geneT;
 	private JFormattedTextField col_familyT;
@@ -108,9 +111,14 @@ public class ImportTable extends JPanel
 	
 	Box cogB;
 	Box mclB;
+	Box recB;
 	
 	Border mclBorder=null;
 	Border cogBorder=null;
+	Border recBorder=null;
+
+	
+	private static final boolean ENABLE_REC = true; // under development
 	
 	/**
 	 * Formatted text box size for long explanations.
@@ -125,17 +133,28 @@ public class ImportTable extends JPanel
 		formatsB.setAlignmentX(LEFT_ALIGNMENT);
 		ButtonGroup formats = new ButtonGroup();
 		cogB = createCOGBox();
+		formatsB.add(cogRB);
 		formatsB.add(cogB);
 		formats.add(cogRB);
 		
 		mclB = createMCLBox();
+		formatsB.add(mclRB);
 		formatsB.add(mclB);
 		formats.add(mclRB);
+
+		recB = createRecBox();
+		if (ENABLE_REC) {
+			formatsB.add(recRB);
+			formatsB.add(recB);
+			formats.add(recRB);
+		}
+		
 		this.add(formatsB, BorderLayout.CENTER);
-		this.add(cogRB, BorderLayout.NORTH);
-		this.add(mclRB, BorderLayout.SOUTH);
+//		this.add(cogRB, BorderLayout.NORTH);
+//		this.add(mclRB, BorderLayout.SOUTH);
 		cogRB.addItemListener(e->colorBorders());
 		mclRB.addItemListener(e->colorBorders());
+		recRB.addItemListener(e->colorBorders());
 		
 		mclB.addMouseListener(new MouseListener() {
 			@Override
@@ -165,7 +184,22 @@ public class ImportTable extends JPanel
 			@Override
 			public void mouseExited(MouseEvent e) {}
 		});
+		recB.addMouseListener(new MouseListener() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				recRB.setSelected(true);
+			}
+			@Override
+			public void mousePressed(MouseEvent e) {}
+			@Override
+			public void mouseReleased(MouseEvent e) {}
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			@Override
+			public void mouseExited(MouseEvent e) {}
+		});
 		
+		recRB.setSelected(true);;
 		mclRB.setSelected(true);
 		cogRB.setSelected(true);
 	}
@@ -192,6 +226,7 @@ public class ImportTable extends JPanel
 		};
 		createCOGBox.setAlignmentX(LEFT_ALIGNMENT);
 		cogRB =  new JRadioButton("Membership data");
+		cogRB.setFont(cogRB.getFont().deriveFont(Font.BOLD));
 //		createCOGBox.add(cogRB);
 		
 		String cog_format_description = "<em>The input file is a comma- or tab-separated text file, "
@@ -321,28 +356,36 @@ public class ImportTable extends JPanel
 		{
 			cogBorder = cogB.getBorder();
 			mclBorder = mclB.getBorder();
+			recBorder = recB.getBorder();
 		}
 		Box selected;
-		Box unselected;
 		Border selected_border;
-		Border unselected_border;
 		if (cogRB.isSelected())
 		{
 			selected = cogB;
 			selected_border = cogBorder;
-			unselected = mclB;
-			unselected_border = mclBorder;
-		} else
+		} else if (mclRB.isSelected())
 		{
 			selected = mclB;
 			selected_border = mclBorder;
-			unselected = cogB;
-			unselected_border = cogBorder;
+		} else {
+			selected = recB;
+			selected_border = recBorder;
 		}
 		selected.setBorder(BorderFactory.createCompoundBorder(selected_border, BorderFactory.createLineBorder(Color.black, 3)));
-		unselected.setBorder(unselected_border);
-		selected.setEnabled(true); // on a Box?
-		unselected.setEnabled(false);
+		selected.setEnabled(true); // on a Box but we overridden it 
+		if (!cogRB.isSelected()) {
+			cogB.setBorder(cogBorder);
+			cogB.setEnabled(false);
+		}
+		if (!mclRB.isSelected()) {
+			mclB.setBorder(mclBorder);
+			mclB.setEnabled(false);
+		}
+		if (!recRB.isSelected()) {
+			recB.setBorder(recBorder);
+			recB.setEnabled(false);
+		}
 	}
 	
 	
@@ -361,6 +404,7 @@ public class ImportTable extends JPanel
 		createMCLBox.setAlignmentX(LEFT_ALIGNMENT);
 		createMCLBox.setAlignmentY(TOP_ALIGNMENT);
 		mclRB = new JRadioButton("Clustering data");
+		mclRB.setFont(mclRB.getFont().deriveFont(Font.BOLD));
 //		createMCLBox.add(mclRB);
 		
 		String mcl_format_description = "<em>The input file is a list of clusters (-families), "
@@ -376,7 +420,7 @@ public class ImportTable extends JPanel
 		
 		JEditorPane mcl_format_explain = new JEditorPane("text/html", mcl_format_description);
 		mcl_format_explain.setEditable(false);
-		mcl_format_explain.setPreferredSize(EXPLAIN_SIZE);
+		mcl_format_explain.setPreferredSize(new Dimension(EXPLAIN_SIZE.width, 2*EXPLAIN_SIZE.height/3));
 		createMCLBox.add(new JScrollPane(mcl_format_explain));
 		p2oD = new ShmancyFileDialog(app, "Open gene-to-genome map", "Gene-to-genome file");
 		mclD = new ShmancyFileDialog(app, "Open clustering output", "Clusters file");
@@ -387,6 +431,57 @@ public class ImportTable extends JPanel
 //		createMCLBox.addMouseListener(e->mclRB.setSelected(true));
 		
 		return createMCLBox;
+	}
+	
+	private Box createRecBox()
+	{
+		Box createRecBox = new Box(BoxLayout.PAGE_AXIS)
+		{
+				@Override
+				public void setEnabled(boolean e)
+				{
+					recD.setEnabled(e);
+				}
+		};		
+		createRecBox.setAlignmentX(LEFT_ALIGNMENT);
+		createRecBox.setAlignmentY(TOP_ALIGNMENT);
+		
+		recRB = new JRadioButton("Reconciliation data");
+		recRB.setFont(recRB.getFont().deriveFont(Font.BOLD));
+		String rec_format_description = "<em>The input file is a tab-separated table of event counts for family-node pairs at "
+				+ "terminal and ancestral nodes, whihc must be all named. "
+				+ "The first line is a header line with columns for Family/family, "
+				+ "BranchName/species, duplications, transfers, losses, copies; "
+				+ "and possibly origination, singletons (inherited funding copies), presence "
+				+ "and arCOG/COG annotation.</em>";
+		
+		JEditorPane rec_format_explain = new JEditorPane("text/html", rec_format_description);
+		rec_format_explain.setEditable(false);
+		rec_format_explain.setPreferredSize(new Dimension(EXPLAIN_SIZE.width, EXPLAIN_SIZE.height/3));
+		createRecBox.add(new JScrollPane(rec_format_explain));
+		recD = new ShmancyFileDialog(app, "Open reconciliation output", "Reconciliation statistics file");
+		createRecBox.add(recD.getEmbeddableChooser());
+		
+		createRecBox.setBorder(BorderFactory.createTitledBorder("Import reconciliation statistics (ALE-style data)"));
+		
+		return createRecBox;
+	}	
+	
+	public boolean isTableTask() {
+		return cogRB.isSelected() || mclRB.isSelected();
+	}
+	
+	public SwingWorker<DataFile<Reconciliation<?>>, Void> readReconciliationTask(Phylogeny main_tree){
+        SwingWorker<DataFile<Reconciliation<?>>, Void> load_task = recD.createTask(stream->
+			{                
+				BufferedReader recR = new BufferedReader(new InputStreamReader(stream));
+				Reconciliation<?> rec = ReconciliationParser.parseTable(recR, main_tree);
+				File rec_file = new File(recD.getDirectory(), recD.getFile());
+				DataFile<Reconciliation<?>> rec_data 
+					= new DataFile<>(rec, rec_file);
+				return rec_data;
+			});
+		return load_task;
 	}
 	
 	public SwingWorker<DataFile<AnnotatedTable>, Void> readTableTask(String[] taxon_names)

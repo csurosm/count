@@ -308,26 +308,67 @@ class HistoryModel extends AnnotatedTableModel
 		}
 		private final double[] cells;
 		private double offset=0.0;
+		private double sum=0.0;
+		private double max=Double.NEGATIVE_INFINITY;
+		private double min=Double.POSITIVE_INFINITY;
 		
 		
 		@Override
-		public RoundedDouble getValue(int row_idx) 
-		{
+		public RoundedDouble getValue(int row_idx){
 			double y = cells[row_idx]+offset;
 			return new RoundedDouble(y);
 		} 
 		@Override
-		public void setValue(int row_idx, Number x) { cells[row_idx]=x.doubleValue();}
+		public void setValue(int row_idx, Number x){ 
+			double v = x.doubleValue();
+			double z = cells[row_idx];
+			cells[row_idx]=v;
+			this.sum += v-(Double.isNaN(z)?0.0:z);
+			if (max<=v) {
+				max = v;
+			} else if (z==max) {
+				max = Double.NEGATIVE_INFINITY;
+			}
+			if (v<=min) {
+				min = v;
+			} else if (z==min) {
+				min = Double.POSITIVE_INFINITY;
+			}
+		}
 		@Override 
-		public void reset()
-		{
+		public void reset(){
 			Arrays.fill(cells, Double.NaN);
+			this.sum=0.0;
+			this.max=Double.NEGATIVE_INFINITY;
+			this.min=Double.POSITIVE_INFINITY;
 		}
 		@Override
-		public void setCorrection(Number x)
-		{
+		public void setCorrection(Number x){
 			this.offset = x.doubleValue();
 		}
+		
+		// eager updates do not seem to work
+		
+//		@Override
+//		public double getSum() {
+//			return sum+offset*getRowCount();
+//		}
+		
+//		@Override
+//		public double getMinimum() {
+//			if (min == Double.POSITIVE_INFINITY) {
+//				min = super.getMinimum();
+//			} 
+//			return min+offset;
+//		}
+//		
+//		@Override
+//		public double getMaximum() {
+//			if (max == Double.NEGATIVE_INFINITY) {
+//				max = super.getMaximum();
+//			}
+//			return max+offset;
+//		}
 	}
 	private class IntColumn extends Column<Integer>
 	{
@@ -338,17 +379,28 @@ class HistoryModel extends AnnotatedTableModel
 			reset();
 		}
 		private final int[] cells;
+		private long sum=0L;
+		
 		@Override
 		public Integer getValue(int row_idx) { return cells[row_idx];} 
 		@Override
 		public void setValue(int row_idx, Number x) 
 		{ 
-			cells[row_idx]=x.intValue();
+			int v= x.intValue();
+			int z = cells[row_idx];
+			cells[row_idx]= v;
+			sum += v-Integer.max(0, z);
 		}
 		@Override
 		public void reset()
 		{
 			Arrays.fill(cells, -1);
+			this.sum=0L;
+		}
+		
+		@Override
+		public double getSum() {
+			return sum;
 		}
 	}
 	private class SumColumn<C extends Number> extends Column<C>
@@ -616,7 +668,11 @@ class HistoryModel extends AnnotatedTableModel
     		this.name = name;
     	}
     	
-    	protected final String name;
+    	protected String name;
+    	
+    	protected void setName(String name) {
+    		this.name = name;
+    	}
     }
 
 }

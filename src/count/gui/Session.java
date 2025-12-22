@@ -23,6 +23,7 @@ import java.awt.FileDialog;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
+import java.util.Random;
 import java.util.Set;
 
 import javax.swing.Box;
@@ -48,6 +49,7 @@ import count.io.ExportableData;
 import count.model.MixedRateModel;
 import count.ds.AnnotatedTable;
 import count.ds.Phylogeny;
+import count.ds.Reconciliation;
 
 
 /**
@@ -963,6 +965,23 @@ public class Session extends JSplitPane
     	work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     }
     
+    public void doBootstrap() {
+    	DataFile<AnnotatedTable> table_data = this.getSelectedData();
+    	
+    	Random rnd = app.getApp().getRnd();
+    	long bootstrap_id = (rnd.nextLong()<<8)>>>16; // middle 48 bits
+    	String bootstrap_name = "Boo."
+    							+ DataFile.chopCommonFileExtension(table_data.getFile().getName())
+    							+ "#"
+    							+ Long.toHexString(bootstrap_id);
+    	AnnotatedTable bootstrap = table_data.getContent().bootstrap(rnd);
+    	DataFile<AnnotatedTable> bootstrap_data = 
+    			new DataFile<>(bootstrap, new File((File)null, bootstrap_name));
+    	AnnotatedTablePanel bootstrap_panel = (AnnotatedTablePanel) data_browser.addTable(bootstrap_data, false);
+		bootstrap_panel.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());
+		work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
+    }
+    
     public void doPosteriors()
     {
     	ModelSelectionDialog optD = new ModelSelectionDialog(app, "Rate model and algorithm selection");
@@ -1011,6 +1030,23 @@ public class Session extends JSplitPane
         	S.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());    	
     		work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     	}
+    }
+
+    /*
+     * Development: ReconciliationView 
+     */
+    private static final boolean ENABLE_REC = false; // 
+    
+    
+    public void addReconciliation(DataFile<Reconciliation<?>> rec_data) {
+    	ReconciliationView R = new ReconciliationView(rec_data);
+    	data_browser.addTable(R.asTable(), true);
+    	if (ENABLE_REC) {
+        	ModelBundle.Entry phylo_entry =  model_browser.getSelectedTreeEntry();
+        	data_browser.addHistoryItem(R, phylo_entry, null);
+        	R.setPhyleticProfileColoring(model_browser.getBrowserComponent().getLeafColors());    	
+    	}
+		work_area.setSelectedIndex(work_area.indexOfTab(DATA_PANEL));
     }
     
 

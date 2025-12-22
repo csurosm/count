@@ -109,14 +109,21 @@ public class HistoryView
 	protected HistoryView(
 			IndexedTree phylo, 
 			DataFile<AnnotatedTable> table_data,
-			boolean has_copy_numbers, boolean has_only_integers)
+			boolean has_copy_numbers, boolean has_only_integers){
+		this(phylo, table_data, has_copy_numbers, has_only_integers, false);
+		
+	}
+	protected HistoryView(
+			IndexedTree phylo, 
+			DataFile<AnnotatedTable> table_data,
+			boolean has_copy_numbers, boolean has_only_integers, boolean is_simulated_or_resolved)
 	{
 		super(JSplitPane.VERTICAL_SPLIT);
 		this.table_data = table_data;
 		this.has_copy_numbers = has_copy_numbers;
 		this.has_only_integers = has_only_integers;
 		this.table_model = new HistoryModel(phylo, table_data.getContent());
-		this.isSimulated = false;
+		this.isSimulated = is_simulated_or_resolved;
 		initTableModel();
 		initComponents();
 		
@@ -182,20 +189,20 @@ public class HistoryView
 	/*
 	 * History reconstruction column codes 
 	 */
-	private static final String MEMBER_COUNT	= ":n";
-	private static final String MEMBER_CHANGE	= ":d";
-	private static final String MEMBER_BIRTH	= ":+";
-	private static final String MEMBER_DEATH	= ":-";
-	private static final String FAMILY_PRESENT	= ":p";
-	private static final String FAMILY_MULTI	= ":m";
-	private static final String FAMILY_GAIN		= ":g";
-	private static final String FAMILY_LOSE		= ":l";
-	private static final String FAMILY_EXPAND	= "++";
-	private static final String FAMILY_CONTRACT	= "--";
-	private static final String MEMBER_MAX      = ":x";
+	protected static final String MEMBER_COUNT	= ":n";
+	protected static final String MEMBER_CHANGE	= ":d";
+	protected static final String MEMBER_BIRTH	= ":+";
+	protected static final String MEMBER_DEATH	= ":-";
+	protected static final String FAMILY_PRESENT	= ":p";
+	protected static final String FAMILY_MULTI	= ":m";
+	protected static final String FAMILY_GAIN		= ":g";
+	protected static final String FAMILY_LOSE		= ":l";
+	protected static final String FAMILY_EXPAND	= "++";
+	protected static final String FAMILY_CONTRACT	= "--";
+	protected static final String MEMBER_MAX      = ":x";
 	
-	private static final String HEADER_GAINS = "Gains";
-	private static final String HEADER_LOSSES = "Losses";
+	protected static final String HEADER_GAINS = "Gains";
+	protected static final String HEADER_LOSSES = "Losses";
 	
 	public HistoryTreePanel getTreePanel()
 	{
@@ -412,7 +419,7 @@ public class HistoryView
 
 //        JLabel selected_rows_information = ;  // JLabel(":");
          
-        HistoryTreePanel tree_panel = createLineageModel();
+        HistoryTreePanel tree_panel = createLineageModel(new HistoryTreePanel(table_scroll));
         tree_control = new Zoom<>(tree_panel);
 
 
@@ -563,9 +570,9 @@ public class HistoryView
 
 	
 
-	private HistoryTreePanel createLineageModel()
+	protected HistoryTreePanel createLineageModel(HistoryTreePanel P)
 	{
-		HistoryTreePanel P = new HistoryTreePanel(table_scroll);
+//		HistoryTreePanel P = ;
 		boolean is_binary_table = table_data.getContent().isBinaryTable();
 		
 		if (has_copy_numbers && !is_binary_table)
@@ -589,6 +596,8 @@ public class HistoryView
 		lineage_family_gain = P.newColumns("Gains "+FAMILY_GAIN+"", table_family_gain);
 		lineage_family_lose = P.newColumns("Losses "+FAMILY_LOSE+"", table_family_lose);
 		P.showChangeStatistics("Loss/gain", lineage_family_gain, lineage_family_lose);
+		
+		
 		if (has_copy_numbers && !is_binary_table)
 		{
 			lineage_family_expand = P.newColumns("Expansions "+FAMILY_EXPAND+"", table_family_expand);
@@ -855,12 +864,9 @@ public class HistoryView
 	}
 	
 	/**
-	 * Called on Event thread.
+	 * Called on Event thread, so be quick
 	 */
-	protected void computeDone()
-	{
-		
-	}
+	protected void computeDone(){}
 	
 
 	/**

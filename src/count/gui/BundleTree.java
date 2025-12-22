@@ -439,6 +439,13 @@ public class BundleTree extends JTree
 						double relative = CommandLine.parseTruncateRelative(truncate);
 						PV.setCalculcationWidthThresholds(absolute, relative);
 					}
+					String smincopy = enode.getAttributeValue(CountXML.ATT_MINCOPY);
+					if (smincopy != null) {
+						int mincopy = Integer.parseInt(smincopy);
+						PV.setMinimumObserved(mincopy);
+					}
+					
+					
 					node.setHistoryComponent(PV);
 //					System.out.println("#**BT.sC node "+node+"\tpv "+PV
 //							+"\ttruncate "+PV.getCalculationWidthAbsolute()+","+PV.getCalculationWidthRelative()
@@ -499,6 +506,7 @@ public class BundleTree extends JTree
 					dnode.setTableData(Stable_data);
 				} else
 				{
+					throw new UnsupportedOperationException("Cannot construct content for "+type);
 					// what is this?
 				}
 				HistoryView H = (HistoryView) node.getComponent();

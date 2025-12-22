@@ -2023,7 +2023,6 @@ public class ModelSelectionDialog extends JDialog
         approximate_autoCB.setVisible(want_optimization);
         
         
-        approximateCB.setSelected(want_optimization);
         approximate_thresholdT.setValue(2);
         approximate_factorT.setValue(3.0);
         

@@ -24,9 +24,11 @@ import java.awt.Color;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JEditorPane;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
 import javax.swing.SpinnerNumberModel;
 
 import count.ds.AnnotatedTable;
@@ -40,6 +42,8 @@ import count.model.Parsimony;
  */
 public class ParsimonyView extends HistoryView
 {
+	private static final double SPINNER_PRECISION = 0.001;
+	
 	public ParsimonyView(DataFile<? extends IndexedTree> tree_data, 
 			DataFile<AnnotatedTable> table_data)
 	{
@@ -133,11 +137,15 @@ public class ParsimonyView extends HistoryView
 //		control_box.setMinimumSize(new Dimension(control_box.getComponentCount()*48,h));
 		computation_cancel.setVisible(false);
         getTreeControl().addControlAt(2,control_box);
+        
+        JEditorPane table_explain = createLegend();
+        JTabbedPane selected_rows_display = this.getSelectedRowsDisplay();
+		selected_rows_display.addTab("Legend", table_explain);
 	}
 	
 	private JSpinner createSpinner(double initial_value, String tooltip_text, Color background_color)
 	{
-        SpinnerNumberModel penalty_model = new SpinnerNumberModel(initial_value, 0.0, Double.POSITIVE_INFINITY, 0.1);
+        SpinnerNumberModel penalty_model = new SpinnerNumberModel(initial_value, 0.0, Double.POSITIVE_INFINITY, SPINNER_PRECISION);
         JSpinner spinner = new JSpinner(penalty_model);
         spinner.setToolTipText(tooltip_text);
         final JFormattedTextField gps_text = ((JSpinner.DefaultEditor)spinner.getEditor()).getTextField();
@@ -145,9 +153,43 @@ public class ParsimonyView extends HistoryView
 //        gps_text.setBackground(background_color);
         
         
-        ((JSpinner.DefaultEditor)spinner.getEditor()).getTextField().setColumns(3);
+        ((JSpinner.DefaultEditor)spinner.getEditor()).getTextField().setColumns(5);
         
         return spinner;
+	}
+	
+	
+	private JEditorPane createLegend() {
+		String table_legend = "<p>The <b>Tree</b> panel is a visual display of "
+				+ "the reconstruction at each node for the selected families in the top table."
+				+ "The <b>Table</b> panel gives the same values; you can sort by columns to see distributions "
+				+ "across lineages. Node selections are synchronized between <b>Tree</b> and <b>Table</b>."
+				+ "The numerical parsimony "
+				+ "reconstruction penalizes each copy change <var>p</var>→<var>c</var> from parent with <var>p</var> copies "
+				+ "to a child with <var>c</var> copies; we minimize the score of a reconstruction which is the edge-wise penalty sum on phylogeny with the "
+				+ "inferred ancestral copies. The penalty function <var>P</var>(<var>p</var>,<var>c</var>) is a generalization of Wagner parsimony: "
+				+ "sum of <i>step</i> penalties for each increase <var>i</var>→(<var>i</var>+1) or each decrease <var>i</var>→(<var>i</var>-1)"
+				+ "from <var>p</var> to <var>c</var>. Steps from 0 or to 0 are <b>gain</b> and <b>loss</b>; "
+				+ "otherwise it is an <b>expansion</b>.</p> "
+				+ "<ul>"
+				+ "<li><var>P</var>(<var>p</var>, <var>p</var>)=0</li>"
+				+ "<li><var>P</var>(0, <var>c</var>) = <b>gain</b>+<b>expansion</b>*(<var>c</var>-1) for 1&le;<var>c</var></li>"
+				+ "<li><var>P</var>(<var>p</var>, <var>p</var>+<var>inc</var>) = <b>expansion</b>*(<var>inc</var>) for 1&le;<var>p</var>, 1&le;<var>inc</var></li>"
+				+ "<li><var>P</var>(<var>p</var>, 0) = <b>loss</b>+(<var>p</var>-1) for 1&le;<var>p</var></li>"
+				+ "<li><var>P</var>(<var>p</var>, <var>p</var>-<var>dec</var>) = <var>dec</var> for 1&le;<var>p</var>, 1&le;<var>dec</var></li>"
+				+"</ul>"
+				+"<p>Use the spinners to set the penalties, or enter a value. "
+				+ "Use a small deviation  from integer values (eg 2.0001 instead of 2 for gain)"
+				+ " to resolve the ties gently between optimal solutions. (The table has columns for minimum-copy and maximum-copy "
+				+ "reconstructions that are differnt if there are ties.)<p>"
+				+ "<p>The following events are counted: copies, birth/death (copy change), family presence (at least 1 copy), family "
+				+ "loss and gain (copy change to and from 0), and family contraction and expansion (copy change to and from 1).</p>"
+				;
+		
+		JEditorPane createLegend = new JEditorPane("text/html", table_legend);
+		createLegend.setEditable(false);		
+		
+		return createLegend;
 	}
 	
 	
@@ -161,6 +203,13 @@ public class ParsimonyView extends HistoryView
 		this.loss_penalty = loss_pty;
 		this.duplication_penalty = dup_pty;
 	}
+	
+	
+	
+	/*
+	 * Profiles
+	 */
+	
 	
 	private Parsimony.Profile[] profiles=null;
 	
