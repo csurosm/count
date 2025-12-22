@@ -21,6 +21,7 @@ import java.io.PrintStream;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
 
 import count.ds.AnnotatedTable;
@@ -46,7 +47,7 @@ public class Count
      * Version string starting with a float value (integer part=major version); 
      * set to the date during development.
      */
-    public static final String APP_VERSION = "25.1124 [beta]";
+    public static final String APP_VERSION = "25.1222 [beta release]";
     
     /**
      * Name of the application.
@@ -179,6 +180,8 @@ public class Count
     public Count(String[] args) throws Exception
     {
     	this.cli = new CommandLine(args, getClass(), 0);
+        Random rnd = cli.getOptionRND(null);
+        this.RND = rnd==null?new Random():rnd;
     }
     /**
      * Frame in which the execution is done.
@@ -186,6 +189,14 @@ public class Count
     private AppFrame top_frame;
 	
     private final CommandLine cli;
+    
+    private final Random RND;
+    
+    public CommandLine  getCommandLine() {
+    	return this.cli;
+    }
+    
+    public Random getRnd() { return this.RND;}
     
     /**
      * Launches the Swing application; call from event queue
