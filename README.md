@@ -20,6 +20,11 @@ see http://www.apache.org/licenses/LICENSE-2.0.
 You can launch the Count GUI as `java -jar CountXXV.jar`, but various functionalities 
 are also available from the command line as `java -cp CountXXV.jar ...`. See the command-line builder below.
 
+Citation
+========
+Please cite as M. Csűrös (2026). Reconstructing ancient genomes from gene counts: A robust likelihood framework with sampling bias correction, _Proceedings of the National Academy of the U.S.A._ 123 (19) e2537812123, [DOI:10.1073/pnas.2537812123] (https://doi.org/10.1073/pnas.2537812123).
+
+
 Using Count
 ===========
 Count implements a number of parsimony and probabilistic methods for inferring copy number evolution 
